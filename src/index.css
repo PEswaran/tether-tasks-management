@@ -1,0 +1,150 @@
+.sv-shell {
+  display: flex;
+  height: 100vh;
+  background: #f6f8fb;
+  font-family: Inter, system-ui, sans-serif;
+}
+.sv-sidebar {
+  width: 250px;
+  background: #0f172a;
+  color: white;
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+}
+.sv-brand {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 26px;
+}
+.sv-logo {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #3b82f6, #6366f1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+}
+.sv-company {
+  font-weight: 600;
+}
+.sv-sub {
+  font-size: 12px;
+  color: #94a3b8;
+}
+.sv-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.sv-nav a {
+  color: #cbd5e1;
+  text-decoration: none;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-weight: 500;
+}
+.sv-nav a:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: white;
+}
+.sv-bottom {
+  margin-top: auto;
+}
+.sv-signout {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.08);
+  border: none;
+  padding: 10px;
+  border-radius: 10px;
+  color: #e2e8f0;
+  cursor: pointer;
+}
+.sv-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+.sv-topbar {
+  height: 64px;
+  background: white;
+  border-bottom: 1px solid #eef1f5;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 26px;
+}
+.sv-search {
+  background: #f1f5f9;
+  padding: 10px 14px;
+  border-radius: 10px;
+  color: #64748b;
+}
+.sv-top-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.sv-invite {
+  background: linear-gradient(135deg, #3b82f6, #6366f1);
+  border: none;
+  color: white;
+  padding: 9px 16px;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.sv-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #0f172a;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+}
+.sv-content {
+  padding: 28px;
+  overflow-y: auto;
+}
+.owner-dashboard {
+  max-width: 1200px;
+}
+.section-title {
+  font-weight: 600;
+  margin: 20px 0 12px 0;
+  font-size: 16px;
+}
+.stat-card {
+  background: #fff;
+  border-radius: 14px;
+  padding: 22px;
+  border: 1px solid #eef1f5;
+}
+.stat-label {
+  font-size: 13px;
+  color: #6b7280;
+}
+.stat-value {
+  font-size: 28px;
+  font-weight: 700;
+  margin-top: 4px;
+}
+.chart-card {
+  margin-top: 20px;
+}
+.member-row {
+  padding: 8px 0;
+  border-bottom: 1px solid #f1f5f9;
+}
+.empty {
+  color: #94a3b8;
+}
+.page-loader {
+  padding: 40px;
+}

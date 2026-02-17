@@ -1,0 +1,45 @@
+/* (design variables = colors, spacing, fonts)*/
+
+:root {
+  /* ===============================
+     CORE BACKGROUNDS
+  =============================== */
+  --bg: #f6f8fb;
+  --panel: #ffffff;
+  --panel-soft: #f8fafc;
+
+  /* ===============================
+     TEXT
+  =============================== */
+  --text: #0f172a;
+  --muted: #64748b;
+
+  /* ===============================
+     BRAND (matches your logo vibe)
+  =============================== */
+  --primary: #4f46e5;
+  --primary-600: #4338ca;
+  --primary-soft: #eef2ff;
+  --accent: #06b6d4;
+
+  /* ===============================
+     BORDERS + UI
+  =============================== */
+  --border: #e5e7eb;
+  --border-soft: #eef2f6;
+
+  /* ===============================
+     STATUS
+  =============================== */
+  --success: #10b981;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+
+  /* ===============================
+     DESIGN SYSTEM
+  =============================== */
+  --radius: 14px;
+  --radius-sm: 10px;
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.05);
+  --shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+}

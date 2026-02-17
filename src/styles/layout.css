@@ -1,0 +1,624 @@
+/* ===============================
+   APP LAYOUT
+================================ */
+/* ===============================
+   APP LAYOUT
+================================ */
+.app-shell {
+  display: flex;
+  height: 100vh;
+  background: #f6f8fb;
+  padding: 18px;
+  gap: 18px;
+  font-family: Inter, system-ui, sans-serif;
+}
+
+/* ===============================
+   SIDEBAR (PREMIUM)
+================================ */
+.app-sidebar {
+  width: 250px;
+  transition: width 0.25s ease;
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(20px);
+  border-radius: 16px;
+  padding: 18px 16px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
+}
+
+/* collapsed */
+.app-sidebar.collapsed {
+  width: 82px;
+  padding: 18px 10px;
+}
+
+/* ALWAYS show icon color */
+.app-nav a {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 14px;
+  border-radius: 10px;
+  text-decoration: none;
+  font-weight: 500;
+  font-size: 14px;
+  color: #475569;
+  transition: 0.18s;
+}
+
+/* hover */
+.app-nav a:hover {
+  background: #eef2ff;
+  color: #4f46e5;
+}
+
+/* active */
+.app-nav a.active {
+  background: var(--primary-soft);
+  color: var(--primary-600);
+  font-weight: 600;
+}
+
+/* collapsed */
+.app-sidebar.collapsed .app-nav a {
+  justify-content: center;
+  color: #475569;
+}
+
+/* ===============================
+   BRAND
+================================ */
+.app-brand {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 54px;
+  margin-bottom: 18px;
+}
+
+/* collapse button */
+.collapse-btn {
+  position: absolute;
+  right: -6px;
+  top: 8px;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  border: none;
+  background: rgba(0, 0, 0, 0.05);
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.collapse-btn:hover {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+/* logo */
+.app-logo-tile {
+  width: 42px;
+  height: 42px;
+  min-width: 42px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #6366f1, #22c55e);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.app-logo {
+  width: 24px;
+  height: 24px;
+}
+
+/* brand text */
+.brand-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.app-company {
+  font-weight: 600;
+  font-size: 15px;
+  color: #0f172a;
+}
+
+/* collapsed hide text */
+.app-sidebar.collapsed .brand-text {
+  display: none;
+}
+
+.app-sidebar.collapsed .app-brand {
+  justify-content: center;
+}
+
+/* ===============================
+   ROLE BADGE
+================================ */
+.role-badge {
+  font-size: 10px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-weight: 600;
+  margin-top: 4px;
+}
+
+.role-purple {
+  background: #8b5cf622;
+  color: #8b5cf6;
+}
+.role-blue {
+  background: #3b82f622;
+  color: #3b82f6;
+}
+.role-gold {
+  background: #eab30822;
+  color: #eab308;
+}
+.role-gray {
+  background: #94a3b822;
+  color: #64748b;
+}
+
+/* ===============================
+   NAV
+================================ */
+.app-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.app-nav a {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 14px;
+  border-radius: 10px;
+  color: #334155;
+  font-size: 14px;
+  font-weight: 500;
+  transition: 0.18s;
+}
+
+.app-nav a:hover {
+  background: #eef2ff;
+  color: #3730a3;
+}
+
+.app-nav a.active {
+  background: linear-gradient(135deg, #eef2ff, #e0e7ff);
+  color: #3730a3;
+  font-weight: 600;
+}
+
+/* collapsed nav */
+.app-sidebar.collapsed .app-nav a {
+  justify-content: center;
+  padding: 12px 0;
+}
+
+/* ===============================
+   SIGN OUT
+================================ */
+.app-bottom {
+  margin-top: auto;
+}
+
+.app-signout {
+  width: 100%;
+  border: none;
+  background: #f1f5f9;
+  padding: 10px;
+  border-radius: 10px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.app-signout:hover {
+  background: #e2e8f0;
+}
+
+/* ===============================
+   MAIN PANEL
+================================ */
+.app-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: var(--panel);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+/* ===============================
+   TOPBAR
+================================ */
+.app-topbar {
+  height: 70px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+  padding: 0 26px;
+}
+
+.top-left,
+.top-right {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+/* search */
+.search-box {
+  background: #f1f5f9;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #64748b;
+  cursor: pointer;
+}
+
+/* avatar */
+.app-user {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #6366f1, #22c55e);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 600;
+}
+
+/* content */
+.app-content {
+  padding: 28px;
+  overflow: auto;
+}
+
+/* ===============================
+   BRAND / LOGO
+================================ */
+/* brand container */
+.app-brand {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 18px;
+  margin-bottom: 18px;
+  border-bottom: 1px solid var(--border);
+}
+
+/* collapse button */
+.collapse-btn {
+  position: absolute;
+  right: 0;
+  top: -6px;
+  border: none;
+  background: transparent;
+  font-size: 14px;
+  cursor: pointer;
+  opacity: 0.6;
+  padding: 6px;
+}
+
+.collapse-btn:hover {
+  opacity: 1;
+}
+
+/* collapsed sidebar adjustments */
+.app-sidebar.collapsed .brand-text {
+  display: none;
+}
+
+.app-sidebar.collapsed .app-logo-tile {
+  margin: 0 auto;
+}
+
+/* nav text hide when collapsed */
+.app-sidebar.collapsed .app-nav a {
+  justify-content: center;
+}
+
+.app-logo-tile {
+  width: 64px;
+  height: 64px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #4f46e5, #06b6d4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 20px rgba(79, 70, 229, 0.25);
+}
+
+.app-logo {
+  width: 88px;
+  height: 88px;
+  object-fit: contain;
+}
+
+.brand-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.app-company {
+  font-weight: 600;
+  font-size: 15px;
+  letter-spacing: 0.2px;
+  color: #0f172a;
+}
+
+/* ===============================
+   ROLE BADGE
+================================ */
+.role-badge {
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  display: inline-block;
+  margin-top: 4px;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  text-transform: capitalize;
+}
+
+.role-purple {
+  background: #6d4aff22;
+  color: #7c6cff;
+}
+.role-blue {
+  background: #2979ff22;
+  color: #2979ff;
+}
+.role-gold {
+  background: #d4a01722;
+  color: #d4a017;
+}
+.role-gray {
+  background: #94a3b822;
+  color: #64748b;
+}
+
+/* ===============================
+   NAV
+================================ */
+.app-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.app-nav a {
+  padding: 11px 14px;
+  border-radius: 10px;
+  text-decoration: none;
+  color: #334155;
+  font-weight: 500;
+  font-size: 14px;
+  transition: 0.18s;
+}
+
+.app-nav a:hover {
+  background: #eef2ff;
+  color: #3730a3;
+}
+
+.app-nav a.active {
+  background: linear-gradient(135deg, #eef2ff, #e0e7ff);
+  color: #3730a3;
+  font-weight: 600;
+}
+
+/* ===============================
+   SIDEBAR BOTTOM
+================================ */
+
+.app-signout {
+  margin-top: auto;
+  padding-top: 18px;
+  width: 100%;
+  border: none;
+  background: #f1f5f9;
+  padding: 10px 14px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  justify-content: center;
+}
+
+.app-signout:hover {
+  background: #e2e8f0;
+}
+
+/* collapsed = icon centered */
+.app-sidebar.collapsed .app-signout {
+  justify-content: center;
+  padding: 10px;
+}
+
+/* ===============================
+   MAIN PANEL
+================================ */
+.app-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  border-radius: 18px;
+  overflow: hidden;
+  background: white;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.05);
+}
+
+/* ===============================
+   TOPBAR
+================================ */
+.app-topbar {
+  height: 70px;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid #eef1f6;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 26px;
+}
+
+.top-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.top-right {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+/* ===============================
+   SEARCH
+================================ */
+.search-box {
+  background: #f1f5f9;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #64748b;
+}
+
+/* ===============================
+   WORKSPACE SWITCH
+================================ */
+.workspace-switch {
+  background: #f1f5f9;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 8px;
+  color: #334155;
+  font-size: 13px;
+}
+
+/* ===============================
+   USER / AVATAR
+================================ */
+.app-user-area {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.app-user {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #6366f1, #22c55e);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 600;
+}
+
+/* ===============================
+   CONTENT
+================================ */
+.app-content {
+  padding: 28px;
+  overflow: auto;
+}
+
+/* global smoothness */
+* {
+  transition:
+    background 0.18s ease,
+    color 0.18s ease,
+    border 0.18s ease,
+    box-shadow 0.18s ease,
+    transform 0.15s ease;
+}
+
+/* sidebar collapse animation */
+.app-sidebar {
+  transition:
+    width 0.25s ease,
+    padding 0.25s ease;
+}
+
+/* hover lift cards/buttons */
+.card:hover,
+button:hover {
+  transform: translateY(-1px);
+}
+
+.nav-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  color: inherit; /* inherits link color */
+}
+
+.app-sidebar {
+  width: 250px;
+  background: var(--panel);
+  border-radius: var(--radius);
+  padding: 20px 18px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--shadow);
+  border: 1px solid var(--border-soft);
+}
+
+.app-sidebar.collapsed .app-nav a {
+  position: relative;
+}
+
+/* tooltip */
+.app-sidebar.collapsed .app-nav a:hover::after {
+  content: attr(data-label);
+  position: absolute;
+  left: 70px;
+  background: #111827;
+  color: white;
+  font-size: 12px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+
+/* floating global create button */
+.global-create-btn {
+  position: fixed;
+  bottom: 28px;
+  right: 28px;
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+
+  background: linear-gradient(135deg, #6366f1, #06b6d4);
+  color: white;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  cursor: pointer;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
+  z-index: 9999;
+
+  transition: 0.2s;
+}
+
+.global-create-btn:hover {
+  transform: translateY(-3px) scale(1.05);
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.35);
+}
