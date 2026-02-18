@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { dataClient } from "../libs/data-client";
 import { getTenantId } from "../libs/isTenantAdmin";
+import { displayName } from "../libs/displayName";
 
 export default function AuditLogsPage() {
     const client = dataClient();
@@ -55,7 +56,7 @@ export default function AuditLogsPage() {
                     {logs.map((log) => (
                         <tr key={log.id}>
                             <td>{log.timestamp ? new Date(log.timestamp).toLocaleString() : "—"}</td>
-                            <td>{log.userId ? profileEmail(log.userId) : "—"}</td>
+                            <td>{log.userId ? displayName(profileEmail(log.userId)) : "—"}</td>
                             <td>
                                 <span className={`status-badge ${log.action?.toLowerCase()}`}>
                                     {log.action}

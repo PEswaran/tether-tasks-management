@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { dataClient } from "../libs/data-client";
 import { getTenantId } from "../libs/isTenantAdmin";
+import { displayName } from "../libs/displayName";
 
 type View = "boards" | "tasks";
 
@@ -130,8 +131,8 @@ export default function TenantTasksPage() {
                                     <td>{t.title}</td>
                                     <td><span className={`status-badge ${t.status?.toLowerCase()}`}>{t.status}</span></td>
                                     <td><span className={`role-badge ${t.priority?.toLowerCase()}`}>{t.priority}</span></td>
-                                    <td>{t.assignedTo ? profileEmail(t.assignedTo) : "—"}</td>
-                                    <td>{t.createdBy ? profileEmail(t.createdBy) : "—"}</td>
+                                    <td>{t.assignedTo ? displayName(profileEmail(t.assignedTo)) : "—"}</td>
+                                    <td>{t.createdBy ? displayName(profileEmail(t.createdBy)) : "—"}</td>
                                     <td>{t.dueDate ? new Date(t.dueDate).toLocaleDateString() : "—"}</td>
                                 </tr>
                             ))}

@@ -3,6 +3,7 @@ import { dataClient } from "../libs/data-client";
 import { getOwnerOrgIds, getMyTenantId } from "../libs/isOwner";
 import CreateTaskBoardModal from "./CreateTaskBoardModal";
 import { useWorkspace } from "../shared-components/workspace-context";
+import { displayName } from "../libs/displayName";
 import CreateTaskModal from "../pages/shared/modals/create-task-modal";
 import EditTaskModal from "../pages/shared/modals/edit-task-modal";
 
@@ -95,7 +96,7 @@ export default function OwnerTasksPage() {
     function getInitials(userSub: string) {
         const email = profileEmail(userSub);
         if (!email || email === userSub) return "?";
-        return email.substring(0, 2).toUpperCase();
+        return displayName(email)[0].toUpperCase();
     }
 
     async function deleteBoard(board: any) {
@@ -259,12 +260,12 @@ export default function OwnerTasksPage() {
                                                     )}
                                                     <div className="task-card-avatars">
                                                         {t.ownerUserSub && (
-                                                            <div className="task-card-avatar owner" title={`Owner: ${profileEmail(t.ownerUserSub) || t.ownerUserSub}`}>
+                                                            <div className="task-card-avatar owner" title={`Owner: ${displayName(profileEmail(t.ownerUserSub) || t.ownerUserSub)}`}>
                                                                 {getInitials(t.ownerUserSub)}
                                                             </div>
                                                         )}
                                                         {t.assignedTo && (
-                                                            <div className="task-card-avatar assignee" title={`Assignee: ${profileEmail(t.assignedTo) || t.assignedTo}`}>
+                                                            <div className="task-card-avatar assignee" title={`Assignee: ${displayName(profileEmail(t.assignedTo) || t.assignedTo)}`}>
                                                                 {getInitials(t.assignedTo)}
                                                             </div>
                                                         )}

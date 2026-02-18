@@ -12,6 +12,7 @@ import {
     LayoutDashboard, Users, CheckCircle2, ListTodo,
     Clock, TrendingUp, Kanban, ArrowUpRight, Building2,
 } from "lucide-react";
+import { displayName } from "../libs/displayName";
 
 type Stats = {
     boards: number;
@@ -67,6 +68,8 @@ export default function OwnerDashboard() {
         let allTasks: any[] = [];
         let allMembers: any[] = [];
 
+        const profRes = await client.models.UserProfile.list({ filter: { tenantId: { eq: tenantId } } });
+
         for (const id of ids) {
             const [memRes, taskRes, invRes] = await Promise.all([
                 client.models.Membership.listMembershipsByWorkspace({ workspaceId: id }),
@@ -93,15 +96,23 @@ export default function OwnerDashboard() {
             pendingInvites: pendingCount,
         });
 
-        setRecentMembers(allMembers.slice(0, 5));
+        const enriched = allMembers.map((m: any) => ({
+            ...m,
+            _email: profRes.data.find((p: any) => p.userId === m.userSub)?.email || m.userSub,
+        }));
+        setRecentMembers(enriched.slice(0, 5));
     }
 
     async function loadWorkspace(id: string) {
-        const [memRes, taskRes, invRes, boardRes] = await Promise.all([
+        const tenantId = await getMyTenantId();
+        const [memRes, taskRes, invRes, boardRes, profRes] = await Promise.all([
             client.models.Membership.listMembershipsByWorkspace({ workspaceId: id }),
             client.models.Task.listTasksByWorkspace({ workspaceId: id }),
             client.models.Invitation.listInvitesByWorkspace({ workspaceId: id }),
             client.models.TaskBoard.list({ filter: { workspaceId: { eq: id } } }),
+            tenantId
+                ? client.models.UserProfile.list({ filter: { tenantId: { eq: tenantId } } })
+                : Promise.resolve({ data: [] }),
         ]);
 
         const members = memRes.data.filter((m: any) => m.status !== "REMOVED");
@@ -117,7 +128,11 @@ export default function OwnerDashboard() {
             pendingInvites: invRes.data.filter((i: any) => i.status === "PENDING").length,
         });
 
-        setRecentMembers(members.slice(0, 5));
+        const enriched = members.map((m: any) => ({
+            ...m,
+            _email: profRes.data.find((p: any) => p.userId === m.userSub)?.email || m.userSub,
+        }));
+        setRecentMembers(enriched.slice(0, 5));
     }
 
     if (loading) {
@@ -363,10 +378,10 @@ export default function OwnerDashboard() {
                             {recentMembers.map((m: any) => (
                                 <div key={m.id} className="member-row">
                                     <div className="member-avatar">
-                                        {(m.userSub || "?").slice(0, 2).toUpperCase()}
+                                        {displayName(m._email)[0].toUpperCase()}
                                     </div>
                                     <div className="member-info">
-                                        <span className="member-id">{m.userSub?.slice(0, 8)}...</span>
+                                        <span className="member-id">{displayName(m._email)}</span>
                                         <span className={`member-role ${m.role?.toLowerCase()}`}>
                                             {m.role}
                                         </span>

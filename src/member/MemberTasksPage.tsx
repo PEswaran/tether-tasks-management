@@ -3,6 +3,7 @@ import { dataClient } from "../libs/data-client";
 import { getMySub } from "../libs/isMember";
 import CreateTaskBoardModal from "../owner/CreateTaskBoardModal";
 import { useWorkspace } from "../shared-components/workspace-context";
+import { displayName } from "../libs/displayName";
 import CreateTaskModal from "../pages/shared/modals/create-task-modal";
 import EditTaskModal from "../pages/shared/modals/edit-task-modal";
 import RequestTaskDeleteModal from "../pages/shared/modals/request-task-delete";
@@ -263,7 +264,7 @@ export default function MemberTasksPage() {
                                     <td>{t.title}</td>
                                     <td><span className={`status-badge ${t.status?.toLowerCase()}`}>{t.status}</span></td>
                                     <td><span className={`role-badge ${t.priority?.toLowerCase()}`}>{t.priority}</span></td>
-                                    <td>{t.assignedTo ? profileEmail(t.assignedTo) : "—"}</td>
+                                    <td>{t.assignedTo ? displayName(profileEmail(t.assignedTo)) : "—"}</td>
                                     <td>{t.dueDate ? new Date(t.dueDate).toLocaleDateString() : "—"}</td>
                                     <td>
                                         <button className="btn secondary" style={{ marginRight: 8 }} onClick={() => setEditTask(t)}>

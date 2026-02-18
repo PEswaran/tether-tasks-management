@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { dataClient } from "../../../libs/data-client";
 import { getMySub, getMyTenantId } from "../../../libs/isMember";
+import { displayName } from "../../../libs/displayName";
 
 export default function RequestTaskDeleteModal({ task, profiles, onClose, onRequested }: any) {
     const client = dataClient();
@@ -62,8 +63,8 @@ export default function RequestTaskDeleteModal({ task, profiles, onClose, onRequ
                 <div style={{ fontSize: 14, color: "#334155", marginBottom: 16 }}>
                     <p><strong>Title:</strong> {task.title}</p>
                     <p><strong>Status:</strong> {task.status}</p>
-                    <p><strong>Created by:</strong> {profileEmail(task.createdBy)}</p>
-                    <p><strong>Assigned to:</strong> {task.assignedTo ? profileEmail(task.assignedTo) : "Unassigned"}</p>
+                    <p><strong>Created by:</strong> {displayName(profileEmail(task.createdBy))}</p>
+                    <p><strong>Assigned to:</strong> {task.assignedTo ? displayName(profileEmail(task.assignedTo)) : "Unassigned"}</p>
                 </div>
 
                 <p style={{ fontSize: 13, color: "#64748b", marginBottom: 8 }}>

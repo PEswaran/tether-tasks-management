@@ -172,7 +172,7 @@ export const handler: Schema["createTenantAdmin"]["functionHandler"] =
                 timestamp: new Date().toISOString(),
             });
 
-            console.log("🎉 TENANT CREATED:", tenantId);
+            console.log("TENANT CREATED:", tenantId);
 
             return {
                 success: true,

@@ -1,6 +1,11 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { dataClient } from "../libs/data-client";
+import { displayName } from "../libs/displayName";
+import {
+    ArrowLeft, Building2, Users, Kanban, CreditCard, ListTodo,
+} from "lucide-react";
+import CountUp from "react-countup";
 
 export default function TenantDetail() {
     const { tenantId } = useParams();
@@ -9,7 +14,9 @@ export default function TenantDetail() {
 
     const [tenant, setTenant] = useState<any>(null);
     const [members, setMembers] = useState<any[]>([]);
-    const [orgs, setOrgs] = useState<any[]>([]);
+    const [workspaces, setWorkspaces] = useState<any[]>([]);
+    const [tasks, setTasks] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
 
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [deleteInput, setDeleteInput] = useState("");
@@ -22,36 +29,39 @@ export default function TenantDetail() {
     }, [tenantId]);
 
     async function load() {
-        // 🔵 tenant info
-        const t = await client.models.Tenant.get({ id: tenantId! });
-        setTenant(t.data);
+        setLoading(true);
+        try {
+            const [t, mem, ws, taskRes] = await Promise.all([
+                client.models.Tenant.get({ id: tenantId! }),
+                client.models.Membership.list({ filter: { tenantId: { eq: tenantId! } } }),
+                client.models.Workspace.list({ filter: { tenantId: { eq: tenantId! } } }),
+                client.models.Task.list({ filter: { tenantId: { eq: tenantId! } } }),
+            ]);
 
-        // 🔵 members (enriched with email from UserProfile)
-        const mem = await client.models.Membership.list({
-            filter: { tenantId: { eq: tenantId! } }
-        });
-        const enriched = await Promise.all(
-            mem.data.map(async (m: any) => {
-                try {
-                    const profile = await client.models.UserProfile.get({ userId: m.userId });
-                    return { ...m, _email: profile.data?.email || m.userId };
-                } catch {
-                    return { ...m, _email: m.userId };
-                }
-            })
-        );
-        setMembers(enriched);
+            setTenant(t.data);
+            setTasks(taskRes.data);
+            setWorkspaces(ws.data);
 
-        // 🔵 orgs
-        const org = await client.models.Workspace.list({
-            filter: { tenantId: { eq: tenantId! } }
-        });
-        setOrgs(org.data);
+            // enrich members with email
+            const enriched = await Promise.all(
+                mem.data.map(async (m: any) => {
+                    try {
+                        const profile = await client.models.UserProfile.get({ userId: m.userId });
+                        return { ...m, _email: profile.data?.email || m.userId };
+                    } catch {
+                        return { ...m, _email: m.userId };
+                    }
+                })
+            );
+            setMembers(enriched);
+        } catch (err) {
+            console.error("TenantDetails load error:", err);
+        }
+        setLoading(false);
     }
 
     function handleDeleteClick() {
         setDeleteBlocked("");
-        // Client-side guard: check for active non-admin members
         const activeNonAdmins = members.filter(
             (m) => m.role !== "TENANT_ADMIN" && m.status !== "REMOVED"
         );
@@ -67,12 +77,8 @@ export default function TenantDetail() {
     }
 
     async function handleDeleteConfirm() {
-        const trimmedInput = deleteInput.trim();
-        const trimmedName = (tenant.companyName || "").trim();
-        console.log("Confirm check:", JSON.stringify(trimmedInput), "vs", JSON.stringify(trimmedName));
-
-        if (trimmedInput !== trimmedName) {
-            setDeleteError(`Name doesn't match. You typed "${trimmedInput}", expected "${trimmedName}".`);
+        if (deleteInput.trim() !== (tenant.companyName || "").trim()) {
+            setDeleteError(`Name doesn't match. You typed "${deleteInput.trim()}", expected "${(tenant.companyName || "").trim()}".`);
             return;
         }
 
@@ -80,9 +86,7 @@ export default function TenantDetail() {
         setDeleteError("");
 
         try {
-            console.log("Calling removeTenantAndData with tenantId:", tenantId);
             const res = await client.mutations.removeTenantAndData({ tenantId: tenantId! });
-            console.log("removeTenantAndData response:", res);
             if (res.data?.success) {
                 navigate("/super/tenants");
             } else {
@@ -95,28 +99,125 @@ export default function TenantDetail() {
         }
     }
 
-    if (!tenant) return <div style={{ padding: 40 }}>Loading...</div>;
+    async function removeMember(member: any) {
+        if (!confirm(`Remove ${displayName(member._email)} from this company?`)) return;
+        await client.models.Membership.update({
+            id: member.id,
+            status: "REMOVED",
+        });
+        load();
+    }
+
+    async function reactivateMember(member: any) {
+        if (!confirm(`Re-activate ${displayName(member._email)}?`)) return;
+        await client.models.Membership.update({
+            id: member.id,
+            status: "ACTIVE",
+        });
+        load();
+    }
+
+    function getPlanLabel(plan: string | null | undefined) {
+        switch (plan) {
+            case "PROFESSIONAL": return "Professional";
+            case "ENTERPRISE": return "Enterprise";
+            default: return "Starter";
+        }
+    }
+
+    function getPlanColor(plan: string | null | undefined) {
+        switch (plan) {
+            case "PROFESSIONAL": return { bg: "#eff6ff", color: "#3b82f6" };
+            case "ENTERPRISE": return { bg: "#f5f3ff", color: "#7c3aed" };
+            default: return { bg: "#f1f5f9", color: "#64748b" };
+        }
+    }
+
+    if (loading) {
+        return (
+            <div className="dash">
+                <div className="dash-skeleton">
+                    <div className="skel-row">
+                        <div className="skel-card shimmer" />
+                        <div className="skel-card shimmer" />
+                        <div className="skel-card shimmer" />
+                    </div>
+                    <div className="skel-row">
+                        <div className="skel-wide shimmer" />
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    if (!tenant) return <div><p>Company not found.</p></div>;
+
+    const activeMembers = members.filter(m => m.status !== "REMOVED");
+    const planStyle = getPlanColor(tenant.plan);
 
     return (
-        <div style={{ padding: 40 }}>
-            <h1>{tenant.companyName}</h1>
+        <div>
 
-            {/* 🔵 tenant controls */}
-            <div style={{ marginBottom: 30 }}>
-                <button className="btn">Suspend Tenant</button>
-                <button className="btn secondary" style={{ marginLeft: 10 }}>
-                    Impersonate Admin
-                </button>
-                <button
-                    className="btn"
-                    style={{ marginLeft: 10, backgroundColor: "#dc3545", borderColor: "#dc3545" }}
-                    onClick={handleDeleteClick}
-                >
-                    Delete Company
-                </button>
+            {/* BACK BUTTON */}
+            <button
+                className="btn secondary"
+                onClick={() => navigate("/super/tenants")}
+                style={{ marginBottom: 16, display: "inline-flex", alignItems: "center", gap: 6 }}
+            >
+                <ArrowLeft size={16} /> Companies
+            </button>
+
+            {/* COMPANY HEADER */}
+            <div className="page-header" style={{ marginBottom: 24 }}>
+                <div>
+                    <h1 className="page-title" style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        <Building2 size={22} />
+                        {tenant.companyName}
+                        <span
+                            className="role-badge"
+                            style={{
+                                background: planStyle.bg,
+                                color: planStyle.color,
+                                fontSize: 12,
+                                padding: "3px 10px",
+                                borderRadius: 20,
+                                fontWeight: 600,
+                            }}
+                        >
+                            {getPlanLabel(tenant.plan)}
+                        </span>
+                        <span
+                            className="role-badge"
+                            style={{
+                                background: tenant.status === "SUSPENDED" ? "#fef2f2" : "#ecfdf5",
+                                color: tenant.status === "SUSPENDED" ? "#dc2626" : "#16a34a",
+                                fontSize: 12,
+                                padding: "3px 10px",
+                                borderRadius: 20,
+                                fontWeight: 600,
+                            }}
+                        >
+                            {tenant.status === "SUSPENDED" ? "Suspended" : "Active"}
+                        </span>
+                    </h1>
+                    <p className="page-sub">
+                        Created {new Date(tenant.createdAt).toLocaleDateString()}
+                    </p>
+                </div>
+
+                <div style={{ display: "flex", gap: 8 }}>
+                    <button className="btn secondary">Suspend</button>
+                    <button
+                        className="btn"
+                        style={{ backgroundColor: "#dc3545", borderColor: "#dc3545" }}
+                        onClick={handleDeleteClick}
+                    >
+                        Delete Company
+                    </button>
+                </div>
             </div>
 
-            {/* 🔴 delete blocked banner */}
+            {/* DELETE BLOCKED BANNER */}
             {deleteBlocked && (
                 <div style={{
                     padding: "12px 16px",
@@ -146,31 +247,170 @@ export default function TenantDetail() {
                 </div>
             )}
 
-            {/* 🔴 delete confirmation */}
+            {/* SUBSCRIPTION + KPI ROW */}
+            <div className="kpi-grid">
+
+                {/* SUBSCRIPTION CARD */}
+                <div className="kpi-card" style={{ cursor: "default" }}>
+                    <div className="kpi-icon" style={{ background: "#fef3c7", color: "#d97706" }}>
+                        <CreditCard size={20} />
+                    </div>
+                    <div className="kpi-body">
+                        <span className="kpi-label">Plan</span>
+                        <span className="kpi-value" style={{ fontSize: 18 }}>
+                            {getPlanLabel(tenant.plan)}
+                        </span>
+                    </div>
+                </div>
+
+                {/* MEMBERS */}
+                <div className="kpi-card" style={{ cursor: "default" }}>
+                    <div className="kpi-icon" style={{ background: "#ecfdf5", color: "#10b981" }}>
+                        <Users size={20} />
+                    </div>
+                    <div className="kpi-body">
+                        <span className="kpi-label">Members</span>
+                        <span className="kpi-value">
+                            <CountUp end={activeMembers.length} duration={0.8} />
+                        </span>
+                    </div>
+                </div>
+
+                {/* WORKSPACES */}
+                <div className="kpi-card" style={{ cursor: "default" }}>
+                    <div className="kpi-icon" style={{ background: "#eff6ff", color: "#3b82f6" }}>
+                        <Kanban size={20} />
+                    </div>
+                    <div className="kpi-body">
+                        <span className="kpi-label">Workspaces</span>
+                        <span className="kpi-value">
+                            <CountUp end={workspaces.length} duration={0.8} />
+                        </span>
+                    </div>
+                </div>
+
+                {/* TASKS */}
+                <div className="kpi-card" style={{ cursor: "default" }}>
+                    <div className="kpi-icon" style={{ background: "#eef2ff", color: "#4f46e5" }}>
+                        <ListTodo size={20} />
+                    </div>
+                    <div className="kpi-body">
+                        <span className="kpi-label">Tasks</span>
+                        <span className="kpi-value">
+                            <CountUp end={tasks.length} duration={0.8} />
+                        </span>
+                    </div>
+                </div>
+
+            </div>
+
+            {/* MEMBERS TABLE */}
+            <h2 style={{ marginTop: 32, marginBottom: 16 }}>Members</h2>
+            <table className="table">
+                <thead>
+                    <tr>
+                        <th>Member</th>
+                        <th>Role</th>
+                        <th>Status</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {members.map(m => {
+                        const name = displayName(m._email);
+                        const statusLabel = m.status === "REMOVED" ? "Inactive" : "Active";
+                        const statusColor = m.status === "REMOVED" ? "#ef4444" : "#10b981";
+                        return (
+                            <tr key={m.id}>
+                                <td>
+                                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                                        <div className="member-avatar">
+                                            {name[0].toUpperCase()}
+                                        </div>
+                                        <div>
+                                            <div style={{ fontWeight: 500 }}>{name}</div>
+                                            <div style={{ fontSize: 12, color: "#64748b" }}>{m._email}</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span
+                                        className="role-badge"
+                                        style={{
+                                            background: m.role === "TENANT_ADMIN" ? "#fef3c7" : m.role === "OWNER" ? "#eff6ff" : "#f1f5f9",
+                                            color: m.role === "TENANT_ADMIN" ? "#d97706" : m.role === "OWNER" ? "#3b82f6" : "#64748b",
+                                        }}
+                                    >
+                                        {m.role}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span style={{ fontSize: 12, fontWeight: 500, color: statusColor }}>
+                                        {statusLabel}
+                                    </span>
+                                </td>
+                            </tr>
+                        );
+                    })}
+                </tbody>
+            </table>
+
+            {/* WORKSPACES TABLE */}
+            <h2 style={{ marginTop: 32, marginBottom: 16 }}>Workspaces</h2>
+            <table className="table">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Members</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {workspaces.map(ws => {
+                        const wsMemberCount = members.filter(
+                            m => m.workspaceId === ws.id && m.status !== "REMOVED"
+                        ).length;
+                        return (
+                            <tr key={ws.id}>
+                                <td>{ws.name}</td>
+                                <td>{wsMemberCount}</td>
+                            </tr>
+                        );
+                    })}
+                </tbody>
+            </table>
+
+            {/* DELETE CONFIRMATION MODAL */}
             {showDeleteConfirm && (
                 <div className="modal-backdrop" onClick={() => !deleting && setShowDeleteConfirm(false)}>
                     <div className="modal" onClick={(e) => e.stopPropagation()}>
-                        <h3>Delete Company</h3>
-                        <p>
-                            This will permanently delete <strong>{tenant.companyName}</strong> and
-                            all associated data including members, tasks, organizations, and the
-                            tenant admin's Cognito account.
-                        </p>
-                        <p>
-                            Type <strong>{tenant.companyName}</strong> to confirm:
-                        </p>
-                        <input
-                            type="text"
-                            value={deleteInput}
-                            onChange={(e) => setDeleteInput(e.target.value)}
-                            placeholder={tenant.companyName}
-                            style={{ width: "100%", padding: 8, marginBottom: 12 }}
-                            disabled={deleting}
-                        />
-                        {deleteError && (
-                            <p style={{ color: "#dc3545", marginBottom: 12 }}>{deleteError}</p>
-                        )}
-                        <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+
+                        <div className="modal-header">
+                            <h2>Delete Company</h2>
+                            <div className="modal-sub">This action cannot be undone</div>
+                        </div>
+
+                        <div className="modal-form">
+                            <p>
+                                This will permanently delete <strong>{tenant.companyName}</strong> and
+                                all associated data including members, tasks, workspaces, and the
+                                tenant admin's Cognito account.
+                            </p>
+                            <label>
+                                Type <strong>{tenant.companyName}</strong> to confirm:
+                            </label>
+                            <input
+                                type="text"
+                                value={deleteInput}
+                                onChange={(e) => setDeleteInput(e.target.value)}
+                                placeholder={tenant.companyName}
+                                disabled={deleting}
+                            />
+                            {deleteError && (
+                                <p style={{ color: "#dc3545", fontSize: 13, marginTop: 8 }}>{deleteError}</p>
+                            )}
+                        </div>
+
+                        <div className="modal-footer">
                             <button
                                 className="btn secondary"
                                 onClick={() => setShowDeleteConfirm(false)}
@@ -187,60 +427,11 @@ export default function TenantDetail() {
                                 {deleting ? "Deleting..." : "Delete Permanently"}
                             </button>
                         </div>
+
                     </div>
                 </div>
             )}
 
-            {/* 🔵 stats */}
-            <div className="card-grid">
-                <div className="card">
-                    <h3>Members</h3>
-                    <div className="big">{members.length}</div>
-                </div>
-
-                <div className="card">
-                    <h3>Organizations</h3>
-                    <div className="big">{orgs.length}</div>
-                </div>
-            </div>
-
-            {/* 🔵 members table */}
-            <h2 style={{ marginTop: 40 }}>Members</h2>
-            <table className="table">
-                <thead>
-                    <tr>
-                        <th>Email</th>
-                        <th>Role</th>
-                        <th>Status</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {members.map(m => (
-                        <tr key={m.id}>
-                            <td>{m._email}</td>
-                            <td>{m.role}</td>
-                            <td>{m.status}</td>
-                        </tr>
-                    ))}
-                </tbody>
-            </table>
-
-            {/* 🔵 orgs */}
-            <h2 style={{ marginTop: 40 }}>Organizations</h2>
-            <table className="table">
-                <thead>
-                    <tr>
-                        <th>Name</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {orgs.map(o => (
-                        <tr key={o.id}>
-                            <td>{o.name}</td>
-                        </tr>
-                    ))}
-                </tbody>
-            </table>
         </div>
     );
 }

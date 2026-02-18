@@ -7,7 +7,7 @@ export const platformNav = [
     icon: <LayoutDashboard size={18} />
   },
   {
-    label: "Tenants",
+    label: "Companies",
     path: "/super/tenants",
     icon: <Building2 size={18} />
   },

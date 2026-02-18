@@ -2,6 +2,7 @@ import { useState } from "react";
 import { fetchAuthSession } from "aws-amplify/auth";
 import { dataClient } from "../../../libs/data-client";
 import { useWorkspace } from "../../../shared-components/workspace-context";
+import { displayName } from "../../../libs/displayName";
 import type { Schema } from "../../../../amplify/data/resource";
 
 interface CreateTaskModalProps {
@@ -183,7 +184,7 @@ export default function CreateTaskModal({
                         <option value="">Unassigned</option>
                         {members.map((m: any) => (
                             <option key={m.userSub} value={m.userSub}>
-                                {m._profileEmail || m.userSub}
+                                {displayName(m._profileEmail || m.userSub)}
                             </option>
                         ))}
                     </select>

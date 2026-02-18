@@ -11,6 +11,7 @@ import {
     LayoutDashboard, Users, CheckCircle2, ListTodo,
     Clock, TrendingUp, Kanban, ArrowUpRight, Building2,
 } from "lucide-react";
+import { displayName } from "../libs/displayName";
 
 type Stats = {
     workspaces: number;
@@ -331,10 +332,10 @@ export default function TenantDashboard() {
                                 return (
                                     <div key={m.id} className="member-row">
                                         <div className="member-avatar">
-                                            {(m._email || "?").slice(0, 2).toUpperCase()}
+                                            {displayName(m._email)[0].toUpperCase()}
                                         </div>
                                         <div className="member-info">
-                                            <span className="member-id">{m._email}</span>
+                                            <span className="member-id">{displayName(m._email)}</span>
                                             <span style={{ fontSize: 12, fontWeight: 500, color: statusColor }}>
                                                 {statusLabel}
                                             </span>

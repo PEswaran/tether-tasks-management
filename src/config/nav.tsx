@@ -1,11 +1,5 @@
 import { LayoutDashboard, Users, CheckSquare, Kanban, Building2 } from "lucide-react";
 
-export const platformNav = [
-    { label: "Tenants", path: "/super/tenants" },
-    { label: "Billing", path: "/super/billing" },
-    { label: "Audit", path: "/super/audit" },
-];
-
 export const ownerNav = [
     {
         label: "Dashboard",

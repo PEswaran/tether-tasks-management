@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { dataClient } from "../../../libs/data-client";
+import { displayName } from "../../../libs/displayName";
 
 type Workspace = {
     id: string;
@@ -136,7 +137,7 @@ export default function InviteMemberModal({
                             Invite sent successfully!
                         </div>
                         <div style={{ fontSize: 13, color: "#64748b", marginTop: 6 }}>
-                            {email}
+                            {displayName(email)}
                         </div>
                     </div>
                 ) : (

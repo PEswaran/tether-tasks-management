@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { dataClient } from "../../../libs/data-client";
 import type { Schema } from "../../../../amplify/data/resource";
+import { displayName } from "../../../libs/displayName";
 
 
 export default function EditTaskModal({ task, members, onClose, onUpdated }: any) {
@@ -78,7 +79,7 @@ export default function EditTaskModal({ task, members, onClose, onUpdated }: any
                     <div className="created-by-box">
                         <div className="created-by-label">Created By</div>
                         <div className="created-by-value">
-                            {task._createdByEmail || "Unknown"}
+                            {displayName(task._createdByEmail) || "Unknown"}
                             <span className="created-by-role">
                                 {task._createdByRole || ""}
                             </span>
@@ -130,7 +131,7 @@ export default function EditTaskModal({ task, members, onClose, onUpdated }: any
                         <option value="">Unassigned</option>
                         {members.map((m: any) => (
                             <option key={m.userSub} value={m.userSub}>
-                                {m._profileEmail || m.userSub}
+                                {displayName(m._profileEmail || m.userSub)}
                             </option>
                         ))}
                     </select>
