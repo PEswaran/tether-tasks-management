@@ -13,9 +13,10 @@ import {
 
 interface LandingPageProps {
   onSignIn: () => void;
+  onGetStarted: () => void;
 }
 
-export default function LandingPage({ onSignIn }: LandingPageProps) {
+export default function LandingPage({ onSignIn, onGetStarted }: LandingPageProps) {
   const [scrolled, setScrolled] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
 
@@ -46,7 +47,7 @@ export default function LandingPage({ onSignIn }: LandingPageProps) {
           <button className="landing-btn landing-btn-outline" onClick={onSignIn}>
             Sign In
           </button>
-          <button className="landing-btn landing-btn-primary" onClick={onSignIn}>
+          <button className="landing-btn landing-btn-primary" onClick={onGetStarted}>
             Get Started
           </button>
         </div>
@@ -69,7 +70,7 @@ export default function LandingPage({ onSignIn }: LandingPageProps) {
             everyone accountable — all in one place.
           </p>
           <div className="landing-hero-buttons">
-            <button className="landing-btn landing-btn-primary landing-btn-lg" onClick={onSignIn}>
+            <button className="landing-btn landing-btn-primary landing-btn-lg" onClick={onGetStarted}>
               Start Free <ArrowRight size={18} />
             </button>
             <button
@@ -165,7 +166,7 @@ export default function LandingPage({ onSignIn }: LandingPageProps) {
               <li><Check size={16} /> Kanban boards</li>
               <li><Check size={16} /> Basic notifications</li>
             </ul>
-            <button className="landing-btn landing-btn-outline" onClick={onSignIn}>
+            <button className="landing-btn landing-btn-outline" onClick={onGetStarted}>
               Get Started
             </button>
           </div>
@@ -184,7 +185,7 @@ export default function LandingPage({ onSignIn }: LandingPageProps) {
               <li><Check size={16} /> Audit trail</li>
               <li><Check size={16} /> Priority support</li>
             </ul>
-            <button className="landing-btn landing-btn-primary" onClick={onSignIn}>
+            <button className="landing-btn landing-btn-primary" onClick={onGetStarted}>
               Start Free Trial
             </button>
           </div>
@@ -202,7 +203,7 @@ export default function LandingPage({ onSignIn }: LandingPageProps) {
               <li><Check size={16} /> Advanced permissions</li>
               <li><Check size={16} /> Dedicated support</li>
             </ul>
-            <button className="landing-btn landing-btn-outline" onClick={onSignIn}>
+            <button className="landing-btn landing-btn-outline" onClick={onGetStarted}>
               Contact Sales
             </button>
           </div>
@@ -248,7 +249,7 @@ export default function LandingPage({ onSignIn }: LandingPageProps) {
           Join thousands of teams already using TetherTasks to ship faster
           and stay organized.
         </p>
-        <button className="landing-btn landing-btn-white landing-btn-lg" onClick={onSignIn}>
+        <button className="landing-btn landing-btn-white landing-btn-lg" onClick={onGetStarted}>
           Create Free Account <ArrowRight size={18} />
         </button>
       </section>

@@ -5,6 +5,7 @@ import { inviteMemberToOrgFn } from '../functions/invite-member-to-org/resource'
 import { sendAssignmentEmail } from '../functions/sendAssignmentEmail/resource';
 import { notifyTaskAssignment } from '../functions/notifyOnTaskAssignment/resource';
 import { replaceTenantAdminFn } from '../functions/replace-tenant-admin/resource';
+import { submitContactRequestFn } from '../functions/submit-contact-request/resource';
 
 const schema = a.schema({
 
@@ -19,7 +20,7 @@ const schema = a.schema({
     TaskPriority: a.enum(['LOW', 'MEDIUM', 'HIGH', 'URGENT']),
 
     NotificationType: a.enum([
-        'TASK_DELETE_REQUEST', 'TASK_ASSIGNED', 'TASK_UPDATED', 'TASK_COMPLETED', 'BOARD_ASSIGNED', 'INVITED_TO_WORKSPACE'
+        'TASK_DELETE_REQUEST', 'TASK_ASSIGNED', 'TASK_UPDATED', 'TASK_COMPLETED', 'BOARD_ASSIGNED', 'INVITED_TO_WORKSPACE', 'CONTACT_REQUEST'
     ]),
 
     AuditAction: a.enum(['CREATE', 'UPDATE', 'DELETE', 'INVITE', 'REMOVE', 'LOGIN', 'LOGOUT', 'ASSIGN']),
@@ -422,6 +423,21 @@ const schema = a.schema({
         .authorization(allow => [allow.authenticated()])
         .handler(a.handler.function(notifyTaskAssignment)),
 
+    submitContactRequest: a.mutation()
+        .arguments({
+            name: a.string().required(),
+            email: a.string().required(),
+            companyName: a.string().required(),
+            phone: a.string(),
+            teamSize: a.string(),
+            message: a.string().required(),
+        })
+        .returns(a.customType({
+            success: a.boolean(),
+            message: a.string(),
+        }))
+        .authorization(allow => [allow.publicApiKey()])
+        .handler(a.handler.function(submitContactRequestFn)),
 
 })
     .authorization(allow => [
@@ -430,7 +446,8 @@ const schema = a.schema({
         allow.resource(inviteMemberToOrgFn),
         allow.resource(sendAssignmentEmail),
         allow.resource(notifyTaskAssignment),
-        allow.resource(replaceTenantAdminFn)
+        allow.resource(replaceTenantAdminFn),
+        allow.resource(submitContactRequestFn)
     ]);
 
 export type Schema = ClientSchema<typeof schema>;

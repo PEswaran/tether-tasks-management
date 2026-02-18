@@ -6,6 +6,7 @@ import { deleteTenantFn } from './functions/delete-tenant/resource';
 import { inviteMemberToOrgFn } from './functions/invite-member-to-org/resource';
 import { sendAssignmentEmail } from './functions/sendAssignmentEmail/resource';
 import { replaceTenantAdminFn } from './functions/replace-tenant-admin/resource';
+import { submitContactRequestFn } from './functions/submit-contact-request/resource';
 import { data } from './data/resource';
 
 
@@ -17,6 +18,7 @@ const backend = defineBackend({
   inviteMemberToOrgFn,
   sendAssignmentEmail,
   replaceTenantAdminFn,
+  submitContactRequestFn,
 });
 
 // Configure createTenantAdmin function
@@ -71,6 +73,17 @@ backend.auth.resources.userPool.grant(
   "cognito-idp:AdminAddUserToGroup",
   "cognito-idp:AdminDisableUser",
   "cognito-idp:AdminRemoveUserFromGroup"
+);
+
+// Configure submitContactRequest function
+backend.submitContactRequestFn.addEnvironment(
+  "USER_POOL_ID",
+  backend.auth.resources.userPool.userPoolId
+);
+
+backend.auth.resources.userPool.grant(
+  backend.submitContactRequestFn.resources.lambda,
+  "cognito-idp:ListUsersInGroup"
 );
 
 // Configure sendAssignmentEmail function — SES permissions
