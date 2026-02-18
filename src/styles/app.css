@@ -21,6 +21,9 @@
 /* Page-specific layouts */
 @import "./pages.css";
 
+/* Landing page */
+@import "./landing.css";
+
 /* Utilities (flex helpers etc) */
 
 /* =========================================
