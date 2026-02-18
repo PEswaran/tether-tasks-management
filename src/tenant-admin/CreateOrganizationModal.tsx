@@ -2,11 +2,13 @@ import { useState, useEffect } from "react";
 import { fetchAuthSession } from "aws-amplify/auth";
 import { dataClient } from "../libs/data-client";
 import { getTenantId } from "../libs/isTenantAdmin";
+import { useConfirm } from "../shared-components/confirm-context";
 
 type InviteResult = { email: string; role: string; success: boolean; message: string };
 
 export default function CreateOrganizationModal({ onClose, onCreated }: any) {
     const client = dataClient();
+    const { alert } = useConfirm();
 
     const [step, setStep] = useState<"create" | "invite" | "summary">("create");
     const [loading, setLoading] = useState(false);
@@ -33,14 +35,14 @@ export default function CreateOrganizationModal({ onClose, onCreated }: any) {
     // Step 1: create the workspace
     async function handleCreate() {
         if (!name.trim()) {
-            alert("Enter a workspace name");
+            await alert({ title: "Missing Name", message: "Enter a workspace name", variant: "warning" });
             return;
         }
 
         setLoading(true);
         try {
             if (!tenantId) {
-                alert("Could not determine tenant");
+                await alert({ title: "Error", message: "Could not determine tenant", variant: "danger" });
                 setLoading(false);
                 return;
             }
@@ -57,7 +59,7 @@ export default function CreateOrganizationModal({ onClose, onCreated }: any) {
             });
 
             if (!result.data?.id) {
-                alert("Error creating workspace — no ID returned");
+                await alert({ title: "Error", message: "Error creating workspace — no ID returned", variant: "danger" });
                 setLoading(false);
                 return;
             }
@@ -66,7 +68,7 @@ export default function CreateOrganizationModal({ onClose, onCreated }: any) {
             setStep("invite");
         } catch (err) {
             console.error(err);
-            alert("Error creating workspace");
+            await alert({ title: "Error", message: "Error creating workspace", variant: "danger" });
         }
         setLoading(false);
     }
@@ -86,13 +88,13 @@ export default function CreateOrganizationModal({ onClose, onCreated }: any) {
 
         // Duplicate checks
         if (owner && members.includes(owner)) {
-            alert("Owner email also appears in the member list. Please remove the duplicate.");
+            await alert({ title: "Duplicate Email", message: "Owner email also appears in the member list. Please remove the duplicate.", variant: "warning" });
             return;
         }
 
         const uniqueMembers = new Set(members);
         if (uniqueMembers.size < members.length) {
-            alert("Duplicate emails in the member list. Please remove duplicates.");
+            await alert({ title: "Duplicate Emails", message: "Duplicate emails in the member list. Please remove duplicates.", variant: "warning" });
             return;
         }
 

@@ -4,6 +4,7 @@ import { deleteTenantFn } from '../functions/delete-tenant/resource';
 import { inviteMemberToOrgFn } from '../functions/invite-member-to-org/resource';
 import { sendAssignmentEmail } from '../functions/sendAssignmentEmail/resource';
 import { notifyTaskAssignment } from '../functions/notifyOnTaskAssignment/resource';
+import { replaceTenantAdminFn } from '../functions/replace-tenant-admin/resource';
 
 const schema = a.schema({
 
@@ -375,6 +376,19 @@ const schema = a.schema({
         .authorization(allow => [allow.authenticated()])
         .handler(a.handler.function(inviteMemberToOrgFn)),
 
+    replaceTenantAdmin: a.mutation()
+        .arguments({
+            tenantId: a.string().required(),
+            newAdminEmail: a.string().required(),
+            oldMembershipId: a.string().required(),
+        })
+        .returns(a.customType({
+            success: a.boolean(),
+            message: a.string(),
+        }))
+        .authorization(allow => [allow.group("PLATFORM_SUPER_ADMIN")])
+        .handler(a.handler.function(replaceTenantAdminFn)),
+
     removeTenantAndData: a.mutation()
         .arguments({
             tenantId: a.string().required(),
@@ -415,7 +429,8 @@ const schema = a.schema({
         allow.resource(deleteTenantFn),
         allow.resource(inviteMemberToOrgFn),
         allow.resource(sendAssignmentEmail),
-        allow.resource(notifyTaskAssignment)
+        allow.resource(notifyTaskAssignment),
+        allow.resource(replaceTenantAdminFn)
     ]);
 
 export type Schema = ClientSchema<typeof schema>;

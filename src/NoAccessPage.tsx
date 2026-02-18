@@ -2,11 +2,13 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { fetchAuthSession, signOut } from "aws-amplify/auth";
 import { dataClient } from "./libs/data-client";
+import { useConfirm } from "./shared-components/confirm-context";
 import "./platform-super-admin/styles/platform-admin.css";
 
 export default function NoAccessPage() {
     const client = dataClient();
     const navigate = useNavigate();
+    const { alert } = useConfirm();
 
     const [email, setEmail] = useState("");
     const [invitation, setInvitation] = useState<any>(null);
@@ -96,7 +98,7 @@ export default function NoAccessPage() {
             setMessage("");
         } catch (err) {
             console.error("NoAccessPage: sendMessage error", err);
-            alert("Failed to send message. Please try again.");
+            await alert({ title: "Error", message: "Failed to send message. Please try again.", variant: "danger" });
         }
         setSending(false);
     }

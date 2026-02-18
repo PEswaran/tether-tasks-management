@@ -2,9 +2,11 @@ import { useState } from "react";
 import { fetchAuthSession } from "aws-amplify/auth";
 import { dataClient } from "../libs/data-client";
 import { getMyTenantId } from "../libs/isOwner";
+import { useConfirm } from "../shared-components/confirm-context";
 
 export default function CreateTaskBoardModal({ organizations, onClose, onCreated }: any) {
     const client = dataClient();
+    const { alert } = useConfirm();
 
     const [name, setName] = useState("");
     const [description, setDescription] = useState("");
@@ -12,13 +14,13 @@ export default function CreateTaskBoardModal({ organizations, onClose, onCreated
     const [loading, setLoading] = useState(false);
 
     async function createBoard() {
-        if (!name) { alert("Enter a board name"); return; }
-        if (!workspaceId) { alert("Select an organization"); return; }
+        if (!name) { await alert({ title: "Missing Name", message: "Enter a board name", variant: "warning" }); return; }
+        if (!workspaceId) { await alert({ title: "Missing Organization", message: "Select an organization", variant: "warning" }); return; }
 
         setLoading(true);
         try {
             const tenantId = await getMyTenantId();
-            if (!tenantId) { alert("Could not determine tenant"); setLoading(false); return; }
+            if (!tenantId) { await alert({ title: "Error", message: "Could not determine tenant", variant: "danger" }); setLoading(false); return; }
 
             const session = await fetchAuthSession();
             const sub = session.tokens?.accessToken.payload.sub as string;
@@ -36,7 +38,7 @@ export default function CreateTaskBoardModal({ organizations, onClose, onCreated
             onCreated();
         } catch (err) {
             console.error(err);
-            alert("Error creating task board");
+            await alert({ title: "Error", message: "Error creating task board", variant: "danger" });
         }
         setLoading(false);
     }

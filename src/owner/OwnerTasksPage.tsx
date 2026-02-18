@@ -6,6 +6,7 @@ import { useWorkspace } from "../shared-components/workspace-context";
 import { displayName } from "../libs/displayName";
 import CreateTaskModal from "../pages/shared/modals/create-task-modal";
 import EditTaskModal from "../pages/shared/modals/edit-task-modal";
+import { useConfirm } from "../shared-components/confirm-context";
 
 type View = "boards" | "tasks";
 
@@ -20,6 +21,7 @@ type TaskStatus = "TODO" | "IN_PROGRESS" | "DONE" | "ARCHIVED";
 export default function OwnerTasksPage() {
     const client = dataClient();
     const { workspaceId } = useWorkspace();
+    const { confirm, alert } = useConfirm();
 
     const [view, setView] = useState<View>("boards");
     const [boards, setBoards] = useState<any[]>([]);
@@ -100,24 +102,24 @@ export default function OwnerTasksPage() {
     }
 
     async function deleteBoard(board: any) {
-        if (!window.confirm(`Delete board "${board.name}"? All tasks on this board will remain.`)) return;
+        if (!await confirm({ title: "Delete Board", message: `Delete board "${board.name}"? All tasks on this board will remain.`, confirmLabel: "Delete", variant: "danger" })) return;
         try {
             await client.models.TaskBoard.delete({ id: board.id });
             load();
         } catch (err) {
             console.error(err);
-            alert("Error deleting board");
+            await alert({ title: "Error", message: "Error deleting board", variant: "danger" });
         }
     }
 
     async function deleteTask(task: any) {
-        if (!window.confirm(`Delete task "${task.title}"?`)) return;
+        if (!await confirm({ title: "Delete Task", message: `Delete task "${task.title}"?`, confirmLabel: "Delete", variant: "danger" })) return;
         try {
             await client.models.Task.delete({ id: task.id });
             load();
         } catch (err) {
             console.error(err);
-            alert("Error deleting task");
+            await alert({ title: "Error", message: "Error deleting task", variant: "danger" });
         }
     }
 

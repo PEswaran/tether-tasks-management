@@ -1,19 +1,21 @@
 import { useState } from "react";
 import { dataClient } from "../libs/data-client";
 import { getMyTenantId, getMySub } from "../libs/isMember";
+import { useConfirm } from "../shared-components/confirm-context";
 
 export default function RequestDeleteModal({ task, profiles, onClose, onRequested }: any) {
     const client = dataClient();
 
     const [reason, setReason] = useState("");
     const [loading, setLoading] = useState(false);
+    const { alert } = useConfirm();
 
     function profileEmail(userSub: string) {
         return profiles?.find((p: any) => p.userId === userSub)?.email || userSub || "—";
     }
 
     async function submitRequest() {
-        if (!reason.trim()) { alert("Please provide a reason for the deletion request."); return; }
+        if (!reason.trim()) { await alert({ title: "Missing Reason", message: "Please provide a reason for the deletion request.", variant: "warning" }); return; }
 
         setLoading(true);
         try {
@@ -21,13 +23,13 @@ export default function RequestDeleteModal({ task, profiles, onClose, onRequeste
             const tenantId = await getMyTenantId();
 
             if (!mySub || !tenantId || !task.createdBy) {
-                alert("Unable to determine required info");
+                await alert({ title: "Error", message: "Unable to determine required info", variant: "danger" });
                 setLoading(false);
                 return;
             }
 
             if (!client.models.Notification) {
-                alert("Notifications not available yet. Please try again after deployment.");
+                await alert({ title: "Not Available", message: "Notifications not available yet. Please try again after deployment.", variant: "warning" });
                 setLoading(false);
                 return;
             }
@@ -49,7 +51,7 @@ export default function RequestDeleteModal({ task, profiles, onClose, onRequeste
             onRequested();
         } catch (err) {
             console.error(err);
-            alert("Error submitting delete request");
+            await alert({ title: "Error", message: "Error submitting delete request", variant: "danger" });
         }
         setLoading(false);
     }

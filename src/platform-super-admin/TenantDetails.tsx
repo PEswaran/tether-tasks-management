@@ -6,11 +6,13 @@ import {
     ArrowLeft, Building2, Users, Kanban, CreditCard, ListTodo,
 } from "lucide-react";
 import CountUp from "react-countup";
+import { useConfirm } from "../shared-components/confirm-context";
 
 export default function TenantDetail() {
     const { tenantId } = useParams();
     const navigate = useNavigate();
     const client = dataClient();
+    const { confirm } = useConfirm();
 
     const [tenant, setTenant] = useState<any>(null);
     const [members, setMembers] = useState<any[]>([]);
@@ -23,6 +25,12 @@ export default function TenantDetail() {
     const [deleting, setDeleting] = useState(false);
     const [deleteError, setDeleteError] = useState("");
     const [deleteBlocked, setDeleteBlocked] = useState("");
+
+    const [showReplaceModal, setShowReplaceModal] = useState(false);
+    const [replaceTarget, setReplaceTarget] = useState<any>(null);
+    const [newAdminEmail, setNewAdminEmail] = useState("");
+    const [replacing, setReplacing] = useState(false);
+    const [replaceError, setReplaceError] = useState("");
 
     useEffect(() => {
         if (tenantId) load();
@@ -46,10 +54,10 @@ export default function TenantDetail() {
             const enriched = await Promise.all(
                 mem.data.map(async (m: any) => {
                     try {
-                        const profile = await client.models.UserProfile.get({ userId: m.userId });
-                        return { ...m, _email: profile.data?.email || m.userId };
+                        const profile = await client.models.UserProfile.get({ userId: m.userSub });
+                        return { ...m, _email: profile.data?.email || m.userSub };
                     } catch {
-                        return { ...m, _email: m.userId };
+                        return { ...m, _email: m.userSub };
                     }
                 })
             );
@@ -100,7 +108,7 @@ export default function TenantDetail() {
     }
 
     async function removeMember(member: any) {
-        if (!confirm(`Remove ${displayName(member._email)} from this company?`)) return;
+        if (!await confirm({ title: "Remove Member", message: `Remove ${displayName(member._email)} from this company?`, confirmLabel: "Remove", variant: "danger" })) return;
         await client.models.Membership.update({
             id: member.id,
             status: "REMOVED",
@@ -109,12 +117,61 @@ export default function TenantDetail() {
     }
 
     async function reactivateMember(member: any) {
-        if (!confirm(`Re-activate ${displayName(member._email)}?`)) return;
+        if (!await confirm({ title: "Re-activate Member", message: `Re-activate ${displayName(member._email)}?`, confirmLabel: "Re-activate" })) return;
         await client.models.Membership.update({
             id: member.id,
             status: "ACTIVE",
         });
         load();
+    }
+
+    async function toggleSuspend() {
+        const isSuspended = tenant.status === "SUSPENDED";
+        const action = isSuspended ? "reactivate" : "suspend";
+        if (!await confirm({ title: isSuspended ? "Reactivate Company" : "Suspend Company", message: `Are you sure you want to ${action} ${tenant.companyName}?`, confirmLabel: isSuspended ? "Reactivate" : "Suspend", variant: isSuspended ? "info" : "warning" })) return;
+
+        await client.models.Tenant.update({
+            id: tenantId!,
+            status: isSuspended ? "ACTIVE" : "SUSPENDED",
+            isActive: isSuspended,
+        });
+        load();
+    }
+
+    function openReplaceModal(member: any) {
+        setReplaceTarget(member);
+        setNewAdminEmail("");
+        setReplaceError("");
+        setShowReplaceModal(true);
+    }
+
+    async function handleReplaceAdmin() {
+        if (!newAdminEmail.trim()) {
+            setReplaceError("Please enter the new admin's email.");
+            return;
+        }
+        setReplacing(true);
+        setReplaceError("");
+        try {
+            const res = await client.mutations.replaceTenantAdmin({
+                tenantId: tenantId!,
+                newAdminEmail: newAdminEmail.trim(),
+                oldMembershipId: replaceTarget.id,
+            });
+            if (res.data?.success) {
+                setShowReplaceModal(false);
+                load();
+            } else {
+                setReplaceError(
+                    res.data?.message ||
+                    res.errors?.map((e: any) => e.message).join(", ") ||
+                    "Replace failed."
+                );
+            }
+        } catch (err: any) {
+            setReplaceError(err.message || "Replace failed.");
+        }
+        setReplacing(false);
     }
 
     function getPlanLabel(plan: string | null | undefined) {
@@ -206,7 +263,9 @@ export default function TenantDetail() {
                 </div>
 
                 <div style={{ display: "flex", gap: 8 }}>
-                    <button className="btn secondary">Suspend</button>
+                    <button className="btn secondary" onClick={toggleSuspend}>
+                        {tenant.status === "SUSPENDED" ? "Reactivate" : "Suspend"}
+                    </button>
                     <button
                         className="btn"
                         style={{ backgroundColor: "#dc3545", borderColor: "#dc3545" }}
@@ -349,6 +408,32 @@ export default function TenantDetail() {
                                         {statusLabel}
                                     </span>
                                 </td>
+                                <td style={{ textAlign: "right" }}>
+                                    {m.role === "TENANT_ADMIN" ? (
+                                        m.status !== "REMOVED" && (
+                                            <button
+                                                className="btn-table"
+                                                onClick={() => openReplaceModal(m)}
+                                            >
+                                                Replace
+                                            </button>
+                                        )
+                                    ) : m.status === "REMOVED" ? (
+                                        <button
+                                            className="btn-table"
+                                            onClick={() => reactivateMember(m)}
+                                        >
+                                            Re-activate
+                                        </button>
+                                    ) : (
+                                        <button
+                                            className="btn-table danger"
+                                            onClick={() => removeMember(m)}
+                                        >
+                                            Remove
+                                        </button>
+                                    )}
+                                </td>
                             </tr>
                         );
                     })}
@@ -378,6 +463,63 @@ export default function TenantDetail() {
                     })}
                 </tbody>
             </table>
+
+            {/* REPLACE ADMIN MODAL */}
+            {showReplaceModal && replaceTarget && (
+                <div className="modal-backdrop" onClick={() => !replacing && setShowReplaceModal(false)}>
+                    <div className="modal" onClick={(e) => e.stopPropagation()}>
+
+                        <div className="modal-header">
+                            <h2>Replace Tenant Admin</h2>
+                            <div className="modal-sub">
+                                The current admin will be disabled and removed
+                            </div>
+                        </div>
+
+                        <div className="modal-form">
+                            <p>
+                                Replacing <strong>{displayName(replaceTarget._email)}</strong>{" "}
+                                ({replaceTarget._email}) as tenant admin
+                                for <strong>{tenant.companyName}</strong>.
+                            </p>
+                            <p style={{ fontSize: 13, color: "#64748b" }}>
+                                The old admin's Cognito account will be disabled and their
+                                membership marked as removed. The new admin will receive a
+                                temporary password via email.
+                            </p>
+                            <label>New admin email:</label>
+                            <input
+                                type="email"
+                                value={newAdminEmail}
+                                onChange={(e) => setNewAdminEmail(e.target.value)}
+                                placeholder="newadmin@company.com"
+                                disabled={replacing}
+                            />
+                            {replaceError && (
+                                <p style={{ color: "#dc3545", fontSize: 13, marginTop: 8 }}>{replaceError}</p>
+                            )}
+                        </div>
+
+                        <div className="modal-footer">
+                            <button
+                                className="btn secondary"
+                                onClick={() => setShowReplaceModal(false)}
+                                disabled={replacing}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                className="btn"
+                                onClick={handleReplaceAdmin}
+                                disabled={!newAdminEmail.trim() || replacing}
+                            >
+                                {replacing ? "Replacing..." : "Replace Admin"}
+                            </button>
+                        </div>
+
+                    </div>
+                </div>
+            )}
 
             {/* DELETE CONFIRMATION MODAL */}
             {showDeleteConfirm && (

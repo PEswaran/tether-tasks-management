@@ -3,9 +3,11 @@ import { dataClient } from "../libs/data-client";
 import { getTenantId } from "../libs/isTenantAdmin";
 import CreateOrganizationModal from "./CreateOrganizationModal";
 import EditOrganizationModal from "./EditOrganizationModal";
+import { useConfirm } from "../shared-components/confirm-context";
 
 export default function OrganizationsPage() {
     const client = dataClient();
+    const { confirm, alert } = useConfirm();
     const [organizations, setOrganizations] = useState<any[]>([]);
     const [showCreate, setShowCreate] = useState(false);
     const [editOrg, setEditOrg] = useState<any>(null);
@@ -23,14 +25,14 @@ export default function OrganizationsPage() {
     }
 
     async function removeOrganization(id: string) {
-        if (!window.confirm("Are you sure you want to remove this workspace?")) return;
+        if (!await confirm({ title: "Remove Workspace", message: "Are you sure you want to remove this workspace?", confirmLabel: "Remove", variant: "danger" })) return;
 
         try {
             await client.models.Workspace.delete({ id });
             load();
         } catch (err) {
             console.error(err);
-            alert("Error removing workspace");
+            await alert({ title: "Error", message: "Error removing workspace", variant: "danger" });
         }
     }
 

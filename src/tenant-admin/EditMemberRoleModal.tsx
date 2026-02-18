@@ -1,8 +1,10 @@
 import { useState } from "react";
 import { dataClient } from "../libs/data-client";
+import { useConfirm } from "../shared-components/confirm-context";
 
 export default function EditMemberRoleModal({ member, members, onClose, onUpdated }: any) {
     const client = dataClient();
+    const { alert } = useConfirm();
 
     const [role, setRole] = useState(member.role || "MEMBER");
     const [loading, setLoading] = useState(false);
@@ -25,7 +27,7 @@ export default function EditMemberRoleModal({ member, members, onClose, onUpdate
 
         // single-owner guard
         if (role === "OWNER" && orgHasOtherOwner()) {
-            alert("This organization already has an owner. Change the existing owner's role first.");
+            await alert({ title: "Owner Exists", message: "This organization already has an owner. Change the existing owner's role first.", variant: "warning" });
             return;
         }
 
@@ -40,7 +42,7 @@ export default function EditMemberRoleModal({ member, members, onClose, onUpdate
             onUpdated();
         } catch (err) {
             console.error(err);
-            alert("Error updating role");
+            await alert({ title: "Error", message: "Error updating role", variant: "danger" });
         }
 
         setLoading(false);

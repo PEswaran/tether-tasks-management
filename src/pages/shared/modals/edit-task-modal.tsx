@@ -2,10 +2,12 @@ import { useState } from "react";
 import { dataClient } from "../../../libs/data-client";
 import type { Schema } from "../../../../amplify/data/resource";
 import { displayName } from "../../../libs/displayName";
+import { useConfirm } from "../../../shared-components/confirm-context";
 
 
 export default function EditTaskModal({ task, members, onClose, onUpdated }: any) {
     const client = dataClient();
+    const { alert } = useConfirm();
 
     // 🔥 use schema types (prevents string enum bugs)
     type TaskStatus = NonNullable<Schema["Task"]["type"]["status"]>;
@@ -21,7 +23,7 @@ export default function EditTaskModal({ task, members, onClose, onUpdated }: any
 
     async function saveTask() {
         if (!title) {
-            alert("Enter a task title");
+            await alert({ title: "Missing Title", message: "Enter a task title", variant: "warning" });
             return;
         }
 
@@ -46,7 +48,7 @@ export default function EditTaskModal({ task, members, onClose, onUpdated }: any
             onUpdated();
         } catch (err) {
             console.error(err);
-            alert("Error updating task");
+            await alert({ title: "Error", message: "Error updating task", variant: "danger" });
         }
 
         setLoading(false);

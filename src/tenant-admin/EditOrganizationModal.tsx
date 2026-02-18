@@ -1,8 +1,10 @@
 import { useState } from "react";
 import { dataClient } from "../libs/data-client";
+import { useConfirm } from "../shared-components/confirm-context";
 
 export default function EditOrganizationModal({ organization, onClose, onUpdated }: any) {
     const client = dataClient();
+    const { alert } = useConfirm();
 
     const [name, setName] = useState(organization.name || "");
     const [description, setDescription] = useState(organization.description || "");
@@ -10,7 +12,7 @@ export default function EditOrganizationModal({ organization, onClose, onUpdated
 
     async function updateOrganization() {
         if (!name) {
-            alert("Enter organization name");
+            await alert({ title: "Missing Name", message: "Enter organization name", variant: "warning" });
             return;
         }
 
@@ -26,7 +28,7 @@ export default function EditOrganizationModal({ organization, onClose, onUpdated
             onUpdated();
         } catch (err) {
             console.error(err);
-            alert("Error updating organization");
+            await alert({ title: "Error", message: "Error updating organization", variant: "danger" });
         }
 
         setLoading(false);

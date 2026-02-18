@@ -7,12 +7,14 @@ import { displayName } from "../libs/displayName";
 import CreateTaskModal from "../pages/shared/modals/create-task-modal";
 import EditTaskModal from "../pages/shared/modals/edit-task-modal";
 import RequestTaskDeleteModal from "../pages/shared/modals/request-task-delete";
+import { useConfirm } from "../shared-components/confirm-context";
 
 type View = "boards" | "tasks";
 
 export default function MemberTasksPage() {
     const client = dataClient();
     const { workspaceId, tenantId, workspaces } = useWorkspace();
+    const { confirm, alert } = useConfirm();
 
     const [view, setView] = useState<View>("boards");
     const [boards, setBoards] = useState<any[]>([]);
@@ -88,7 +90,7 @@ export default function MemberTasksPage() {
     }
 
     async function deleteTask(task: any) {
-        if (!window.confirm(`Delete task "${task.title}"?`)) return;
+        if (!await confirm({ title: "Delete Task", message: `Delete task "${task.title}"?`, confirmLabel: "Delete", variant: "danger" })) return;
         try {
             // Log the deletion
             if (tenantId && mySub) {
@@ -109,7 +111,7 @@ export default function MemberTasksPage() {
             load();
         } catch (err) {
             console.error(err);
-            alert("Error deleting task");
+            await alert({ title: "Error", message: "Error deleting task", variant: "danger" });
         }
     }
 
@@ -243,7 +245,7 @@ export default function MemberTasksPage() {
                             task={requestDeleteTask}
                             profiles={profiles}
                             onClose={() => setRequestDeleteTask(null)}
-                            onRequested={() => { setRequestDeleteTask(null); alert("Delete request sent to task creator."); load(); }}
+                            onRequested={async () => { setRequestDeleteTask(null); await alert({ title: "Request Sent", message: "Delete request sent to task creator.", variant: "success" }); load(); }}
                         />
                     )}
 

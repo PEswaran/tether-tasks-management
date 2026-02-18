@@ -2,10 +2,12 @@ import { useEffect, useState } from "react";
 import { fetchAuthSession } from "aws-amplify/auth";
 import { dataClient } from "../libs/data-client";
 import { useNavigate } from "react-router-dom";
+import { useConfirm } from "../shared-components/confirm-context";
 
 export default function AcceptInvitationPage() {
     const client = dataClient();
     const navigate = useNavigate();
+    const { alert } = useConfirm();
 
     const [loading, setLoading] = useState(false);
     const [invite, setInvite] = useState<any>(null);
@@ -79,7 +81,7 @@ export default function AcceptInvitationPage() {
 
         } catch (err) {
             console.error(err);
-            alert("Error accepting invite");
+            await alert({ title: "Error", message: "Error accepting invite", variant: "danger" });
         }
 
         setLoading(false);

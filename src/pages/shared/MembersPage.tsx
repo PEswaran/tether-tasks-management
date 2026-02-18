@@ -6,6 +6,7 @@ import InviteMemberModal from "./modals/invite-members-modal";
 import { getMyTenantId } from "../../libs/isOwner";
 import { displayName } from "../../libs/displayName";
 import { Search } from "lucide-react";
+import { useConfirm } from "../../shared-components/confirm-context";
 
 export default function MembersPage() {
     const client = dataClient();
@@ -21,6 +22,7 @@ export default function MembersPage() {
     const [loading, setLoading] = useState(true);
     const [showInvite, setShowInvite] = useState(false);
     const [search, setSearch] = useState("");
+    const { confirm, alert } = useConfirm();
 
     useEffect(() => {
         init();
@@ -76,7 +78,7 @@ export default function MembersPage() {
     /* ============================= ACTIONS ============================= */
 
     async function removeMember(member: any) {
-        if (!confirm("Remove this member from workspace?")) return;
+        if (!await confirm({ title: "Remove Member", message: "Remove this member from workspace?", confirmLabel: "Remove", variant: "danger" })) return;
 
         await client.models.Membership.update({
             id: member.id,
@@ -118,7 +120,7 @@ export default function MembersPage() {
             console.warn("Resend email failed (non-critical):", emailErr);
         }
 
-        alert("Invitation resent");
+        await alert({ title: "Success", message: "Invitation resent", variant: "success" });
     }
 
     async function changeRole(member: any, newRole: string) {
@@ -127,14 +129,14 @@ export default function MembersPage() {
                 (m: any) => m.id !== member.id && m.role === "OWNER" && m.status === "ACTIVE"
             );
             if (hasOwner) {
-                alert("This workspace already has an owner. Remove the current owner first.");
+                await alert({ title: "Owner Exists", message: "This workspace already has an owner. Remove the current owner first.", variant: "warning" });
                 return;
             }
         }
 
         await client.models.Membership.update({
             id: member.id,
-            role: newRole
+            role: newRole as any,
         });
 
         init();

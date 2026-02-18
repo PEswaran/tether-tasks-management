@@ -4,11 +4,13 @@ import { fetchAuthSession, signOut } from "aws-amplify/auth";
 import { dataClient } from "../libs/data-client";
 import { useWorkspace } from "../shared-components/workspace-context";
 import "../platform-super-admin/styles/platform-admin.css";
+import { useConfirm } from "../shared-components/confirm-context";
 
 export default function AcceptOrgInvitationPage() {
     const client = dataClient();
     const navigate = useNavigate();
     const { refreshSession, refreshWorkspaces } = useWorkspace();
+    const { alert } = useConfirm();
 
     const [invitation, setInvitation] = useState<any>(null);
     const [tenantName, setTenantName] = useState("");
@@ -106,7 +108,7 @@ export default function AcceptOrgInvitationPage() {
             navigate("/");
         } catch (err) {
             console.error(err);
-            alert("Error accepting invitation");
+            await alert({ title: "Error", message: "Error accepting invitation", variant: "danger" });
             setAccepting(false);
         }
     }

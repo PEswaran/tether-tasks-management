@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { dataClient } from "../../../libs/data-client";
 import { displayName } from "../../../libs/displayName";
+import { useConfirm } from "../../../shared-components/confirm-context";
 
 type Workspace = {
     id: string;
@@ -20,6 +21,7 @@ export default function InviteMemberModal({
     onInvited: () => void;
 }) {
     const client = dataClient();
+    const { alert } = useConfirm();
 
     const [email, setEmail] = useState("");
     const [workspaceId, setWorkspaceId] = useState<string>("");
@@ -73,17 +75,17 @@ export default function InviteMemberModal({
     =============================== */
     async function sendInvite() {
         if (!email.trim()) {
-            alert("Enter an email");
+            await alert({ title: "Missing Email", message: "Enter an email", variant: "warning" });
             return;
         }
 
         if (!workspaceId) {
-            alert("Select workspace");
+            await alert({ title: "Missing Workspace", message: "Select workspace", variant: "warning" });
             return;
         }
 
         if (role === "OWNER" && workspaceHasOwner(workspaceId)) {
-            alert("Workspace already has an owner");
+            await alert({ title: "Owner Exists", message: "Workspace already has an owner", variant: "warning" });
             return;
         }
 
@@ -100,7 +102,7 @@ export default function InviteMemberModal({
             const res = result.data;
 
             if (!res?.success) {
-                alert(res?.message || "Invite failed");
+                await alert({ title: "Invite Failed", message: res?.message || "Invite failed", variant: "danger" });
                 setLoading(false);
                 return;
             }
@@ -110,7 +112,7 @@ export default function InviteMemberModal({
 
         } catch (err) {
             console.error(err);
-            alert("Server error sending invite");
+            await alert({ title: "Error", message: "Server error sending invite", variant: "danger" });
         }
 
         setLoading(false);

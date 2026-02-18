@@ -73,6 +73,13 @@ export default function AuthRedirect() {
                     return;
                 }
 
+                // check if tenant is suspended
+                const tenantRes = await client.models.Tenant.get({ id: activeMem.tenantId });
+                if (tenantRes.data?.status === "SUSPENDED") {
+                    navigate("/suspended");
+                    return;
+                }
+
                 if (role === "TENANT_ADMIN") {
                     navigate("/tenant");
                 } else if (role === "OWNER") {

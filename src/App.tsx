@@ -4,6 +4,7 @@ import Dashboard from "./platform-super-admin/Dashboard";
 import Tenants from "./platform-super-admin/TenantsPage";
 import AuthRedirect from "./auth-redirect";
 import NoAccessPage from "./NoAccessPage";
+import SuspendedPage from "./SuspendedPage";
 import MemberShell from "./layouts/MemberShell";
 import OwnerShell from "./layouts/OwnerShell";
 import PlatformShell from "./layouts/PlatformAdminShell";
@@ -24,11 +25,13 @@ import TenantTasksPage from "./tenant-admin/TenantTasksPage";
 import { Toaster } from "sonner";
 import useGlobalNotifications from "./hooks/useGlobalNotifications";
 import GlobalTaskModal from "./pages/shared/modals/global-task-modal";
+import { ConfirmProvider } from "./shared-components/confirm-context";
 
 export default function App() {
   useGlobalNotifications();
 
   return (
+    <ConfirmProvider>
     <WorkspaceProvider>
       <Routes>
 
@@ -37,6 +40,7 @@ export default function App() {
 
         {/* NO ACCESS */}
         <Route path="/no-access" element={<NoAccessPage />} />
+        <Route path="/suspended" element={<SuspendedPage />} />
 
         {/* ACCEPT INVITES */}
         <Route path="/accept-invitation" element={<AcceptInvitationPage />} />
@@ -85,5 +89,6 @@ export default function App() {
         duration={4000}
       />
     </WorkspaceProvider>
+    </ConfirmProvider>
   );
 }

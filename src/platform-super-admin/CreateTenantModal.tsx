@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { dataClient } from "../libs/data-client";
+import { useConfirm } from "../shared-components/confirm-context";
 
 type Props = {
     onClose: () => void;
@@ -32,6 +33,7 @@ const PLANS = [
 
 export default function CreateTenantModal({ onClose, onCreated }: Props) {
     const client = dataClient();
+    const { alert } = useConfirm();
 
     const [companyName, setCompanyName] = useState("");
     const [adminEmail, setAdminEmail] = useState("");
@@ -47,7 +49,7 @@ export default function CreateTenantModal({ onClose, onCreated }: Props) {
 
     async function createCompany() {
         if (!companyName.trim() || !adminEmail.trim()) {
-            alert("Company name and admin email required");
+            await alert({ title: "Missing Fields", message: "Company name and admin email required", variant: "warning" });
             return;
         }
 
@@ -60,12 +62,12 @@ export default function CreateTenantModal({ onClose, onCreated }: Props) {
             });
 
             if (res.errors?.length) {
-                alert(res.errors.map((e: any) => e.message).join(", "));
+                await alert({ title: "Error", message: res.errors.map((e: any) => e.message).join(", "), variant: "danger" });
                 return;
             }
 
             if (!res.data?.success) {
-                alert(res.data?.message || "Failed to create tenant");
+                await alert({ title: "Error", message: res.data?.message || "Failed to create tenant", variant: "danger" });
                 return;
             }
 
@@ -80,7 +82,7 @@ export default function CreateTenantModal({ onClose, onCreated }: Props) {
             setSuccess(true);
         } catch (err: any) {
             console.error(err);
-            alert(err.message);
+            await alert({ title: "Error", message: err.message, variant: "danger" });
         } finally {
             setLoading(false);
         }

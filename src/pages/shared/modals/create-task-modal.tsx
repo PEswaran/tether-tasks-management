@@ -4,6 +4,7 @@ import { dataClient } from "../../../libs/data-client";
 import { useWorkspace } from "../../../shared-components/workspace-context";
 import { displayName } from "../../../libs/displayName";
 import type { Schema } from "../../../../amplify/data/resource";
+import { useConfirm } from "../../../shared-components/confirm-context";
 
 interface CreateTaskModalProps {
     board: any;
@@ -23,6 +24,7 @@ export default function CreateTaskModal({
 
     const client = dataClient();
     const { tenantId } = useWorkspace();
+    const { alert } = useConfirm();
 
     // 🔥 Amplify schema types (single source of truth)
     type TaskStatus = NonNullable<Schema["Task"]["type"]["status"]>;
@@ -48,12 +50,12 @@ export default function CreateTaskModal({
 
     async function createTask() {
         if (!title) {
-            alert("Enter a task title");
+            await alert({ title: "Missing Title", message: "Enter a task title", variant: "warning" });
             return;
         }
 
         if (!tenantId) {
-            alert("Tenant not loaded yet");
+            await alert({ title: "Error", message: "Tenant not loaded yet", variant: "warning" });
             return;
         }
 
@@ -87,7 +89,7 @@ export default function CreateTaskModal({
 
             if (!newTask.data) {
                 console.error("Task creation failed", newTask);
-                alert("Task failed to create");
+                await alert({ title: "Error", message: "Task failed to create", variant: "danger" });
                 setLoading(false);
                 return;
             }
@@ -126,7 +128,7 @@ export default function CreateTaskModal({
 
         } catch (err) {
             console.error(err);
-            alert("Error creating task");
+            await alert({ title: "Error", message: "Error creating task", variant: "danger" });
         }
 
         setLoading(false);
