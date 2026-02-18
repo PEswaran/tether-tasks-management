@@ -1,17 +1,25 @@
 version: 1
+backend:
+  phases:
+    build:
+      commands:
+        - npm install
+        - npx ampx pipeline-deploy --branch $AWS_BRANCH --app-id $AWS_APP_ID
+
 frontend:
   phases:
     preBuild:
       commands:
-        - npm ci
-        - npx ampx generate outputs --app-id $AWS_APP_ID --branch $AWS_BRANCH
+        - npm install
     build:
       commands:
         - npm run build
+
   artifacts:
-    baseDirectory: dist
+    baseDirectory: build
     files:
       - "**/*"
+
   cache:
     paths:
       - node_modules/**/*
