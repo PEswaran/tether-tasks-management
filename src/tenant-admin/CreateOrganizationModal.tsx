@@ -1,12 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { fetchAuthSession } from "aws-amplify/auth";
 import { dataClient } from "../libs/data-client";
-import { getTenantId } from "../libs/isTenantAdmin";
 import { useConfirm } from "../shared-components/confirm-context";
 
 type InviteResult = { email: string; role: string; success: boolean; message: string };
 
-export default function CreateOrganizationModal({ onClose, onCreated }: any) {
+export default function CreateOrganizationModal({ tenantId, onClose, onCreated }: { tenantId: string | null; onClose: () => void; onCreated: () => void }) {
     const client = dataClient();
     const { alert } = useConfirm();
 
@@ -23,14 +22,7 @@ export default function CreateOrganizationModal({ onClose, onCreated }: any) {
 
     // Shared
     const [createdOrgId, setCreatedOrgId] = useState("");
-    const [tenantId, setTenantId] = useState("");
     const [inviteResults, setInviteResults] = useState<InviteResult[]>([]);
-
-    useEffect(() => {
-        getTenantId().then((id) => {
-            if (id) setTenantId(id);
-        });
-    }, []);
 
     // Step 1: create the workspace
     async function handleCreate() {
@@ -115,7 +107,7 @@ export default function CreateOrganizationModal({ onClose, onCreated }: any) {
                 const res = await client.mutations.inviteMemberToOrg({
                     email: invite.email,
                     workspaceId: createdOrgId,
-                    tenantId,
+                    tenantId: tenantId!,
                     role: invite.role,
                 });
 

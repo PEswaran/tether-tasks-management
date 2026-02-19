@@ -7,8 +7,8 @@ export async function isTenantAdmin(): Promise<boolean> {
     if (!sub) return false;
 
     const client = dataClient();
-    const res = await client.models.Membership.list({
-        filter: { userSub: { eq: sub } }
+    const res = await client.models.Membership.listMembershipsByUser({
+        userSub: sub
     });
 
     return res.data.some((m: any) => m.role === "TENANT_ADMIN");
@@ -20,8 +20,8 @@ export async function getTenantId(): Promise<string | null> {
     if (!sub) return null;
 
     const client = dataClient();
-    const res = await client.models.Membership.list({
-        filter: { userSub: { eq: sub } }
+    const res = await client.models.Membership.listMembershipsByUser({
+        userSub: sub
     });
 
     const membership = res.data.find((m: any) => m.role === "TENANT_ADMIN");

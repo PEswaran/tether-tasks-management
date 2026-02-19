@@ -6,7 +6,7 @@ import { Plus } from "lucide-react";
 
 export default function GlobalCreateTaskButton() {
     const client = dataClient();
-    const { workspaceId, tenantId } = useWorkspace();
+    const { workspaceId, tenantId, isTenantAdmin } = useWorkspace();
 
     const [open, setOpen] = useState(false);
     const [boards, setBoards] = useState<any[]>([]);
@@ -15,15 +15,21 @@ export default function GlobalCreateTaskButton() {
 
     useEffect(() => {
         loadContext();
-    }, [workspaceId, tenantId]);
+    }, [workspaceId, tenantId, isTenantAdmin]);
 
     async function loadContext() {
-        if (!workspaceId || !tenantId) return;
+        if (!tenantId) return;
+        if (!isTenantAdmin && !workspaceId) return;
 
         try {
-            const [boardRes, memRes, profRes] = await Promise.all([
-                client.models.TaskBoard.list({ filter: { workspaceId: { eq: workspaceId } } }),
-                client.models.Membership.listMembershipsByWorkspace({ workspaceId }),
+            // Tenant admins: load boards across entire tenant
+            // Owners/Members: load boards for active workspace only
+            const boardFilter = isTenantAdmin
+                ? { tenantId: { eq: tenantId } }
+                : { workspaceId: { eq: workspaceId! } };
+
+            const [boardRes, profRes] = await Promise.all([
+                client.models.TaskBoard.list({ filter: boardFilter }),
                 client.models.UserProfile.list({ filter: { tenantId: { eq: tenantId } } }),
             ]);
 
@@ -31,12 +37,22 @@ export default function GlobalCreateTaskButton() {
             setBoards(wsBoards);
             setSelectedBoard(wsBoards[0] || null);
 
-            const activeMembers = (memRes.data || []).filter((m: any) => m.status !== "REMOVED");
-            const enriched = activeMembers.map((m: any) => ({
-                ...m,
-                _profileEmail: (profRes.data || []).find((p: any) => p.userId === m.userSub)?.email || m.userSub,
-            }));
-            setMembers(enriched);
+            // Load members — for tenant admin use tenant-wide profiles, otherwise workspace memberships
+            if (!isTenantAdmin && workspaceId) {
+                const memRes = await client.models.Membership.listMembershipsByWorkspace({ workspaceId });
+                const activeMembers = (memRes.data || []).filter((m: any) => m.status !== "REMOVED");
+                const enriched = activeMembers.map((m: any) => ({
+                    ...m,
+                    _profileEmail: (profRes.data || []).find((p: any) => p.userId === m.userSub)?.email || m.userSub,
+                }));
+                setMembers(enriched);
+            } else {
+                const enriched = (profRes.data || []).map((p: any) => ({
+                    userSub: p.userId,
+                    _profileEmail: p.email || p.userId,
+                }));
+                setMembers(enriched);
+            }
         } catch (err) {
             console.error("Global create load error", err);
         }

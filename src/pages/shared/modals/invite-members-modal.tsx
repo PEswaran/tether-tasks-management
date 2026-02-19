@@ -10,11 +10,13 @@ type Workspace = {
 
 export default function InviteMemberModal({
     tenantId,
+    tenantName,
     currentWorkspaceId,
     workspaces = [],
     onClose,
 }: {
     tenantId: string;
+    tenantName?: string | null;
     currentWorkspaceId?: string | null;
     workspaces?: Workspace[];
     onClose: () => void;
@@ -128,7 +130,9 @@ export default function InviteMemberModal({
                 <div className="modal-header">
                     <h2>Invite Member</h2>
                     <div className="modal-sub">
-                        Add users to your workspace
+                        {tenantName
+                            ? `Add users to ${tenantName}`
+                            : "Add users to your workspace"}
                     </div>
                 </div>
 
@@ -156,23 +160,19 @@ export default function InviteMemberModal({
                             />
 
                             {/* WORKSPACE SELECT */}
-                            {workspaces.length > 1 && (
-                                <>
-                                    <label>Workspace</label>
-                                    <select
-                                        className="modal-select"
-                                        value={workspaceId}
-                                        onChange={(e) => setWorkspaceId(e.target.value)}
-                                    >
-                                        <option value="">Select workspace</option>
-                                        {workspaces.map(ws => (
-                                            <option key={ws.id} value={ws.id}>
-                                                {ws.name}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </>
-                            )}
+                            <label>Workspace</label>
+                            <select
+                                className="modal-select"
+                                value={workspaceId}
+                                onChange={(e) => setWorkspaceId(e.target.value)}
+                            >
+                                <option value="">Select workspace</option>
+                                {workspaces.map(ws => (
+                                    <option key={ws.id} value={ws.id}>
+                                        {ws.name}
+                                    </option>
+                                ))}
+                            </select>
 
                             {/* ROLE */}
                             <label>Role</label>

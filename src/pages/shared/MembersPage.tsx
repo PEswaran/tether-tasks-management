@@ -3,17 +3,16 @@ import { dataClient } from "../../libs/data-client";
 import { useWorkspace } from "../../shared-components/workspace-context";
 import { useUserRole } from "../../hooks/useUserRole";
 import InviteMemberModal from "./modals/invite-members-modal";
-import { getMyTenantId } from "../../libs/isOwner";
 import { displayName } from "../../libs/displayName";
 import { Search } from "lucide-react";
 import { useConfirm } from "../../shared-components/confirm-context";
 
 export default function MembersPage() {
     const client = dataClient();
-    const { workspaceId, setWorkspaceId } = useWorkspace();
+    const { workspaceId: contextWorkspaceId, tenantId, tenantName } = useWorkspace();
     const { getRole } = useUserRole();
 
-    const [tenantId, setTenantId] = useState<string | null>(null);
+    const [selectedWsId, setSelectedWsId] = useState<string | null>(null);
     const [role, setRole] = useState<string | null>(null);
     const [members, setMembers] = useState<any[]>([]);
     const [invites, setInvites] = useState<any[]>([]);
@@ -24,28 +23,38 @@ export default function MembersPage() {
     const [search, setSearch] = useState("");
     const { confirm, alert } = useConfirm();
 
+    // The active workspace for this page — local state, not global context
+    const activeWsId = selectedWsId || contextWorkspaceId;
+
+    // Sync from context on tenant switch
     useEffect(() => {
-        init();
-    }, [workspaceId]);
+        setSelectedWsId(null);
+    }, [tenantId]);
 
-    /* ============================= */
-    async function init() {
-        setLoading(true);
+    useEffect(() => {
+        loadWorkspaces();
+    }, [tenantId]);
 
+    useEffect(() => {
+        loadMembers();
+    }, [activeWsId, tenantId]);
+
+    async function loadWorkspaces() {
         const r = await getRole();
         setRole(r);
 
-        const tid = await getMyTenantId();
-        setTenantId(tid);
-
-        if (tid) {
+        if (tenantId) {
             const wsRes = await client.models.Workspace.list({
-                filter: { tenantId: { eq: tid } }
+                filter: { tenantId: { eq: tenantId } }
             });
             setWorkspaces(wsRes.data);
         }
+    }
 
-        if (!workspaceId) {
+    async function loadMembers() {
+        setLoading(true);
+
+        if (!activeWsId) {
             setMembers([]);
             setInvites([]);
             setLoading(false);
@@ -54,13 +63,13 @@ export default function MembersPage() {
 
         /* MEMBERS */
         const memRes = await client.models.Membership.list({
-            filter: { workspaceId: { eq: workspaceId } }
+            filter: { workspaceId: { eq: activeWsId } }
         });
         setMembers(memRes.data);
 
         /* INVITES */
         const invRes = await client.models.Invitation.list({
-            filter: { workspaceId: { eq: workspaceId } }
+            filter: { workspaceId: { eq: activeWsId } }
         });
         setInvites(invRes.data);
 
@@ -85,7 +94,7 @@ export default function MembersPage() {
             status: "REMOVED"
         });
 
-        init();
+        loadMembers();
     }
 
     async function revokeInvite(inv: any) {
@@ -94,7 +103,7 @@ export default function MembersPage() {
             status: "REVOKED"
         });
 
-        init();
+        loadMembers();
     }
 
     async function resendInvite(inv: any) {
@@ -139,7 +148,7 @@ export default function MembersPage() {
             role: newRole as any,
         });
 
-        init();
+        loadMembers();
     }
 
     function formatDate(iso: string | null | undefined) {
@@ -196,8 +205,8 @@ export default function MembersPage() {
                 {/* WORKSPACE SELECTOR */}
                 <select
                     className="workspace-select"
-                    value={workspaceId || ""}
-                    onChange={(e) => setWorkspaceId(e.target.value)}
+                    value={activeWsId || ""}
+                    onChange={(e) => setSelectedWsId(e.target.value || null)}
                 >
                     <option value="">Select workspace</option>
                     {workspaces.map((w: any) => (
@@ -206,7 +215,7 @@ export default function MembersPage() {
                 </select>
 
                 {/* INVITE */}
-                {canManage && workspaceId && (
+                {canManage && activeWsId && (
                     <button className="btn-primary" onClick={() => setShowInvite(true)}>
                         + Invite Member
                     </button>
@@ -214,7 +223,7 @@ export default function MembersPage() {
             </div>
 
             {/* SEARCH BAR */}
-            {workspaceId && (
+            {activeWsId && (
                 <div style={{ position: "relative", marginBottom: 16, maxWidth: 320 }}>
                     <Search size={16} style={{ position: "absolute", left: 12, top: 10, color: "#94a3b8" }} />
                     <input
@@ -394,12 +403,13 @@ export default function MembersPage() {
             )}
 
             {/* INVITE MODAL */}
-            {showInvite && canManage && workspaceId && tenantId && (
+            {showInvite && canManage && activeWsId && tenantId && (
                 <InviteMemberModal
                     tenantId={tenantId}
-                    currentWorkspaceId={workspaceId}
+                    tenantName={tenantName}
+                    currentWorkspaceId={activeWsId}
                     workspaces={workspaces}
-                    onClose={() => { setShowInvite(false); init(); }}
+                    onClose={() => { setShowInvite(false); loadMembers(); }}
                     onInvited={() => {}}
                 />
             )}

@@ -30,6 +30,32 @@ export default function AppShell({
     const { role, workspaceId, setWorkspaceId, workspaces, memberships, tenantName } = useWorkspace();
     const displayName = tenantName || companyName || "TetherTasks";
 
+    // Build tenantId → companyName map for multi-tenant disambiguation
+    const [tenantNames, setTenantNames] = useState<Record<string, string>>({});
+    const isMultiTenant = (() => {
+        const tenantIds = new Set(
+            memberships.filter((m: any) => m.role === "TENANT_ADMIN").map((m: any) => m.tenantId)
+        );
+        return tenantIds.size > 1;
+    })();
+
+    useEffect(() => {
+        if (!isMultiTenant) return;
+        const tenantIds = [...new Set(
+            memberships.filter((m: any) => m.role === "TENANT_ADMIN").map((m: any) => m.tenantId)
+        )];
+        const clientRef = dataClient();
+        Promise.all(tenantIds.map(tid => clientRef.models.Tenant.get({ id: tid }))).then(results => {
+            const map: Record<string, string> = {};
+            results.forEach((r: any) => {
+                if (r?.data?.id && r?.data?.companyName) {
+                    map[r.data.id] = r.data.companyName;
+                }
+            });
+            setTenantNames(map);
+        });
+    }, [memberships, isMultiTenant]);
+
     /* ROLE COLOR */
     function roleColor() {
         if (!role) return "role-gray";
@@ -185,7 +211,10 @@ export default function AppShell({
                                 {workspaces.map((w: any) => {
                                     const mem = memberships.find((m: any) => m.workspaceId === w.id);
                                     const tag = mem?.role === "OWNER" ? " (Owner)" : mem?.role === "MEMBER" ? " (Member)" : "";
-                                    return <option key={w.id} value={w.id}>{w.name}{tag}</option>;
+                                    const tenantSuffix = isMultiTenant && w.tenantId && tenantNames[w.tenantId]
+                                        ? ` — ${tenantNames[w.tenantId]}`
+                                        : "";
+                                    return <option key={w.id} value={w.id}>{w.name}{tag}{tenantSuffix}</option>;
                                 })}
                             </select>
                         )}

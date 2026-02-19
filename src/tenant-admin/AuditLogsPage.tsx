@@ -1,18 +1,18 @@
 import { useEffect, useState } from "react";
 import { dataClient } from "../libs/data-client";
-import { getTenantId } from "../libs/isTenantAdmin";
+import { useWorkspace } from "../shared-components/workspace-context";
 import { displayName } from "../libs/displayName";
 
 export default function AuditLogsPage() {
     const client = dataClient();
+    const { tenantId } = useWorkspace();
     const [logs, setLogs] = useState<any[]>([]);
     const [profiles, setProfiles] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
 
-    useEffect(() => { load(); }, []);
+    useEffect(() => { load(); }, [tenantId]);
 
     async function load() {
-        const tenantId = await getTenantId();
         if (!tenantId) { setLoading(false); return; }
 
         const [res, profRes] = await Promise.all([

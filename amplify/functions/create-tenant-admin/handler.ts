@@ -30,21 +30,30 @@ export const handler: Schema["createTenantAdmin"]["functionHandler"] =
         try {
 
             /* =========================================================
-               CHECK USER EXISTS
+               CHECK IF USER ALREADY EXISTS IN COGNITO
             ========================================================= */
+            let userSub: string;
+            let isExistingUser = false;
+
             try {
-                await cognito.send(new AdminGetUserCommand({
+                const existingUser = await cognito.send(new AdminGetUserCommand({
                     UserPoolId: userPoolId,
                     Username: adminEmail,
                 }));
 
-                return {
-                    success: false,
-                    message: "User already exists. Cannot reuse admin email."
-                };
+                // User exists — extract their sub
+                userSub = existingUser.UserAttributes?.find(
+                    a => a.Name === "sub"
+                )?.Value!;
+
+                if (!userSub) throw new Error("Existing user has no sub");
+                isExistingUser = true;
 
             } catch (err: any) {
                 if (err.name !== "UserNotFoundException") throw err;
+
+                // User does NOT exist — will create below after tenant
+                userSub = ""; // placeholder, set after Cognito creation
             }
 
             /* =========================================================
@@ -77,51 +86,53 @@ export const handler: Schema["createTenantAdmin"]["functionHandler"] =
             const workspaceId = workspaceRes.data?.id;
             if (!workspaceId) throw new Error("Workspace failed");
 
-            /* =========================================================
-               CREATE COGNITO USER
-            ========================================================= */
-            const createUser = await cognito.send(
-                new AdminCreateUserCommand({
-                    UserPoolId: userPoolId,
-                    Username: adminEmail,
-                    UserAttributes: [
-                        { Name: "email", Value: adminEmail },
-                        { Name: "email_verified", Value: "true" },
-                        { Name: "custom:tenantId", Value: tenantId }
-                    ],
-                    DesiredDeliveryMediums: ["EMAIL"],
-                })
-            );
+            if (!isExistingUser) {
+                /* =========================================================
+                   CREATE COGNITO USER (new user only)
+                ========================================================= */
+                const createUser = await cognito.send(
+                    new AdminCreateUserCommand({
+                        UserPoolId: userPoolId,
+                        Username: adminEmail,
+                        UserAttributes: [
+                            { Name: "email", Value: adminEmail },
+                            { Name: "email_verified", Value: "true" },
+                            { Name: "custom:tenantId", Value: tenantId }
+                        ],
+                        DesiredDeliveryMediums: ["EMAIL"],
+                    })
+                );
 
-            const userSub = createUser.User?.Attributes?.find(
-                a => a.Name === "sub"
-            )?.Value;
+                userSub = createUser.User?.Attributes?.find(
+                    a => a.Name === "sub"
+                )?.Value!;
 
-            if (!userSub) throw new Error("No Cognito sub returned");
+                if (!userSub) throw new Error("No Cognito sub returned");
 
-            /* =========================================================
-               ADD TO TENANT ADMIN GROUP
-            ========================================================= */
-            await cognito.send(
-                new AdminAddUserToGroupCommand({
-                    UserPoolId: userPoolId,
-                    Username: adminEmail,
-                    GroupName: "TENANT_ADMIN",
-                })
-            );
+                /* =========================================================
+                   ADD TO TENANT ADMIN GROUP (new user only)
+                ========================================================= */
+                await cognito.send(
+                    new AdminAddUserToGroupCommand({
+                        UserPoolId: userPoolId,
+                        Username: adminEmail,
+                        GroupName: "TENANT_ADMIN",
+                    })
+                );
 
-            /* =========================================================
-               CREATE USER PROFILE
-            ========================================================= */
-            await client.models.UserProfile.create({
-                userId: userSub,
-                tenantId,
-                email: adminEmail,
-                role: "TENANT_ADMIN",
-                firstName: "",
-                lastName: "",
-                createdAt: new Date().toISOString(),
-            });
+                /* =========================================================
+                   CREATE USER PROFILE (new user only)
+                ========================================================= */
+                await client.models.UserProfile.create({
+                    userId: userSub,
+                    tenantId,
+                    email: adminEmail,
+                    role: "TENANT_ADMIN",
+                    firstName: "",
+                    lastName: "",
+                    createdAt: new Date().toISOString(),
+                });
+            }
 
             /* =========================================================
                CREATE MEMBERSHIP

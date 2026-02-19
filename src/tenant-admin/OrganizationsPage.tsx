@@ -1,21 +1,23 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { dataClient } from "../libs/data-client";
-import { getTenantId } from "../libs/isTenantAdmin";
+import { useWorkspace } from "../shared-components/workspace-context";
 import CreateOrganizationModal from "./CreateOrganizationModal";
 import EditOrganizationModal from "./EditOrganizationModal";
 import { useConfirm } from "../shared-components/confirm-context";
 
 export default function OrganizationsPage() {
     const client = dataClient();
+    const navigate = useNavigate();
     const { confirm, alert } = useConfirm();
+    const { tenantId, refreshWorkspaces } = useWorkspace();
     const [organizations, setOrganizations] = useState<any[]>([]);
     const [showCreate, setShowCreate] = useState(false);
     const [editOrg, setEditOrg] = useState<any>(null);
 
-    useEffect(() => { load(); }, []);
+    useEffect(() => { load(); }, [tenantId]);
 
     async function load() {
-        const tenantId = await getTenantId();
         if (!tenantId) return;
 
         const res = await client.models.Workspace.list({
@@ -30,6 +32,7 @@ export default function OrganizationsPage() {
         try {
             await client.models.Workspace.delete({ id });
             load();
+            refreshWorkspaces();
         } catch (err) {
             console.error(err);
             await alert({ title: "Error", message: "Error removing workspace", variant: "danger" });
@@ -50,10 +53,12 @@ export default function OrganizationsPage() {
 
             {showCreate && (
                 <CreateOrganizationModal
+                    tenantId={tenantId}
                     onClose={() => setShowCreate(false)}
                     onCreated={() => {
                         setShowCreate(false);
                         load();
+                        refreshWorkspaces();
                     }}
                 />
             )}
@@ -82,7 +87,14 @@ export default function OrganizationsPage() {
                 <tbody>
                     {organizations.map((org) => (
                         <tr key={org.id}>
-                            <td>{org.name}</td>
+                            <td>
+                                <button
+                                    style={{ background: "none", border: "none", color: "#2563eb", cursor: "pointer", fontWeight: 500, fontSize: 14, padding: 0 }}
+                                    onClick={() => navigate(`/tenant/tasks?workspace=${org.id}`)}
+                                >
+                                    {org.name}
+                                </button>
+                            </td>
                             <td>{org.description || "—"}</td>
                             <td>{new Date(org.createdAt).toLocaleDateString()}</td>
                             <td>

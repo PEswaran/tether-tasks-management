@@ -1,7 +1,6 @@
 import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { dataClient } from "../libs/data-client";
 import { getTenantId } from "../libs/isTenantAdmin";
-import { getMyTenantId } from "../libs/isOwner";
 import { fetchAuthSession, getCurrentUser } from "aws-amplify/auth";
 
 type Role = "OWNER" | "TENANT_ADMIN" | "MEMBER" | null;
@@ -9,6 +8,7 @@ type Role = "OWNER" | "TENANT_ADMIN" | "MEMBER" | null;
 type Workspace = {
     id: string;
     name?: string;
+    tenantId?: string;
 };
 
 type WorkspaceCtx = {
@@ -59,6 +59,7 @@ export function WorkspaceProvider({ children }: any) {
     });
 
     const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
+    const workspacesRef = useRef<Workspace[]>([]);
     const [memberships, setMemberships] = useState<any[]>([]);
     const membershipsRef = useRef<any[]>([]);
 
@@ -75,10 +76,26 @@ export function WorkspaceProvider({ children }: any) {
         if (id) {
             localStorage.setItem("activeWorkspace", id);
             // update role to match the new workspace's membership
-            const mem = membershipsRef.current.find((m: any) => m.workspaceId === id);
+            let mem = membershipsRef.current.find((m: any) => m.workspaceId === id);
+
+            // Tenant admin may not have a membership for every workspace they manage.
+            // Fall back: find the workspace's tenantId, then use any admin membership for that tenant.
+            if (!mem) {
+                const ws = workspacesRef.current.find(w => w.id === id);
+                if (ws?.tenantId) {
+                    mem = membershipsRef.current.find(
+                        (m: any) => m.tenantId === ws.tenantId && m.role === "TENANT_ADMIN"
+                    );
+                }
+            }
+
             if (mem) {
                 setRole(mem.role as Role);
                 setTenantId(mem.tenantId);
+                // Fetch and update tenant name for the new workspace
+                client.models.Tenant.get({ id: mem.tenantId }).then((res: any) => {
+                    setTenantName(res?.data?.companyName ?? null);
+                });
             }
         } else {
             localStorage.removeItem("activeWorkspace");
@@ -162,11 +179,16 @@ export function WorkspaceProvider({ children }: any) {
         let ws: Workspace[] = [];
 
         if (isTAdmin) {
-            // tenant admins see all workspaces in their tenant
-            const tid = await getMyTenantId() || await getTenantId();
-            if (!tid) return;
-            const res = await client.models.Workspace.workspacesByTenant({ tenantId: tid });
-            ws = (res.data || []) as Workspace[];
+            // tenant admins see all workspaces across ALL their admin tenants
+            const adminTenantIds = [...new Set(
+                mems.filter((m: any) => m.role === "TENANT_ADMIN").map((m: any) => m.tenantId)
+            )];
+            const allWs: Workspace[] = [];
+            for (const tid of adminTenantIds) {
+                const res = await client.models.Workspace.workspacesByTenant({ tenantId: tid });
+                allWs.push(...((res.data || []) as Workspace[]));
+            }
+            ws = allWs;
         } else {
             // owners/members: load only workspaces they have memberships in
             const wsIds = [...new Set(mems.map((m: any) => m.workspaceId).filter(Boolean))];
@@ -177,6 +199,7 @@ export function WorkspaceProvider({ children }: any) {
         }
 
         setWorkspaces(ws);
+        workspacesRef.current = ws;
 
         if (!workspaceId && ws.length > 0) {
             setWorkspaceId(ws[0].id);

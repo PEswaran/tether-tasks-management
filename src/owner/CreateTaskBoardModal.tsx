@@ -4,7 +4,7 @@ import { dataClient } from "../libs/data-client";
 import { getMyTenantId } from "../libs/isOwner";
 import { useConfirm } from "../shared-components/confirm-context";
 
-export default function CreateTaskBoardModal({ organizations, onClose, onCreated }: any) {
+export default function CreateTaskBoardModal({ organizations, onClose, onCreated, tenantId: tenantIdProp }: any) {
     const client = dataClient();
     const { alert } = useConfirm();
 
@@ -19,7 +19,7 @@ export default function CreateTaskBoardModal({ organizations, onClose, onCreated
 
         setLoading(true);
         try {
-            const tenantId = await getMyTenantId();
+            const tenantId = tenantIdProp || await getMyTenantId();
             if (!tenantId) { await alert({ title: "Error", message: "Could not determine tenant", variant: "danger" }); setLoading(false); return; }
 
             const session = await fetchAuthSession();
