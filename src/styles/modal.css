@@ -124,8 +124,8 @@
 }
 
 .modal .btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 8px 20px rgba(99, 102, 241, 0.25);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(79, 70, 229, 0.3);
 }
 
 .modal .btn.secondary {

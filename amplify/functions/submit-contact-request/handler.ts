@@ -20,7 +20,7 @@ const cognito = new CognitoIdentityProviderClient({});
 export const handler: Schema["submitContactRequest"]["functionHandler"] =
     async (event) => {
 
-        const { name, email, companyName, phone, teamSize, message } = event.arguments;
+        const { name, email, companyName, phone, teamSize, numberOfOrgs, businessType, message } = event.arguments;
         const userPoolId = process.env.USER_POOL_ID;
 
         if (!userPoolId) throw new Error("Missing USER_POOL_ID");
@@ -42,6 +42,8 @@ export const handler: Schema["submitContactRequest"]["functionHandler"] =
                     companyName,
                     phone: phone || "",
                     teamSize: teamSize || "",
+                    numberOfOrgs: numberOfOrgs || "",
+                    businessType: businessType || "",
                     message,
                 }),
                 timestamp: new Date().toISOString(),
@@ -70,7 +72,7 @@ export const handler: Schema["submitContactRequest"]["functionHandler"] =
                     recipientId: adminSub,
                     type: "CONTACT_REQUEST",
                     title: "New Contact Request",
-                    message: `${name} from ${companyName} (${email}) wants to get started.`,
+                    message: `${name} from ${companyName} (${email}) wants to get started.${numberOfOrgs ? ` Orgs: ${numberOfOrgs}.` : ""}${businessType ? ` Type: ${businessType}.` : ""}`,
                     isRead: false,
                     createdAt: new Date().toISOString(),
                 });

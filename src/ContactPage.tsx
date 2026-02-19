@@ -13,6 +13,8 @@ export default function ContactPage({ onBack }: ContactPageProps) {
     companyName: "",
     phone: "",
     teamSize: "",
+    numberOfOrgs: "",
+    businessType: "",
     message: "",
   });
   const [submitting, setSubmitting] = useState(false);
@@ -40,6 +42,8 @@ export default function ContactPage({ onBack }: ContactPageProps) {
           companyName: form.companyName,
           phone: form.phone || undefined,
           teamSize: form.teamSize || undefined,
+          numberOfOrgs: form.numberOfOrgs || undefined,
+          businessType: form.businessType || undefined,
           message: form.message,
         },
         { authMode: "apiKey" }
@@ -96,8 +100,8 @@ export default function ContactPage({ onBack }: ContactPageProps) {
             <div className="contact-header">
               <h1>Get Started with TetherTasks</h1>
               <p>
-                Fill out the form below and our team will reach out to help you
-                set up your workspace.
+                Tell us about your business and how many organizations you
+                manage. We'll help you find the right plan.
               </p>
             </div>
 
@@ -152,6 +156,41 @@ export default function ContactPage({ onBack }: ContactPageProps) {
                     onChange={handleChange}
                     placeholder="+1 (555) 123-4567"
                   />
+                </div>
+              </div>
+
+              <div className="contact-form-row">
+                <div className="contact-form-field">
+                  <label htmlFor="numberOfOrgs">Number of Organizations</label>
+                  <select
+                    id="numberOfOrgs"
+                    name="numberOfOrgs"
+                    value={form.numberOfOrgs}
+                    onChange={handleChange}
+                  >
+                    <option value="">How many companies do you manage?</option>
+                    <option value="1">1 company</option>
+                    <option value="2-3">2–3 companies</option>
+                    <option value="4-10">4–10 companies</option>
+                    <option value="10+">10+ companies</option>
+                  </select>
+                </div>
+                <div className="contact-form-field">
+                  <label htmlFor="businessType">Type of Business</label>
+                  <select
+                    id="businessType"
+                    name="businessType"
+                    value={form.businessType}
+                    onChange={handleChange}
+                  >
+                    <option value="">Select your business type</option>
+                    <option value="consulting">Consulting</option>
+                    <option value="agency">Agency</option>
+                    <option value="franchise">Franchise / Multi-location</option>
+                    <option value="startup">Startup</option>
+                    <option value="enterprise">Enterprise</option>
+                    <option value="other">Other</option>
+                  </select>
                 </div>
               </div>
 

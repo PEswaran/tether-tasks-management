@@ -8,6 +8,12 @@
   font-weight: 600;
   cursor: pointer;
   box-shadow: 0 6px 20px rgba(79, 70, 229, 0.35);
+  transition: all 0.2s;
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(79, 70, 229, 0.4);
 }
 
 .btn-secondary {
@@ -32,6 +38,12 @@
   border-radius: var(--radius);
   border: 1px solid var(--border);
   box-shadow: var(--shadow-sm);
+  transition: all 0.25s;
+}
+
+.card:hover {
+  box-shadow: 0 8px 30px rgba(79, 70, 229, 0.08);
+  border-color: var(--primary);
 }
 
 .metric-card {
@@ -127,6 +139,44 @@
 
 .pending-row {
   background: #fafafa;
+}
+
+/* ================= TABLE ================= */
+
+.tt-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.tt-table thead th {
+  text-align: left;
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  padding: 12px 16px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.tt-table tbody tr {
+  border-bottom: 1px solid #f1f5f9;
+  transition: background 0.15s;
+}
+
+.tt-table tbody tr:last-child {
+  border-bottom: none;
+}
+
+.tt-table tbody tr:hover {
+  background: #f8fafc;
+}
+
+.tt-table tbody td {
+  padding: 14px 16px;
+  font-size: 14px;
+  color: var(--text);
+  vertical-align: middle;
 }
 
 /* ================= MEMBERS TABLE ================= */

@@ -20,16 +20,20 @@ export const tenantAdminNav = [
     {
         label: "Members",
         path: "/tenant/members",
-        icon: <Users size={18} />
+        icon: <Users size={18} />,
+        section: "Manage"
     },
     {
         label: "Tasks",
         path: "/tenant/tasks",
-        icon: <CheckSquare size={18} />
+        icon: <CheckSquare size={18} />,
+        parent: "/tenant/organizations",
+        section: "Manage"
     },
     {
         label: "Audit",
         path: "/tenant/audit",
-        icon: <Shield size={18} />
+        icon: <Shield size={18} />,
+        section: "Manage"
     }
 ];

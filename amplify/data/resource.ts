@@ -430,6 +430,8 @@ const schema = a.schema({
             companyName: a.string().required(),
             phone: a.string(),
             teamSize: a.string(),
+            numberOfOrgs: a.string(),
+            businessType: a.string(),
             message: a.string().required(),
         })
         .returns(a.customType({

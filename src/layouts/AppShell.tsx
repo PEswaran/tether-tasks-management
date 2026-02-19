@@ -1,6 +1,6 @@
 import { Link, Outlet, useNavigate, useLocation } from "react-router-dom";
 import { signOut } from "aws-amplify/auth";
-import { LogOut } from "lucide-react";
+import { LogOut, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 
 import NotificationBell from "../shared-components/notification-bell";
 import { useWorkspace } from "../shared-components/workspace-context";
@@ -15,6 +15,8 @@ type NavItem = {
     label: string;
     path: string;
     icon?: any;
+    parent?: string;
+    section?: string;
 };
 
 export default function AppShell({
@@ -129,15 +131,16 @@ export default function AppShell({
             {/* SIDEBAR */}
             <aside className={`app-sidebar ${collapsed ? "collapsed" : ""}`}>
 
+                {/* COLLAPSE TOGGLE */}
+                <button
+                    className="collapse-btn"
+                    onClick={() => setCollapsed(!collapsed)}
+                >
+                    {collapsed ? <PanelLeftOpen size={14} /> : <PanelLeftClose size={14} />}
+                </button>
+
                 {/* BRAND */}
                 <div className="app-brand">
-                    <button
-                        className="collapse-btn"
-                        onClick={() => setCollapsed(!collapsed)}
-                    >
-                        {collapsed ? "»" : "«"}
-                    </button>
-
                     <div className="app-logo-tile" onClick={() => navigate("/")}>
                         <img src="/logo.png" className="app-logo" />
                     </div>
@@ -154,33 +157,45 @@ export default function AppShell({
 
                 {/* NAV */}
                 <nav className="app-nav">
-                    {navItems.map(n => (
-                        <Link
-                            key={n.path}
-                            to={n.path}
-                            data-label={n.label}
-                            className={location.pathname === n.path ? "active" : ""}
-                        >
-                            {n.icon && <span className="nav-icon">{n.icon}</span>}
-                            {!collapsed && n.label}
-                        </Link>
-                    ))}
+                    {navItems.map((n, i) => {
+                        const prevSection = i > 0 ? navItems[i - 1].section : undefined;
+                        const showSection = n.section && n.section !== prevSection;
+                        return (
+                            <div key={n.path}>
+                                {showSection && !collapsed && (
+                                    <div className="nav-section-label">{n.section}</div>
+                                )}
+                                {showSection && collapsed && (
+                                    <div className="nav-section-divider" />
+                                )}
+                                <Link
+                                    to={n.path}
+                                    data-label={n.label}
+                                    className={location.pathname === n.path ? "active" : ""}
+                                >
+                                    {n.icon && <span className="nav-icon">{n.icon}</span>}
+                                    {!collapsed && n.label}
+                                </Link>
+                            </div>
+                        );
+                    })}
                 </nav>
 
-                {/* BOTTOM */}
-                <button
-                    onClick={async () => {
-                        await signOut();
-                        navigate("/");
-                    }}
-                    className="app-signout"
-                >
-                    <span className="nav-icon">
-                        <LogOut size={18} />
-                    </span>
-
-                    {!collapsed && "Sign out"}
-                </button>
+                {/* SIGN OUT */}
+                <div className="sidebar-bottom">
+                    <button
+                        onClick={async () => {
+                            await signOut();
+                            navigate("/");
+                        }}
+                        className="app-signout"
+                    >
+                        <span className="nav-icon">
+                            <LogOut size={16} />
+                        </span>
+                        {!collapsed && "Sign out"}
+                    </button>
+                </div>
 
             </aside>
 
@@ -262,6 +277,34 @@ export default function AppShell({
                 </div>
 
                 <div className="app-content">
+                    {(() => {
+                        const home = navItems[0];
+                        const current = navItems.find(n => n.path !== home.path && location.pathname === n.path);
+                        if (!current) return null;
+                        // Walk parent chain to build crumbs between home and current
+                        const chain: NavItem[] = [];
+                        let cursor: NavItem | undefined = current;
+                        while (cursor && cursor.path !== home.path) {
+                            chain.unshift(cursor);
+                            cursor = cursor.parent ? navItems.find(n => n.path === cursor!.parent) : undefined;
+                        }
+                        return (
+                            <div className="breadcrumb">
+                                <button className="breadcrumb-link" onClick={() => navigate(home.path)}>
+                                    {home.label}
+                                </button>
+                                {chain.map((item, i) => (
+                                    <span key={item.path}>
+                                        <span className="breadcrumb-sep">/</span>
+                                        {i < chain.length - 1
+                                            ? <button className="breadcrumb-link" onClick={() => navigate(item.path)}>{item.label}</button>
+                                            : <span className="breadcrumb-current">{item.label}</span>
+                                        }
+                                    </span>
+                                ))}
+                            </div>
+                        );
+                    })()}
                     <Outlet />
                 </div>
                 <GlobalCreateTaskBtn />

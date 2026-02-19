@@ -14,11 +14,13 @@ export const platformNav = [
   {
     label: "Audit Logs",
     path: "/super/audit",
-    icon: <Shield size={18} />
+    icon: <Shield size={18} />,
+    section: "Insights"
   },
   {
     label: "Analytics",
     path: "/super/analytics",
-    icon: <BarChart3 size={18} />
+    icon: <BarChart3 size={18} />,
+    section: "Insights"
   }
 ];

@@ -14,17 +14,22 @@ export const ownerNav = [
     {
         label: "Task Boards",
         path: "/owner/boards",
-        icon: <Kanban size={18} />
+        icon: <Kanban size={18} />,
+        parent: "/owner/workspaces",
+        section: "Manage"
     },
     {
         label: "Members",
         path: "/owner/members",
-        icon: <Users size={18} />
+        icon: <Users size={18} />,
+        section: "Manage"
     },
     {
         label: "Tasks",
         path: "/owner/tasks",
-        icon: <CheckSquare size={18} />
+        icon: <CheckSquare size={18} />,
+        parent: "/owner/workspaces",
+        section: "Manage"
     },
 ];
 

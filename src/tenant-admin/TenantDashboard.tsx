@@ -35,11 +35,14 @@ export default function TenantDashboard() {
     const [recentMembers, setRecentMembers] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
 
-    useEffect(() => { load(); }, [tenantId]);
+    useEffect(() => { load(); }, [tenantId, workspaces]);
 
     async function load() {
         if (!tenantId) return;
         setLoading(true);
+
+        // Filter workspaces to only those belonging to the current tenant
+        const tenantWorkspaces = workspaces.filter((ws: any) => ws.tenantId === tenantId);
 
         try {
             const profRes = await client.models.UserProfile.list({
@@ -51,7 +54,7 @@ export default function TenantDashboard() {
             let allTasks: any[] = [];
             let allMembers: any[] = [];
 
-            for (const ws of workspaces) {
+            for (const ws of tenantWorkspaces) {
                 const [memRes, taskRes, invRes] = await Promise.all([
                     client.models.Membership.listMembershipsByWorkspace({ workspaceId: ws.id }),
                     client.models.Task.listTasksByWorkspace({ workspaceId: ws.id }),
@@ -66,7 +69,7 @@ export default function TenantDashboard() {
             }
 
             setStats({
-                workspaces: workspaces.length,
+                workspaces: tenantWorkspaces.length,
                 members: memberCount,
                 todo: allTasks.filter(t => t.status === "TODO").length,
                 inProgress: allTasks.filter(t => t.status === "IN_PROGRESS").length,
