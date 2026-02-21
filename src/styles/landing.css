@@ -45,9 +45,11 @@
 }
 
 .landing-logo-img {
-  height: 28px;
+  height: 34px;
   width: auto;
   object-fit: contain;
+  opacity: 0.96;
+  image-rendering: -webkit-optimize-contrast;
 }
 
 .landing-nav-links {

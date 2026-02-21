@@ -1,6 +1,5 @@
 import { useNavigate } from "react-router-dom";
 import { signOut } from "aws-amplify/auth";
-import "./platform-super-admin/styles/platform-admin.css";
 
 export default function SuspendedPage() {
     const navigate = useNavigate();

@@ -40,7 +40,7 @@ export default function LandingPage({ onSignIn, onGetStarted }: LandingPageProps
       {/* ========== NAVBAR ========== */}
       <nav className={`landing-nav${scrolled ? " scrolled" : ""}`}>
         <div className="landing-nav-logo">
-          <Kanban size={22} />
+          <img src="/logo.png" alt="TetherTasks logo" className="landing-logo-img" />
           TetherTasks
         </div>
         <div className="landing-nav-links">

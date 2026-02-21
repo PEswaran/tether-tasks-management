@@ -1,9 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { fetchAuthSession, signOut } from "aws-amplify/auth";
-import { dataClient } from "./libs/data-client";
-import { useConfirm } from "./shared-components/confirm-context";
-import "./platform-super-admin/styles/platform-admin.css";
+import { dataClient } from "../../../libs/data-client";
+import { useConfirm } from "../../../shared-components/confirm-context";
 
 export default function NoAccessPage() {
     const client = dataClient();

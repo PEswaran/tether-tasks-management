@@ -3,8 +3,8 @@ import { WorkspaceProvider } from "./shared-components/workspace-context";
 import Dashboard from "./features/platform-admin/pages/Dashboard";
 import Tenants from "./features/platform-admin/pages/TenantsPage";
 import AuthRedirect from "./auth-redirect";
-import NoAccessPage from "./NoAccessPage";
-import SuspendedPage from "./SuspendedPage";
+import NoAccessPage from "./features/auth/pages/NoAccessPage";
+import SuspendedPage from "./features/auth/pages/SuspendedPage";
 import MemberShell from "./layouts/MemberShell";
 import OwnerShell from "./layouts/OwnerShell";
 import PlatformShell from "./layouts/PlatformAdminShell";
@@ -24,6 +24,7 @@ import AcceptOrgInvitationPage from "./features/owners/pages/AcceptOrgInvitation
 import OwnerDashboard from "./features/owners/pages/OwnerDashboard";
 import OwnerWorkspacesPage from "./features/owners/pages/OwnerWorkspacesPage";
 import MemberDashboard from "./features/members/pages/MemberDashboard";
+import Login from "./features/auth/pages/Login";
 
 export default function App() {
   useGlobalNotifications();
@@ -35,6 +36,8 @@ export default function App() {
 
           {/* LOGIN REDIRECT */}
           <Route path="/" element={<AuthRedirect />} />
+          <Route path="/auth-redirect" element={<AuthRedirect />} />
+          <Route path="/login" element={<Login />} />
 
           {/* NO ACCESS */}
           <Route path="/no-access" element={<NoAccessPage />} />

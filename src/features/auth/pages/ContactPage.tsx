@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { ArrowLeft, Send, CheckCircle, Kanban } from "lucide-react";
-import { dataClient } from "./libs/data-client";
+import { ArrowLeft, Send, CheckCircle } from "lucide-react";
+import { dataClient } from "../../../libs/data-client";
 
 interface ContactPageProps {
   onBack: () => void;
@@ -68,7 +68,7 @@ export default function ContactPage({ onBack }: ContactPageProps) {
       {/* Navbar */}
       <nav className="landing-nav">
         <div className="landing-nav-logo">
-          <Kanban size={22} />
+          <img src="/logo.png" alt="TetherTasks logo" className="landing-logo-img" />
           TetherTasks
         </div>
         <div className="landing-nav-actions">

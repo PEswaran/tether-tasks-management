@@ -10,7 +10,7 @@ export default function AuthRedirect() {
     useEffect(() => {
         async function routeUser() {
             try {
-                const session = await fetchAuthSession({ forceRefresh: true });
+                const session = await fetchAuthSession();
                 const payload: any = session.tokens?.idToken?.payload;
 
                 if (!payload) {
@@ -113,8 +113,17 @@ export default function AuthRedirect() {
                     navigate("/member");
                 }
 
-            } catch (err) {
+            } catch (err: any) {
                 console.error("redirect error", err);
+                const name = err?.name || "";
+                if (
+                    name === "UserUnAuthenticatedException" ||
+                    name === "NoValidAuthTokens" ||
+                    name === "TooManyRequestsException"
+                ) {
+                    navigate("/login");
+                    return;
+                }
                 navigate("/no-access");
             }
         }
