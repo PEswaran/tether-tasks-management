@@ -37,19 +37,26 @@ export default function GlobalCreateTaskButton() {
             setBoards(wsBoards);
             setSelectedBoard(wsBoards[0] || null);
 
+            const profiles = profRes.data || [];
+            const profileByUser = new Map(profiles.map((p: any) => [p.userId, p]));
+
             // Load members — for tenant admin use tenant-wide profiles, otherwise workspace memberships
             if (!isTenantAdmin && workspaceId) {
                 const memRes = await client.models.Membership.listMembershipsByWorkspace({ workspaceId });
                 const activeMembers = (memRes.data || []).filter((m: any) => m.status !== "REMOVED");
                 const enriched = activeMembers.map((m: any) => ({
                     ...m,
-                    _profileEmail: (profRes.data || []).find((p: any) => p.userId === m.userSub)?.email || m.userSub,
+                    email: profileByUser.get(m.userSub)?.email || m.userSub,
+                    firstName: profileByUser.get(m.userSub)?.firstName,
+                    lastName: profileByUser.get(m.userSub)?.lastName,
                 }));
                 setMembers(enriched);
             } else {
-                const enriched = (profRes.data || []).map((p: any) => ({
+                const enriched = profiles.map((p: any) => ({
                     userSub: p.userId,
-                    _profileEmail: p.email || p.userId,
+                    email: p.email || p.userId,
+                    firstName: p.firstName,
+                    lastName: p.lastName,
                 }));
                 setMembers(enriched);
             }

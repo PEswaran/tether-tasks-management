@@ -76,7 +76,7 @@ const schema = a.schema({
             index("ownerUserSub").queryField("workspacesByOwner")
         ])
         .authorization(allow => [
-            allow.group('PLATFORM_SUPER_ADMIN'),
+            allow.group('PLATFORM_SUPER_ADMIN'), allow.group('TENANT_ADMIN'),
             allow.ownerDefinedIn('ownerUserSub').to(['read', 'update', 'delete']),
             allow.authenticated().to(['read'])
         ]),

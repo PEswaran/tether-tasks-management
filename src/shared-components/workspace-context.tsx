@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { dataClient } from "../libs/data-client";
-import { fetchAuthSession, getCurrentUser, signOut } from "aws-amplify/auth";
+import { fetchAuthSession, getCurrentUser } from "aws-amplify/auth";
 
 type Role = "OWNER" | "TENANT_ADMIN" | "MEMBER" | null;
 
@@ -95,6 +95,16 @@ export function WorkspaceProvider({ children }: any) {
 
             setEmail(payload.email);
 
+            const groups: string[] = payload["cognito:groups"] || [];
+            const normalizedGroups = groups.map((g) => g.toUpperCase());
+            if (normalizedGroups.includes("PLATFORM_SUPER_ADMIN")) {
+                setMemberships([]);
+                setRole(null);
+                setTenantId(null);
+                setTenantName(null);
+                return null;
+            }
+
             const res: any = await client.models.Membership.listMembershipsByUser({
                 userSub: sub
             });
@@ -130,9 +140,10 @@ export function WorkspaceProvider({ children }: any) {
                 return null;
             }
 
-            console.warn("User removed — signing out");
-            await signOut();
-            window.location.href = "/";
+            console.warn("User has no active memberships — redirecting to no-access");
+            if (window.location.pathname !== "/no-access") {
+                window.location.href = "/no-access";
+            }
             return null;
 
         } catch (err) {
@@ -148,7 +159,7 @@ export function WorkspaceProvider({ children }: any) {
     async function loadWorkspaces(currentTenantId: string, source?: any[]) {
         const list =
             source && source.length ? source :
-            membershipsRef.current.length ? membershipsRef.current : memberships;
+                membershipsRef.current.length ? membershipsRef.current : memberships;
 
         const activeMemberships = list.filter(
             (m: any) =>

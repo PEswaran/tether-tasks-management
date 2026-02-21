@@ -20,7 +20,8 @@ export default function AuthRedirect() {
 
                 // platform super admin
                 const groups: string[] = payload["cognito:groups"] || [];
-                if (groups.includes("PLATFORM_SUPER_ADMIN")) {
+                const normalizedGroups = groups.map((g) => g.toUpperCase());
+                if (normalizedGroups.includes("PLATFORM_SUPER_ADMIN")) {
                     navigate("/super");
                     return;
                 }
@@ -44,6 +45,29 @@ export default function AuthRedirect() {
                     return (invRes?.data || []).some(
                         (i: any) => i.status === "PENDING"
                     );
+                }
+
+                async function acceptTenantAdminInviteIfNeeded(tenantId: string, workspaceId: string) {
+                    const userEmail = payload.email as string;
+                    if (!userEmail) return;
+
+                    const invRes: any = await client.models.Invitation.listInvitesByEmail({
+                        email: userEmail,
+                    });
+
+                    const pending = (invRes?.data || []).find(
+                        (i: any) =>
+                            i.status === "PENDING" &&
+                            i.tenantId === tenantId &&
+                            i.workspaceId === workspaceId
+                    );
+
+                    if (pending) {
+                        await client.models.Invitation.update({
+                            id: pending.id,
+                            status: "ACCEPTED",
+                        });
+                    }
                 }
 
                 // no memberships at all — check for pending invitations first
@@ -81,6 +105,7 @@ export default function AuthRedirect() {
                 }
 
                 if (role === "TENANT_ADMIN") {
+                    await acceptTenantAdminInviteIfNeeded(activeMem.tenantId, activeMem.workspaceId);
                     navigate("/tenant");
                 } else if (role === "OWNER") {
                     navigate("/owner");

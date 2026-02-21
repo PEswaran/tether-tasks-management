@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { fetchAuthSession, signOut } from "aws-amplify/auth";
 import { dataClient } from "./libs/data-client";
@@ -19,8 +19,13 @@ export default function NoAccessPage() {
     const [sending, setSending] = useState(false);
     const [sent, setSent] = useState(false);
     const [loading, setLoading] = useState(true);
+    const didLoadRef = useRef(false);
 
-    useEffect(() => { loadContext(); }, []);
+    useEffect(() => {
+        if (didLoadRef.current) return;
+        didLoadRef.current = true;
+        loadContext();
+    }, []);
 
     async function loadContext() {
         try {
@@ -65,7 +70,11 @@ export default function NoAccessPage() {
                     }
                 }
             }
-        } catch (err) {
+        } catch (err: any) {
+            if (err?.name === "UserUnAuthenticatedException") {
+                setLoading(false);
+                return;
+            }
             console.error("NoAccessPage: loadContext error", err);
         }
         setLoading(false);

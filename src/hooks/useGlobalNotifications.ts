@@ -10,13 +10,14 @@ export default function useGlobalNotifications() {
 
     useEffect(() => {
         let sub: string | null = null;
+        let subscription: { unsubscribe?: () => void } | null = null;
 
         async function init() {
             try {
                 const user = await getCurrentUser();
                 sub = user.userId;
 
-                client.models.Notification.onCreate().subscribe({
+                subscription = client.models.Notification.onCreate().subscribe({
                     next: (msg: any) => {
                         const n = msg?.data;
                         if (!n) return;
@@ -35,7 +36,10 @@ export default function useGlobalNotifications() {
                             });
                         }
                     },
-                    error: (err) => console.error("notif sub error", err),
+                    error: (err) => {
+                        if (err?.name === "NoValidAuthTokens") return;
+                        console.error("notif sub error", err);
+                    },
                 });
             } catch (err: any) {
                 if (err?.name === "UserUnAuthenticatedException") return;
@@ -44,5 +48,10 @@ export default function useGlobalNotifications() {
         }
 
         init();
+
+        return () => {
+            subscription?.unsubscribe?.();
+            subscription = null;
+        };
     }, []);
 }

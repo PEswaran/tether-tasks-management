@@ -76,11 +76,27 @@ export function useTasks({ workspaceId, tenantId }: UseTasksProps) {
             const orgs = orgRes.data || [];
             const boardsData = boardRes.data || [];
             const tasksData = taskRes.data || [];
-            const profilesData = profRes.data || [];
+            let profilesData = profRes.data || [];
             const memberships = memRes.data || [];
 
             setOrganizations(orgs);
             setBoards(boardsData);
+
+            if (profilesData.length === 0 && memberships.length > 0) {
+                const uniqueUserSubs = [...new Set(memberships.map((m: any) => m.userSub).filter(Boolean))];
+                const fetched = await Promise.all(
+                    uniqueUserSubs.map(async (userSub: string) => {
+                        try {
+                            const res: any = await client.models.UserProfile.get({ userId: userSub });
+                            return res?.data || null;
+                        } catch {
+                            return null;
+                        }
+                    })
+                );
+                profilesData = fetched.filter(Boolean) as any[];
+            }
+
             setProfiles(profilesData);
 
             /* ===============================

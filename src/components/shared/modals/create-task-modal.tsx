@@ -43,7 +43,6 @@ export default function CreateTaskModal({
 
     const [priority, setPriority] = useState<TaskPriority>("MEDIUM");
 
-    const [ownerUserSub] = useState("");
     const [assignedTo, setAssignedTo] = useState("");
     const [dueDate, setDueDate] = useState("");
     const [loading, setLoading] = useState(false);
@@ -78,7 +77,7 @@ export default function CreateTaskModal({
                 description: description || undefined,
                 status,
                 priority,
-                ownerUserSub: ownerUserSub || undefined,
+                ownerUserSub: sub,
                 assignedTo: assignedTo || undefined,
                 assignedBy: assignedTo ? sub : undefined,
                 createdBy: sub,
