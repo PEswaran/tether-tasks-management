@@ -74,8 +74,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 setTenantName(membership.tenant?.name ?? null);
             }
 
-        } catch (err) {
-            console.error("Auth load error", err);
+        } catch (err: any) {
+            if (err?.name === "UserUnAuthenticatedException") return;
+            console.error("notif init error", err);
+
         } finally {
             setLoading(false);
         }

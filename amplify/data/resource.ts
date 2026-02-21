@@ -47,7 +47,7 @@ const schema = a.schema({
     })
         .authorization(allow => [
             allow.group('PLATFORM_SUPER_ADMIN'),
-            allow.authenticated()
+            allow.authenticated().to(['read'])
         ]),
 
     /* =========================================================
@@ -75,11 +75,10 @@ const schema = a.schema({
             index("tenantId").queryField("workspacesByTenant"), // rename safer
             index("ownerUserSub").queryField("workspacesByOwner")
         ])
-
-
         .authorization(allow => [
             allow.group('PLATFORM_SUPER_ADMIN'),
-            allow.authenticated()
+            allow.ownerDefinedIn('ownerUserSub').to(['read', 'update', 'delete']),
+            allow.authenticated().to(['read'])
         ]),
 
     /* =========================================================
@@ -114,12 +113,11 @@ const schema = a.schema({
                 .queryField("listMembershipsByTenant")
         ])
 
-
         .authorization(allow => [
-            allow.ownerDefinedIn('userSub'),
-
+            allow.group('TENANT_ADMIN').to(['update']),
             allow.group('PLATFORM_SUPER_ADMIN'),
-            allow.authenticated()
+            allow.ownerDefinedIn('userSub').to(['read']),
+            allow.authenticated().to(['read', 'update', 'create']),
         ]),
 
     /* =========================================================
@@ -154,7 +152,7 @@ const schema = a.schema({
 
         .authorization(allow => [
             allow.group('PLATFORM_SUPER_ADMIN'),
-            allow.authenticated(),
+            allow.authenticated().to(['read', 'update']),
             allow.publicApiKey().to(['read'])
         ]),
 
@@ -167,6 +165,7 @@ const schema = a.schema({
         tenantId: a.id().required(),
         workspaceId: a.id().required(),
 
+
         name: a.string().required(),
         description: a.string(),
 
@@ -177,6 +176,8 @@ const schema = a.schema({
         createdBy: a.string(),
         createdAt: a.datetime(),
         updatedAt: a.datetime(),
+        boardType: a.string(),
+        isTemplate: a.boolean(),
     })
         .secondaryIndexes(index => [
             index("tenantId")
@@ -190,7 +191,9 @@ const schema = a.schema({
 
         .authorization(allow => [
             allow.group('PLATFORM_SUPER_ADMIN'),
-            allow.authenticated()
+            allow.ownerDefinedIn('ownerUserSub'),
+            allow.authenticated().to(['read'])
+
         ]),
 
     /* =========================================================
@@ -239,10 +242,10 @@ const schema = a.schema({
                 .queryField("listTasksByWorkspace")
         ])
 
-
         .authorization(allow => [
             allow.group('PLATFORM_SUPER_ADMIN'),
-            allow.authenticated()
+            allow.ownerDefinedIn('ownerUserSub'),
+            allow.authenticated().to(['read', 'update', 'create'])
         ]),
 
     /* =========================================================
@@ -282,7 +285,7 @@ const schema = a.schema({
 
         .authorization(allow => [
             allow.group('PLATFORM_SUPER_ADMIN'),
-            allow.authenticated()
+            allow.ownerDefinedIn('recipientId')
         ]),
 
     /* =========================================================
@@ -317,7 +320,7 @@ const schema = a.schema({
 
         .authorization(allow => [
             allow.group('PLATFORM_SUPER_ADMIN'),
-            allow.authenticated().to(['create', 'read'])
+            allow.ownerDefinedIn('userId'),
         ]),
 
     /* =========================================================
@@ -341,7 +344,7 @@ const schema = a.schema({
         ])
         .authorization(allow => [
             allow.group('PLATFORM_SUPER_ADMIN'),
-            allow.authenticated()
+            allow.authenticated().to(['read'])
         ]),
 
     /* =========================================================

@@ -37,7 +37,8 @@ export default function useGlobalNotifications() {
                     },
                     error: (err) => console.error("notif sub error", err),
                 });
-            } catch (err) {
+            } catch (err: any) {
+                if (err?.name === "UserUnAuthenticatedException") return;
                 console.error("notif init error", err);
             }
         }

@@ -1,7 +1,6 @@
 import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { dataClient } from "../libs/data-client";
-import { getTenantId } from "../libs/isTenantAdmin";
-import { fetchAuthSession, getCurrentUser } from "aws-amplify/auth";
+import { fetchAuthSession, getCurrentUser, signOut } from "aws-amplify/auth";
 
 type Role = "OWNER" | "TENANT_ADMIN" | "MEMBER" | null;
 
@@ -16,9 +15,7 @@ type WorkspaceCtx = {
     setWorkspaceId: (id: string | null) => void;
     workspaces: Workspace[];
     memberships: any[];
-    refreshWorkspaces: () => Promise<void>;
 
-    // 🔥 global session
     tenantId: string | null;
     tenantName: string | null;
     role: Role;
@@ -28,7 +25,10 @@ type WorkspaceCtx = {
     isOwner: boolean;
     isTenantAdmin: boolean;
     isMember: boolean;
-    refreshSession: () => Promise<void>;
+
+    refreshSession: () => Promise<string | null>;
+    refreshWorkspaces: () => Promise<void>;
+    switchTenant: (tenantId: string) => void;
 };
 
 const WorkspaceContext = createContext<WorkspaceCtx>({
@@ -36,7 +36,6 @@ const WorkspaceContext = createContext<WorkspaceCtx>({
     setWorkspaceId: () => { },
     workspaces: [],
     memberships: [],
-    refreshWorkspaces: async () => { },
 
     tenantId: null,
     tenantName: null,
@@ -48,82 +47,53 @@ const WorkspaceContext = createContext<WorkspaceCtx>({
     isTenantAdmin: false,
     isMember: false,
 
-    refreshSession: async () => { }
+    refreshSession: async () => null,
+    refreshWorkspaces: async () => { },
+    switchTenant: () => { }
 });
 
 export function WorkspaceProvider({ children }: any) {
     const client = dataClient();
 
-    const [workspaceId, setWorkspaceIdState] = useState<string | null>(() => {
-        return localStorage.getItem("activeWorkspace") || null;
-    });
+    const [workspaceId, setWorkspaceIdState] = useState<string | null>(
+        localStorage.getItem("activeWorkspace")
+    );
 
     const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
-    const workspacesRef = useRef<Workspace[]>([]);
     const [memberships, setMemberships] = useState<any[]>([]);
     const membershipsRef = useRef<any[]>([]);
 
-    // 🔥 global session state
     const [tenantId, setTenantId] = useState<string | null>(null);
     const [tenantName, setTenantName] = useState<string | null>(null);
     const [role, setRole] = useState<Role>(null);
     const [userId, setUserId] = useState<string | null>(null);
     const [email, setEmail] = useState<string | null>(null);
 
+    /* ===============================
+       LOAD SESSION STATE ONLY
+    =============================== */
 
-    function setWorkspaceId(id: string | null) {
-        setWorkspaceIdState(id);
-        if (id) {
-            localStorage.setItem("activeWorkspace", id);
-            // update role to match the new workspace's membership
-            let mem = membershipsRef.current.find((m: any) => m.workspaceId === id);
-
-            // Tenant admin may not have a membership for every workspace they manage.
-            // Fall back: find the workspace's tenantId, then use any admin membership for that tenant.
-            if (!mem) {
-                const ws = workspacesRef.current.find(w => w.id === id);
-                if (ws?.tenantId) {
-                    mem = membershipsRef.current.find(
-                        (m: any) => m.tenantId === ws.tenantId && m.role === "TENANT_ADMIN"
-                    );
-                }
-            }
-
-            if (mem) {
-                setRole(mem.role as Role);
-                setTenantId(mem.tenantId);
-                // Fetch and update tenant name for the new workspace
-                client.models.Tenant.get({ id: mem.tenantId }).then((res: any) => {
-                    setTenantName(res?.data?.companyName ?? null);
-                });
-            }
-        } else {
-            localStorage.removeItem("activeWorkspace");
-        }
-    }
-
-    // 🔥 load full session (user + tenant + role)
-    async function refreshSession() {
+    async function refreshSession(): Promise<string | null> {
         try {
-            // wait until auth fully ready
-            const user = await getCurrentUser();
-            setUserId(user.userId);
-
-            const session = await fetchAuthSession({ forceRefresh: true });
-            const payload: any = session.tokens?.idToken?.payload;
-
-            if (!payload?.sub) {
-                console.warn("No cognito sub yet — skipping membership lookup");
-                return;
+            let user;
+            try {
+                user = await getCurrentUser();
+            } catch (err: any) {
+                if (err?.name === "UserUnAuthenticatedException") {
+                    console.log("Auth not ready yet — skipping session load");
+                    return null;
+                }
+                throw err;
             }
 
-            setEmail(payload?.email ?? null);
+            const sub = user.userId;
+            setUserId(sub);
 
-            // tenant id (your existing working helper)
-            const tid = await getTenantId();
-            if (tid) setTenantId(tid);
+            const session = await fetchAuthSession();
+            const payload: any = session.tokens?.idToken?.payload;
+            if (!payload?.email) return null;
 
-            const sub = payload.sub;
+            setEmail(payload.email);
 
             const res: any = await client.models.Membership.listMembershipsByUser({
                 userSub: sub
@@ -133,82 +103,167 @@ export function WorkspaceProvider({ children }: any) {
             membershipsRef.current = mems;
             setMemberships(mems);
 
-            if (!mems.length) {
-                console.warn("User has no memberships");
-                return;
+            const active = mems.filter((m: any) => m.status === "ACTIVE");
+
+            if (active.length) {
+                const m = active[0];
+
+                setRole(m.role);
+                setTenantId(m.tenantId);
+                setWorkspaceIdState(m.workspaceId);
+                localStorage.setItem("activeWorkspace", m.workspaceId);
+
+                const tenant = await client.models.Tenant.get({ id: m.tenantId });
+                setTenantName(tenant?.data?.companyName || "");
+
+                return m.tenantId; // 🔥 RETURN TENANT
             }
 
-            // choose active workspace — prefer localStorage, fall back to first
-            let active = mems[0];
-            const stored = localStorage.getItem("activeWorkspace");
+            // check pending invite
+            const invRes: any = await client.models.Invitation.listInvitesByEmail({
+                email: payload.email
+            });
 
-            if (stored) {
-                const found = mems.find((m: any) => m.workspaceId === stored);
-                if (found) active = found;
-            } else if (workspaceId) {
-                const found = mems.find((m: any) => m.workspaceId === workspaceId);
-                if (found) active = found;
+            const pendingInvite = invRes?.data?.find((i: any) => i.status === "PENDING");
+            if (pendingInvite) {
+                console.log("Pending invite exists — allow session");
+                return null;
             }
 
-            // set role + tenant from active membership
-            setRole(active.role as any);
-            setTenantId(active.tenantId);
-            setWorkspaceIdState(active.workspaceId);
-            localStorage.setItem("activeWorkspace", active.workspaceId);
-
-            // load tenant name
-            try {
-                const tenantRes: any = await client.models.Tenant.get({
-                    id: active.tenantId
-                });
-                setTenantName(tenantRes?.data?.companyName ?? null);
-            } catch { }
-
+            console.warn("User removed — signing out");
+            await signOut();
+            window.location.href = "/";
+            return null;
 
         } catch (err) {
-            console.error("session load error", err);
+            console.error("refreshSession error:", err);
+            return null;
         }
     }
 
+    /* ===============================
+       LOAD WORKSPACES
+    =============================== */
 
-    // 🔥 workspaces
-    async function refreshWorkspaces() {
-        const mems = membershipsRef.current;
-        const isTAdmin = mems.some((m: any) => m.role === "TENANT_ADMIN");
+    async function loadWorkspaces(currentTenantId: string, source?: any[]) {
+        const list =
+            source && source.length ? source :
+            membershipsRef.current.length ? membershipsRef.current : memberships;
 
-        let ws: Workspace[] = [];
+        const activeMemberships = list.filter(
+            (m: any) =>
+                m.tenantId === currentTenantId &&
+                m.status === "ACTIVE"
+        );
 
-        if (isTAdmin) {
-            // tenant admins see all workspaces across ALL their admin tenants
-            const adminTenantIds = [...new Set(
-                mems.filter((m: any) => m.role === "TENANT_ADMIN").map((m: any) => m.tenantId)
-            )];
-            const allWs: Workspace[] = [];
-            for (const tid of adminTenantIds) {
-                const res = await client.models.Workspace.workspacesByTenant({ tenantId: tid });
-                allWs.push(...((res.data || []) as Workspace[]));
-            }
-            ws = allWs;
-        } else {
-            // owners/members: load only workspaces they have memberships in
-            const wsIds = [...new Set(mems.map((m: any) => m.workspaceId).filter(Boolean))];
-            const results = await Promise.all(
-                wsIds.map(id => client.models.Workspace.get({ id }))
-            );
-            ws = results.map(r => r.data).filter(Boolean) as Workspace[];
-        }
+        const wsIds = activeMemberships.map((m: any) => m.workspaceId);
+
+        const results = await Promise.all(
+            wsIds.map((id: string) => client.models.Workspace.get({ id }))
+        );
+
+        const ws = results.map(r => r.data).filter(Boolean) as Workspace[];
 
         setWorkspaces(ws);
-        workspacesRef.current = ws;
+    }
 
-        if (!workspaceId && ws.length > 0) {
-            setWorkspaceId(ws[0].id);
+    useEffect(() => {
+        if (!tenantId || memberships.length === 0) return;
+
+        loadWorkspaces(tenantId, memberships);
+
+    }, [tenantId, memberships]);
+
+    async function refreshWorkspaces() {
+        if (!tenantId) return;
+        await loadWorkspaces(tenantId, membershipsRef.current);
+    }
+
+    /* ===============================
+       SWITCH TENANT
+    =============================== */
+
+    function switchTenant(newTenantId: string) {
+        const list = membershipsRef.current.length ? membershipsRef.current : memberships;
+        let mem = list.find(
+            (m: any) =>
+                m.tenantId === newTenantId &&
+                m.status === "ACTIVE"
+        );
+
+        if (!mem) {
+            mem = list.find(
+                (m: any) =>
+                    m.tenantId === newTenantId &&
+                    m.status !== "REMOVED"
+            );
+        }
+
+        setTenantId(newTenantId);
+        setWorkspaces([]);
+
+        if (mem?.workspaceId) {
+            setWorkspaceIdState(mem.workspaceId);
+            setRole(mem.role);
+            localStorage.setItem("activeWorkspace", mem.workspaceId);
+        } else {
+            setWorkspaceIdState(null);
+            setRole(null);
+            localStorage.removeItem("activeWorkspace");
+        }
+
+        client.models.Tenant.get({ id: newTenantId }).then((res: any) => {
+            setTenantName(res?.data?.companyName ?? null);
+        });
+
+        loadWorkspaces(newTenantId, membershipsRef.current);
+    }
+
+    /* ===============================
+       SWITCH WORKSPACE
+    =============================== */
+
+    function setWorkspaceId(id: string | null) {
+        if (!id) return;
+
+        setWorkspaceIdState(id);
+        localStorage.setItem("activeWorkspace", id);
+
+        const mem = membershipsRef.current.find(
+            (m: any) =>
+                m.workspaceId === id &&
+                m.status === "ACTIVE"
+        );
+
+        if (mem) {
+            setRole(mem.role);
+            setTenantId(mem.tenantId);
         }
     }
 
-    // 🔥 initial load order
+    /* =============================== */
+
     useEffect(() => {
-        refreshSession().then(refreshWorkspaces);
+        async function init() {
+            try {
+                const s = await fetchAuthSession();
+                if (!s.tokens?.accessToken) {
+                    console.log("Auth not ready yet — skipping");
+                    return;
+                }
+
+                const tid = await refreshSession();
+
+                if (tid) {
+                    await loadWorkspaces(tid, membershipsRef.current); // 🔥 DIRECT LOAD
+                }
+
+            } catch {
+                console.log("Not authenticated");
+            }
+        }
+
+        init();
     }, []);
 
     return (
@@ -218,7 +273,6 @@ export function WorkspaceProvider({ children }: any) {
                 setWorkspaceId,
                 workspaces,
                 memberships,
-                refreshWorkspaces,
 
                 tenantId,
                 tenantName,
@@ -230,7 +284,9 @@ export function WorkspaceProvider({ children }: any) {
                 isTenantAdmin: role === "TENANT_ADMIN",
                 isMember: role === "MEMBER",
 
-                refreshSession
+                refreshSession,
+                refreshWorkspaces,
+                switchTenant
             }}
         >
             {children}

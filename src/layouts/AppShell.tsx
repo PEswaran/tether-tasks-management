@@ -1,15 +1,12 @@
 import { Link, Outlet, useNavigate, useLocation } from "react-router-dom";
 import { signOut } from "aws-amplify/auth";
 import { LogOut, PanelLeftClose, PanelLeftOpen } from "lucide-react";
-
-import NotificationBell from "../shared-components/notification-bell";
+import NotificationBell from "../components/ui/notification-bell";
 import { useWorkspace } from "../shared-components/workspace-context";
-import GlobalCreateTaskBtn from "../pages/shared/GlobalCreateTaskBtn";
 import { useEffect, useState } from "react";
 import { dataClient } from "../libs/data-client";
 import { getCurrentUser } from "aws-amplify/auth";
-
-
+import GlobalCreateTaskBtn from "../components/ui/global-create-task-btn";
 
 type NavItem = {
     label: string;
@@ -29,46 +26,71 @@ export default function AppShell({
     const navigate = useNavigate();
     const location = useLocation();
 
-    const { role, workspaceId, setWorkspaceId, workspaces, memberships, tenantName } = useWorkspace();
+    const {
+        role,
+        memberships,
+        tenantName,
+        tenantId,
+        workspaceId,
+        switchTenant,
+    } = useWorkspace();
+
     const displayName = tenantName || companyName || "TetherTasks";
 
-    // Build tenantId → companyName map for multi-tenant disambiguation
     const [tenantNames, setTenantNames] = useState<Record<string, string>>({});
-    const isMultiTenant = (() => {
-        const tenantIds = new Set(
-            memberships.filter((m: any) => m.role === "TENANT_ADMIN").map((m: any) => m.tenantId)
-        );
-        return tenantIds.size > 1;
-    })();
+    const [companyOpen, setCompanyOpen] = useState(false);
 
-    useEffect(() => {
-        if (!isMultiTenant) return;
-        const tenantIds = [...new Set(
-            memberships.filter((m: any) => m.role === "TENANT_ADMIN").map((m: any) => m.tenantId)
-        )];
-        const clientRef = dataClient();
-        Promise.all(tenantIds.map(tid => clientRef.models.Tenant.get({ id: tid }))).then(results => {
-            const map: Record<string, string> = {};
-            results.forEach((r: any) => {
-                if (r?.data?.id && r?.data?.companyName) {
-                    map[r.data.id] = r.data.companyName;
-                }
-            });
-            setTenantNames(map);
-        });
-    }, [memberships, isMultiTenant]);
-
-    /* ROLE COLOR */
-    function roleColor() {
-        if (!role) return "role-gray";
-        if (role.includes("SUPER")) return "role-purple";
-        if (role.includes("ADMIN")) return "role-blue";
-        if (role === "OWNER") return "role-gold";
-        return "role-gray";
-    }
     const client = dataClient();
-    const [userEmail, setUserEmail] = useState<string>("");
-    const [userName, setUserName] = useState<string>("");
+
+    /* ---------------- LOAD TENANT NAMES FOR ALL ROLES ---------------- */
+    useEffect(() => {
+        if (!memberships.length) return;
+
+        const ids = [...new Set(memberships.map((m: any) => m.tenantId).filter(Boolean))];
+
+        Promise.all(ids.map(id => client.models.Tenant.get({ id })))
+            .then(results => {
+                const map: Record<string, string> = {};
+                results.forEach((r: any) => {
+                    if (r?.data?.id) {
+                        map[r.data.id] = r.data.companyName || r.data.id;
+                    }
+                });
+                setTenantNames(map);
+            });
+
+    }, [memberships]);
+
+    /* ---------------- BUILD TENANT LIST ---------------- */
+    const tenantIds = [...new Set(memberships.map((m: any) => m.tenantId).filter(Boolean))];
+
+    const tenants = tenantIds.map((tid: string) => {
+        const mem = memberships.find((m: any) => m.tenantId === tid);
+        return {
+            id: tid,
+            name: tenantNames[tid] || "Loading...",
+            role: mem?.role || "MEMBER"
+        };
+    });
+
+    /* ---------------- ROLE SHELL PROTECTION ---------------- */
+    useEffect(() => {
+        if (!role) return;
+
+        if (role === "OWNER" && !location.pathname.startsWith("/owner")) {
+            navigate("/owner");
+        }
+        if (role === "TENANT_ADMIN" && !location.pathname.startsWith("/tenant")) {
+            navigate("/tenant");
+        }
+        if (role === "MEMBER" && !location.pathname.startsWith("/member")) {
+            navigate("/member");
+        }
+    }, [role]);
+
+    /* ---------------- USER PROFILE ---------------- */
+    const [userEmail, setUserEmail] = useState("");
+    const [userName, setUserName] = useState("");
 
     useEffect(() => {
         loadUser();
@@ -79,7 +101,6 @@ export default function AppShell({
             const user = await getCurrentUser();
             const sub = user.userId;
 
-            // try profile table first (best)
             const prof = await client.models.UserProfile.list({
                 filter: { userId: { eq: sub } }
             });
@@ -90,17 +111,16 @@ export default function AppShell({
                 return;
             }
 
-            // fallback to cognito username
             setUserEmail(user.username);
             setUserName(user.username);
+        } catch (err: any) {
+            if (err?.name === "UserUnAuthenticatedException") return;
+            console.error("notif init error", err);
 
-        } catch (err) {
-            console.error("user load error", err);
         }
     }
 
-
-    /* SIDEBAR COLLAPSE */
+    /* ---------------- SIDEBAR COLLAPSE ---------------- */
     const [collapsed, setCollapsed] = useState(
         localStorage.getItem("sidebarCollapsed") === "true"
     );
@@ -109,37 +129,18 @@ export default function AppShell({
         localStorage.setItem("sidebarCollapsed", String(collapsed));
     }, [collapsed]);
 
-    /* COMMAND PALETTE */
-    const [cmdOpen, setCmdOpen] = useState(false);
-
-    useEffect(() => {
-        function handler(e: KeyboardEvent) {
-            if ((e.metaKey || e.ctrlKey) && e.key === "k") {
-                e.preventDefault();
-                setCmdOpen(v => !v);
-            }
-        }
-        window.addEventListener("keydown", handler);
-        return () => window.removeEventListener("keydown", handler);
-    }, []);
-
-    /* PROFILE */
     const [profileOpen, setProfileOpen] = useState(false);
+
+    /* ---------------- UI ---------------- */
     return (
         <div className="app-shell">
 
             {/* SIDEBAR */}
             <aside className={`app-sidebar ${collapsed ? "collapsed" : ""}`}>
-
-                {/* COLLAPSE TOGGLE */}
-                <button
-                    className="collapse-btn"
-                    onClick={() => setCollapsed(!collapsed)}
-                >
+                <button className="collapse-btn" onClick={() => setCollapsed(!collapsed)}>
                     {collapsed ? <PanelLeftOpen size={14} /> : <PanelLeftClose size={14} />}
                 </button>
 
-                {/* BRAND */}
                 <div className="app-brand">
                     <div className="app-logo-tile" onClick={() => navigate("/")}>
                         <img src="/logo.png" className="app-logo" />
@@ -148,40 +149,26 @@ export default function AppShell({
                     {!collapsed && (
                         <div className="brand-text">
                             <div className="app-company">{displayName}</div>
-                            <div className={`role-badge ${roleColor()}`}>
+                            <div className={`role-badge`}>
                                 {role?.replaceAll("_", " ") || "User"}
                             </div>
                         </div>
                     )}
                 </div>
 
-                {/* NAV */}
                 <nav className="app-nav">
-                    {navItems.map((n, i) => {
-                        const prevSection = i > 0 ? navItems[i - 1].section : undefined;
-                        const showSection = n.section && n.section !== prevSection;
-                        return (
-                            <div key={n.path}>
-                                {showSection && !collapsed && (
-                                    <div className="nav-section-label">{n.section}</div>
-                                )}
-                                {showSection && collapsed && (
-                                    <div className="nav-section-divider" />
-                                )}
-                                <Link
-                                    to={n.path}
-                                    data-label={n.label}
-                                    className={location.pathname === n.path ? "active" : ""}
-                                >
-                                    {n.icon && <span className="nav-icon">{n.icon}</span>}
-                                    {!collapsed && n.label}
-                                </Link>
-                            </div>
-                        );
-                    })}
+                    {navItems.map((n) => (
+                        <Link
+                            key={n.path}
+                            to={n.path}
+                            className={location.pathname === n.path ? "active" : ""}
+                        >
+                            {n.icon && <span className="nav-icon">{n.icon}</span>}
+                            {!collapsed && n.label}
+                        </Link>
+                    ))}
                 </nav>
 
-                {/* SIGN OUT */}
                 <div className="sidebar-bottom">
                     <button
                         onClick={async () => {
@@ -196,7 +183,6 @@ export default function AppShell({
                         {!collapsed && "Sign out"}
                     </button>
                 </div>
-
             </aside>
 
             {/* MAIN */}
@@ -205,38 +191,64 @@ export default function AppShell({
                 {/* TOPBAR */}
                 <div className="app-topbar">
 
+                    {/* 🔥 ELITE COMPANY SWITCHER */}
                     <div className="top-left">
-                        {workspaces?.length > 1 && (
-                            <select
-                                className="workspace-switch"
-                                value={workspaceId ?? ""}
-                                onChange={(e) => {
-                                    const newId = e.target.value;
-                                    const mem = memberships.find((m: any) => m.workspaceId === newId);
-                                    const newRole = mem?.role;
-                                    setWorkspaceId(newId);
-                                    // navigate to correct shell if role changed
-                                    if (newRole && newRole !== role) {
-                                        if (newRole === "OWNER") navigate("/owner");
-                                        else if (newRole === "MEMBER") navigate("/member");
-                                        else if (newRole === "TENANT_ADMIN") navigate("/tenant");
-                                    }
-                                }}
-                            >
-                                {workspaces.map((w: any) => {
-                                    const mem = memberships.find((m: any) => m.workspaceId === w.id);
-                                    const tag = mem?.role === "OWNER" ? " (Owner)" : mem?.role === "MEMBER" ? " (Member)" : "";
-                                    const tenantSuffix = isMultiTenant && w.tenantId && tenantNames[w.tenantId]
-                                        ? ` — ${tenantNames[w.tenantId]}`
-                                        : "";
-                                    return <option key={w.id} value={w.id}>{w.name}{tag}{tenantSuffix}</option>;
-                                })}
-                            </select>
-                        )}
+                        {tenants.length > 1 && (
+                            <div className="company-switch-wrap">
 
-                        <div className="search-box" onClick={() => setCmdOpen(true)}>
-                            ⌘K Search
-                        </div>
+                                <div
+                                    className="company-switch"
+                                    onClick={() => setCompanyOpen(v => !v)}
+                                >
+                                    <div className="company-avatar">
+                                        {(tenantName || "C")[0]?.toUpperCase()}
+                                    </div>
+
+                                    <div className="company-meta">
+                                        <div className="company-name">
+                                            {tenantName || "Company"}
+                                        </div>
+                                        <div className="company-role">
+                                            {role?.replaceAll("_", " ")}
+                                        </div>
+                                    </div>
+
+                                    <div className="company-caret">▾</div>
+                                </div>
+
+                                {companyOpen && (
+                                    <div className="company-dropdown">
+                                        {tenants.map((t: any) => {
+                                            const active = t.id === tenantId;
+
+                                            return (
+                                                <div
+                                                    key={t.id}
+                                                    className={`company-option ${active ? "active" : ""}`}
+                                                    onClick={() => {
+                                                        setCompanyOpen(false);
+                                                        switchTenant(t.id);
+                                                    }}
+                                                >
+                                                    <div className="company-avatar small">
+                                                        {t.name?.[0]?.toUpperCase()}
+                                                    </div>
+
+                                                    <div className="company-meta">
+                                                        <div className="company-name">{t.name}</div>
+                                                        <div className="company-role">
+                                                            {t.role?.replaceAll("_", " ")}
+                                                        </div>
+                                                    </div>
+
+                                                    {active && <div className="company-check">✓</div>}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </div>
 
                     <div className="top-right">
@@ -248,18 +260,12 @@ export default function AppShell({
                                 onClick={() => setProfileOpen(!profileOpen)}
                             >
                                 {(userName || userEmail)?.[0]?.toUpperCase() || "U"}
-
                             </div>
 
                             {profileOpen && (
                                 <div className="profile-menu">
-                                    <div className="profile-email">
-                                        {userName || userEmail}
-                                    </div>
-
-                                    <div className="profile-role">
-                                        {role?.replaceAll("_", " ")}
-                                    </div>
+                                    <div className="profile-email">{userName || userEmail}</div>
+                                    <div className="profile-role">{role}</div>
 
                                     <div
                                         className="profile-item danger"
@@ -277,64 +283,11 @@ export default function AppShell({
                 </div>
 
                 <div className="app-content">
-                    {(() => {
-                        const home = navItems[0];
-                        const current = navItems.find(n => n.path !== home.path && location.pathname === n.path);
-                        if (!current) return null;
-                        // Walk parent chain to build crumbs between home and current
-                        const chain: NavItem[] = [];
-                        let cursor: NavItem | undefined = current;
-                        while (cursor && cursor.path !== home.path) {
-                            chain.unshift(cursor);
-                            cursor = cursor.parent ? navItems.find(n => n.path === cursor!.parent) : undefined;
-                        }
-                        return (
-                            <div className="breadcrumb">
-                                <button className="breadcrumb-link" onClick={() => navigate(home.path)}>
-                                    {home.label}
-                                </button>
-                                {chain.map((item, i) => (
-                                    <span key={item.path}>
-                                        <span className="breadcrumb-sep">/</span>
-                                        {i < chain.length - 1
-                                            ? <button className="breadcrumb-link" onClick={() => navigate(item.path)}>{item.label}</button>
-                                            : <span className="breadcrumb-current">{item.label}</span>
-                                        }
-                                    </span>
-                                ))}
-                            </div>
-                        );
-                    })()}
-                    <Outlet />
+                    <Outlet key={`${tenantId || "no-tenant"}:${workspaceId || "no-workspace"}`} />
                 </div>
+
                 <GlobalCreateTaskBtn />
-
             </main>
-
-            {/* COMMAND PALETTE */}
-            {cmdOpen && (
-                <div className="cmd-overlay" onClick={() => setCmdOpen(false)}>
-                    <div className="cmd" onClick={e => e.stopPropagation()}>
-                        <input autoFocus placeholder="Search or jump to..." />
-
-                        <div className="cmd-results">
-                            {navItems.map(n => (
-                                <div
-                                    key={n.path}
-                                    className="cmd-item"
-                                    onClick={() => {
-                                        navigate(n.path);
-                                        setCmdOpen(false);
-                                    }}
-                                >
-                                    {n.label}
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                </div>
-            )}
-
         </div>
     );
 }

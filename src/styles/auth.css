@@ -1,0 +1,134 @@
+.auth-page {
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #6366f1, #06b6d4);
+  font-family: Inter, system-ui, sans-serif;
+}
+
+.auth-card {
+  width: 380px;
+  background: white;
+  padding: 40px;
+  border-radius: 18px;
+  box-shadow: 0 40px 120px rgba(0, 0, 0, 0.25);
+  text-align: center;
+}
+
+.auth-logo {
+  width: 70px;
+  margin-bottom: 12px;
+}
+
+.auth-card h2 {
+  margin: 10px 0 20px;
+  color: #0f172a;
+}
+
+.auth-card input {
+  width: 100%;
+  padding: 12px;
+  margin-bottom: 12px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  font-size: 14px;
+}
+
+.auth-card input:focus {
+  outline: none;
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+}
+
+.auth-card button {
+  width: 100%;
+  padding: 12px;
+  border-radius: 10px;
+  border: none;
+  background: linear-gradient(135deg, #6366f1, #06b6d4);
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.auth-error {
+  background: #fee2e2;
+  color: #dc2626;
+  padding: 8px;
+  border-radius: 8px;
+  font-size: 13px;
+  margin-bottom: 10px;
+}
+
+.auth-page {
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #6366f1, #06b6d4);
+  font-family: Inter, system-ui, sans-serif;
+}
+
+.auth-card {
+  width: 420px;
+  background: #fff;
+  padding: 40px;
+  border-radius: 18px;
+  box-shadow: 0 40px 120px rgba(0, 0, 0, 0.25);
+}
+
+.auth-tabs {
+  display: flex;
+  margin-bottom: 25px;
+  font-weight: 600;
+}
+
+.tab {
+  flex: 1;
+  text-align: center;
+  padding: 14px 0;
+  cursor: pointer;
+  color: #64748b;
+  border-bottom: 2px solid transparent;
+}
+
+.tab.active {
+  color: #0f172a;
+  border-bottom: 3px solid #0ea5a4;
+}
+
+.auth-form input {
+  width: 100%;
+  padding: 12px;
+  margin-bottom: 12px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  font-size: 14px;
+}
+
+.auth-form input:focus {
+  outline: none;
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+}
+
+.auth-form button {
+  width: 100%;
+  padding: 12px;
+  border-radius: 10px;
+  border: none;
+  background: linear-gradient(135deg, #6366f1, #06b6d4);
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.auth-error {
+  background: #fee2e2;
+  color: #dc2626;
+  padding: 8px;
+  border-radius: 8px;
+  font-size: 13px;
+  margin-bottom: 10px;
+}

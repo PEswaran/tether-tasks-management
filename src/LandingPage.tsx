@@ -18,6 +18,7 @@ import {
 interface LandingPageProps {
   onSignIn: () => void;
   onGetStarted: () => void;
+  authMessage?: string;
 }
 
 export default function LandingPage({ onSignIn, onGetStarted }: LandingPageProps) {
