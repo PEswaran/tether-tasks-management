@@ -42,7 +42,7 @@ export default function TenantDetail() {
             const [t, mem, ws, taskRes] = await Promise.all([
                 client.models.Tenant.get({ id: tenantId! }),
                 client.models.Membership.list({ filter: { tenantId: { eq: tenantId! } } }),
-                client.models.Workspace.list({ filter: { tenantId: { eq: tenantId! } } }),
+                client.models.Organization.list({ filter: { tenantId: { eq: tenantId! } } }),
                 client.models.Task.list({ filter: { tenantId: { eq: tenantId! } } }),
             ]);
 
@@ -341,7 +341,7 @@ export default function TenantDetail() {
                         <Kanban size={20} />
                     </div>
                     <div className="kpi-body">
-                        <span className="kpi-label">Workspaces</span>
+                        <span className="kpi-label">Organizations</span>
                         <span className="kpi-value">
                             <CountUp end={workspaces.length} duration={0.8} />
                         </span>
@@ -441,7 +441,7 @@ export default function TenantDetail() {
             </table>
 
             {/* WORKSPACES TABLE */}
-            <h2 style={{ marginTop: 32, marginBottom: 16 }}>Workspaces</h2>
+            <h2 style={{ marginTop: 32, marginBottom: 16 }}>Organizations</h2>
             <table className="table">
                 <thead>
                     <tr>
@@ -452,7 +452,7 @@ export default function TenantDetail() {
                 <tbody>
                     {workspaces.map(ws => {
                         const wsMemberCount = members.filter(
-                            m => m.workspaceId === ws.id && m.status !== "REMOVED"
+                            m => m.organizationId === ws.id && m.status !== "REMOVED"
                         ).length;
                         return (
                             <tr key={ws.id}>
@@ -489,6 +489,8 @@ export default function TenantDetail() {
                             </p>
                             <label>New admin email:</label>
                             <input
+                                id="replace-admin-email"
+                                name="replace_admin_email"
                                 type="email"
                                 value={newAdminEmail}
                                 onChange={(e) => setNewAdminEmail(e.target.value)}
@@ -534,13 +536,15 @@ export default function TenantDetail() {
                         <div className="modal-form">
                             <p>
                                 This will permanently delete <strong>{tenant.companyName}</strong> and
-                                all associated data including members, tasks, workspaces, and the
+                                all associated data including members, tasks, organizations, and the
                                 tenant admin's Cognito account.
                             </p>
                             <label>
                                 Type <strong>{tenant.companyName}</strong> to confirm:
                             </label>
                             <input
+                                id="delete-company-confirm"
+                                name="delete_company_confirm"
                                 type="text"
                                 value={deleteInput}
                                 onChange={(e) => setDeleteInput(e.target.value)}

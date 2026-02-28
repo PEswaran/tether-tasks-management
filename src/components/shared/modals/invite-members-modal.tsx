@@ -4,22 +4,22 @@ import { displayName } from "../../../libs/displayName";
 import { useConfirm } from "../../../shared-components/confirm-context";
 import { isAuthed } from "../../../libs/isAuthed";
 
-type Workspace = {
+type Organization = {
     id: string;
-    name: string;
+    name?: string | null;
 };
 
 export default function InviteMemberModal({
     tenantId,
     tenantName,
-    currentWorkspaceId,
-    workspaces = [],
+    currentOrganizationId,
+    organizations = [],
     onClose,
 }: {
     tenantId: string;
     tenantName?: string | null;
-    currentWorkspaceId?: string | null;
-    workspaces?: Workspace[];
+    currentOrganizationId?: string | null;
+    organizations?: Organization[];
     onClose: () => void;
     onInvited: () => void;
 }) {
@@ -27,7 +27,7 @@ export default function InviteMemberModal({
     const { alert } = useConfirm();
 
     const [email, setEmail] = useState("");
-    const [workspaceId, setWorkspaceId] = useState<string>("");
+    const [organizationId, setOrganizationId] = useState<string>("");
     const [role, setRole] = useState<"MEMBER" | "OWNER">("MEMBER");
     const [loading, setLoading] = useState(false);
     const [success, setSuccess] = useState(false);
@@ -45,9 +45,9 @@ export default function InviteMemberModal({
     =============================== */
 
     useEffect(() => {
-        // default workspace
-        if (currentWorkspaceId) setWorkspaceId(currentWorkspaceId);
-        else if (workspaces.length === 1) setWorkspaceId(workspaces[0].id);
+        // default organization
+        if (currentOrganizationId) setOrganizationId(currentOrganizationId);
+        else if (organizations.length === 1) setOrganizationId(organizations[0].id);
 
         loadMembers();
     }, []);
@@ -70,7 +70,7 @@ export default function InviteMemberModal({
     function workspaceHasOwner(wsId: string) {
         return members.some(
             (m: any) =>
-                m.workspaceId === wsId &&
+                m.organizationId === wsId &&
                 m.role === "OWNER" &&
                 m.status === "ACTIVE"
         );
@@ -85,13 +85,13 @@ export default function InviteMemberModal({
             return;
         }
 
-        if (!workspaceId) {
-            await alert({ title: "Missing Workspace", message: "Select workspace", variant: "warning" });
+        if (!organizationId) {
+            await alert({ title: "Missing Organization", message: "Select organization", variant: "warning" });
             return;
         }
 
-        if (role === "OWNER" && workspaceHasOwner(workspaceId)) {
-            await alert({ title: "Owner Exists", message: "Workspace already has an owner", variant: "warning" });
+        if (role === "OWNER" && workspaceHasOwner(organizationId)) {
+            await alert({ title: "Owner Exists", message: "Organization already has an owner", variant: "warning" });
             return;
         }
 
@@ -100,7 +100,7 @@ export default function InviteMemberModal({
         try {
             const result = await client.mutations.inviteMemberToOrg({
                 email: email.trim().toLowerCase(),
-                workspaceId,
+                organizationId,
                 tenantId,
                 role,
             });
@@ -136,7 +136,7 @@ export default function InviteMemberModal({
                     <div className="modal-sub">
                         {tenantName
                             ? `Add users to ${tenantName}`
-                            : "Add users to your workspace"}
+                            : "Add users to your organization"}
                     </div>
                 </div>
 
@@ -155,8 +155,10 @@ export default function InviteMemberModal({
                         <div className="modal-body">
 
                             {/* EMAIL */}
-                            <label>Email address</label>
+                            <label htmlFor="invite-email">Email address</label>
                             <input
+                                id="invite-email"
+                                name="invite_email"
                                 type="email"
                                 placeholder="name@company.com"
                                 value={email}
@@ -164,23 +166,27 @@ export default function InviteMemberModal({
                             />
 
                             {/* WORKSPACE SELECT */}
-                            <label>Workspace</label>
+                            <label htmlFor="invite-organization">Organization</label>
                             <select
+                                id="invite-organization"
+                                name="invite_organization"
                                 className="modal-select"
-                                value={workspaceId}
-                                onChange={(e) => setWorkspaceId(e.target.value)}
+                                value={organizationId}
+                                onChange={(e) => setOrganizationId(e.target.value)}
                             >
-                                <option value="">Select workspace</option>
-                                {workspaces.map(ws => (
-                                    <option key={ws.id} value={ws.id}>
-                                        {ws.name}
+                                <option value="">Select organization</option>
+                                {organizations.map(org => (
+                                    <option key={org.id} value={org.id}>
+                                        {org.name}
                                     </option>
                                 ))}
                             </select>
 
                             {/* ROLE */}
-                            <label>Role</label>
+                            <label htmlFor="invite-role">Role</label>
                             <select
+                                id="invite-role"
+                                name="invite_role"
                                 className="modal-select"
                                 value={role}
                                 onChange={(e) => setRole(e.target.value as any)}
@@ -190,9 +196,9 @@ export default function InviteMemberModal({
                             </select>
 
                             {/* OWNER WARNING */}
-                            {role === "OWNER" && workspaceHasOwner(workspaceId) && (
+                            {role === "OWNER" && workspaceHasOwner(organizationId) && (
                                 <div className="modal-warning">
-                                    ⚠ This workspace already has an owner
+                                    ⚠ This organization already has an owner
                                 </div>
                             )}
 

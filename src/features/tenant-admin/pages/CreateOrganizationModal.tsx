@@ -2,11 +2,20 @@ import { useState } from "react";
 import { fetchAuthSession } from "aws-amplify/auth";
 import { dataClient } from "../../../libs/data-client";
 import { useConfirm } from "../../../shared-components/confirm-context";
+import { getPlanLimits, formatPlanLimitMessage } from "../../../libs/planLimits";
+
+function ensureString(value: string | null | undefined, label: string): string {
+    if (!value) {
+        throw new Error(`${label} is required`);
+    }
+    return value;
+}
 
 type InviteResult = { email: string; role: string; success: boolean; message: string };
 
 export default function CreateOrganizationModal({ tenantId, onClose, onCreated }: { tenantId: string | null; onClose: () => void; onCreated: () => void }) {
     const client = dataClient();
+    const models = client.models as any;
     const { alert } = useConfirm();
 
     const [step, setStep] = useState<"create" | "invite" | "summary">("create");
@@ -24,10 +33,10 @@ export default function CreateOrganizationModal({ tenantId, onClose, onCreated }
     const [createdOrgId, setCreatedOrgId] = useState("");
     const [inviteResults, setInviteResults] = useState<InviteResult[]>([]);
 
-    // Step 1: create the workspace
+    // Step 1: create the organization
     async function handleCreate() {
         if (!name.trim()) {
-            await alert({ title: "Missing Name", message: "Enter a workspace name", variant: "warning" });
+            await alert({ title: "Missing Name", message: "Enter an organization name", variant: "warning" });
             return;
         }
 
@@ -38,12 +47,31 @@ export default function CreateOrganizationModal({ tenantId, onClose, onCreated }
                 setLoading(false);
                 return;
             }
+            const tenantIdForApi: string = ensureString(tenantId, "tenantId");
+
+            const tenantRes = await models.Tenant.get({ id: tenantIdForApi });
+            const plan = tenantRes.data?.plan;
+            const limits = getPlanLimits(plan);
+
+            const orgCountRes = await models.Organization.list({
+                filter: { tenantId: { eq: tenantIdForApi } },
+            });
+            const existingOrgs = (orgCountRes.data || []).filter((o: any) => o.isActive !== false).length;
+            if (existingOrgs >= limits.orgs) {
+                await alert({
+                    title: "Organization limit reached",
+                    message: `You already have ${existingOrgs} organization(s) (plan: ${plan || "Free"}). ${formatPlanLimitMessage(plan)}`,
+                    variant: "warning",
+                });
+                setLoading(false);
+                return;
+            }
 
             const session = await fetchAuthSession();
             const sub = session.tokens?.accessToken?.payload?.sub as string;
 
-            const result = await client.models.Workspace.create({
-                tenantId,
+            const result = await models.Organization.create({
+                tenantId: tenantIdForApi,
                 name: name.trim(),
                 description: description.trim() || undefined,
                 createdBy: sub,
@@ -51,7 +79,7 @@ export default function CreateOrganizationModal({ tenantId, onClose, onCreated }
             });
 
             if (!result.data?.id) {
-                await alert({ title: "Error", message: "Error creating workspace — no ID returned", variant: "danger" });
+                await alert({ title: "Error", message: "Error creating organization — no ID returned", variant: "danger" });
                 setLoading(false);
                 return;
             }
@@ -60,7 +88,7 @@ export default function CreateOrganizationModal({ tenantId, onClose, onCreated }
             setStep("invite");
         } catch (err) {
             console.error(err);
-            await alert({ title: "Error", message: "Error creating workspace", variant: "danger" });
+            await alert({ title: "Error", message: "Error creating organization", variant: "danger" });
         }
         setLoading(false);
     }
@@ -106,7 +134,7 @@ export default function CreateOrganizationModal({ tenantId, onClose, onCreated }
             try {
                 const res = await client.mutations.inviteMemberToOrg({
                     email: invite.email,
-                    workspaceId: createdOrgId,
+                    organizationId: createdOrgId,
                     tenantId: tenantId!,
                     role: invite.role,
                 });
@@ -206,26 +234,30 @@ export default function CreateOrganizationModal({ tenantId, onClose, onCreated }
         );
     }
 
-    // ─── Step 1: Create Workspace ───
+    // ─── Step 1: Create Organization ───
     if (step === "create") {
         return (
             <div className="modal-backdrop">
                 <div className="modal modern">
                     <div className="modal-header">
-                        <h2>Create Workspace</h2>
-                        <div className="modal-sub">Set up a new workspace for your team</div>
+                        <h2>Create Organization</h2>
+                        <div className="modal-sub">Set up a new organization for your team</div>
                     </div>
 
                     <div className="modal-body">
-                        <label>Name</label>
+                        <label htmlFor="org-name">Name</label>
                         <input
+                            id="org-name"
+                            name="org_name"
                             placeholder="e.g. Marketing, Engineering"
                             value={name}
                             onChange={(e) => setName(e.target.value)}
                         />
 
-                        <label>Description</label>
+                        <label htmlFor="org-description">Description</label>
                         <input
+                            id="org-description"
+                            name="org_description"
                             placeholder="Optional"
                             value={description}
                             onChange={(e) => setDescription(e.target.value)}
@@ -259,8 +291,10 @@ export default function CreateOrganizationModal({ tenantId, onClose, onCreated }
                 <div className="modal-body">
 
                     {/* OWNER */}
-                    <label>Owner (optional, 1 max)</label>
+                    <label htmlFor="org-owner-email">Owner (optional, 1 max)</label>
                     <input
+                        id="org-owner-email"
+                        name="org_owner_email"
                         type="email"
                         placeholder="owner@company.com"
                         value={ownerEmail}
@@ -268,10 +302,12 @@ export default function CreateOrganizationModal({ tenantId, onClose, onCreated }
                     />
 
                     {/* MEMBERS */}
-                    <label style={{ marginTop: 8 }}>Members (optional)</label>
+                    <label htmlFor="org-member-email-0" style={{ marginTop: 8 }}>Members (optional)</label>
                     {memberEmails.map((email, i) => (
                         <div key={i} style={{ display: "flex", alignItems: "center", gap: 8 }}>
                             <input
+                                id={`org-member-email-${i}`}
+                                name={`org_member_email_${i}`}
                                 type="email"
                                 placeholder="member@company.com"
                                 value={email}

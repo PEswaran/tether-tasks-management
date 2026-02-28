@@ -70,9 +70,9 @@ export default function LandingPage({ onSignIn, onGetStarted }: LandingPageProps
             One Dashboard. <span>Every Company.</span>
           </h1>
           <p>
-            Manage all your organizations, teams, and tasks from a single
-            account. Built for consultants, agencies, and founders who run
-            more than one company.
+            Manage organizations, workspaces, taskboards, and team execution
+            from one login. Built for operators who need control, visibility,
+            and clear capacity planning as they scale.
           </p>
           <div className="landing-hero-buttons">
             <button className="landing-btn landing-btn-primary landing-btn-lg" onClick={onGetStarted}>
@@ -80,10 +80,31 @@ export default function LandingPage({ onSignIn, onGetStarted }: LandingPageProps
             </button>
             <button
               className="landing-btn landing-btn-outline landing-btn-lg"
-              onClick={() => scrollTo("features")}
+              onClick={() => scrollTo("pricing")}
             >
-              See How It Works
+              View Plans
             </button>
+          </div>
+        </div>
+      </section>
+
+      {/* ========== CAPACITY STRIP ========== */}
+      <section className="landing-capacity-strip">
+        <div className="landing-capacity-grid">
+          <div className="landing-capacity-card">
+            <div className="landing-capacity-label">Starter Capacity</div>
+            <div className="landing-capacity-value">1 org · 1 workspace</div>
+            <p>Ideal for solo operators validating process.</p>
+          </div>
+          <div className="landing-capacity-card featured">
+            <div className="landing-capacity-label">Professional Capacity</div>
+            <div className="landing-capacity-value">3 orgs · 5 workspaces/org</div>
+            <p>Up to 15 workspaces total with room for client growth.</p>
+          </div>
+          <div className="landing-capacity-card">
+            <div className="landing-capacity-label">Enterprise Capacity</div>
+            <div className="landing-capacity-value">100 orgs · 100 workspaces/org</div>
+            <p>High-scale operations with strict separation by organization.</p>
           </div>
         </div>
       </section>
@@ -113,11 +134,11 @@ export default function LandingPage({ onSignIn, onGetStarted }: LandingPageProps
         <div className="landing-features-grid">
           {[
             { icon: <Building2 size={24} />, title: "Multi-Company Management", desc: "Switch between organizations instantly. Each company gets its own workspaces, members, and data — completely isolated." },
-            { icon: <LayoutGrid size={24} />, title: "Workspaces", desc: "Organize projects into dedicated workspaces with their own members and task boards." },
+            { icon: <LayoutGrid size={24} />, title: "Workspace Capacity Controls", desc: "Apply plan-aware workspace limits per organization so growth stays intentional." },
             { icon: <Kanban size={24} />, title: "Kanban Boards", desc: "Visual task boards with drag-and-drop columns to track work from start to finish." },
             { icon: <Shield size={24} />, title: "Role-Based Access", desc: "Fine-grained permissions for admins, owners, and members across every organization." },
             { icon: <Bell size={24} />, title: "Notifications", desc: "Real-time alerts keep your team informed about task assignments and updates." },
-            { icon: <ClipboardList size={24} />, title: "Audit Trail", desc: "Full activity logs so you can see who did what and when — complete transparency." },
+            { icon: <ClipboardList size={24} />, title: "Audit Trail", desc: "Track key admin actions and role changes with a clean activity history." },
           ].map((f) => (
             <div className="landing-feature-card" key={f.title}>
               <div className="landing-feature-icon">{f.icon}</div>
@@ -195,7 +216,7 @@ export default function LandingPage({ onSignIn, onGetStarted }: LandingPageProps
               <li><Check size={16} /> 1 organization</li>
               <li><Check size={16} /> 1 workspace</li>
               <li><Check size={16} /> Up to 5 members</li>
-              <li><Check size={16} /> Kanban boards</li>
+              <li><Check size={16} /> Core taskboards + assignments</li>
             </ul>
             <button className="landing-btn landing-btn-outline" onClick={onGetStarted}>
               Get Started
@@ -212,9 +233,9 @@ export default function LandingPage({ onSignIn, onGetStarted }: LandingPageProps
             </div>
             <ul className="landing-pricing-features">
               <li><Check size={16} /> 3 organizations</li>
-              <li><Check size={16} /> Unlimited workspaces</li>
+              <li><Check size={16} /> 5 workspaces per organization</li>
               <li><Check size={16} /> Up to 50 members</li>
-              <li><Check size={16} /> Audit trail</li>
+              <li><Check size={16} /> Admin control center + audit trail</li>
             </ul>
             <button className="landing-btn landing-btn-primary" onClick={onGetStarted}>
               Start Free Trial
@@ -229,8 +250,8 @@ export default function LandingPage({ onSignIn, onGetStarted }: LandingPageProps
               $99<span>/mo</span>
             </div>
             <ul className="landing-pricing-features">
-              <li><Check size={16} /> Unlimited organizations</li>
-              <li><Check size={16} /> Unlimited workspaces</li>
+              <li><Check size={16} /> Up to 100 organizations</li>
+              <li><Check size={16} /> Up to 100 workspaces per organization</li>
               <li><Check size={16} /> Unlimited members</li>
               <li><Check size={16} /> Dedicated support</li>
             </ul>
@@ -251,8 +272,9 @@ export default function LandingPage({ onSignIn, onGetStarted }: LandingPageProps
         <div className="landing-faq-list">
           {[
             { q: "Can I manage multiple companies from one account?", a: "Yes — it's what TetherTasks is built for. Unlike other task tools that force you to create separate accounts, you can switch between organizations instantly from a single dashboard." },
-            { q: "How many organizations can I have?", a: "It depends on your plan. Starter includes 1 organization, Professional supports up to 3, and Enterprise gives you unlimited organizations. Upgrade anytime as you grow." },
-            { q: "Is there a free plan?", a: "Yes! Our Starter plan is completely free and includes 1 organization, 1 workspace, and up to 5 team members. No credit card required." },
+            { q: "How many organizations can I have?", a: "It depends on your plan. Starter includes 1 organization, Professional supports 3 organizations, and Enterprise supports up to 100 organizations." },
+            { q: "How do workspace limits work?", a: "Workspace limits are enforced per organization. Professional includes 5 workspaces per organization (up to 15 total across 3 organizations)." },
+            { q: "Is there a free plan?", a: "Yes. Starter is free and includes 1 organization, 1 workspace, and up to 5 team members." },
             { q: "Is my data isolated between companies?", a: "Completely. Each organization gets its own workspaces, members, tasks, and data. Nothing is shared between organizations unless you choose to." },
             { q: "Can I upgrade or downgrade anytime?", a: "Absolutely. You can switch between plans at any time. Changes take effect immediately, and billing is prorated." },
             { q: "Is my data secure?", a: "Yes. We use AWS infrastructure with encryption at rest and in transit, role-based access controls, and comprehensive audit logging." },
@@ -277,8 +299,8 @@ export default function LandingPage({ onSignIn, onGetStarted }: LandingPageProps
       <section className="landing-cta-banner">
         <h2>Stop Juggling Logins</h2>
         <p>
-          Manage every company, team, and task from one account.
-          Start free — upgrade when you add more organizations.
+          Run every organization from one control center with clear capacity
+          limits, cleaner handoffs, and faster execution.
         </p>
         <button className="landing-btn landing-btn-white landing-btn-lg" onClick={onGetStarted}>
           Create Free Account <ArrowRight size={18} />

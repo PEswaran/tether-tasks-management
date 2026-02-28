@@ -114,16 +114,20 @@ export default function CreateTenantModal({ onClose, onCreated }: Props) {
                         <div className="modal-form">
 
                             {/* COMPANY NAME */}
-                            <label>Company Name</label>
+                            <label htmlFor="tenant-company-name">Company Name</label>
                             <input
+                                id="tenant-company-name"
+                                name="tenant_company_name"
                                 value={companyName}
                                 onChange={(e) => setCompanyName(e.target.value)}
                                 placeholder="Acme Inc"
                             />
 
                             {/* ADMIN EMAIL */}
-                            <label>Admin Email</label>
+                            <label htmlFor="tenant-admin-email">Admin Email</label>
                             <input
+                                id="tenant-admin-email"
+                                name="tenant_admin_email"
                                 type="email"
                                 value={adminEmail}
                                 onChange={(e) => setAdminEmail(e.target.value)}
@@ -131,8 +135,8 @@ export default function CreateTenantModal({ onClose, onCreated }: Props) {
                             />
 
                             {/* PLAN SELECTOR */}
-                            <label>Subscription Plan</label>
-                            <div style={{ display: "flex", gap: 12, marginTop: 4 }}>
+                            <label htmlFor="tenant-plan">Subscription Plan</label>
+                            <div id="tenant-plan" style={{ display: "flex", gap: 12, marginTop: 4 }}>
                                 {PLANS.map(plan => {
                                     const isActive = selectedPlan === plan.id;
                                     return (

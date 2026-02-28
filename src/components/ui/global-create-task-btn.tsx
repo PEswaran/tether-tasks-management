@@ -6,66 +6,37 @@ import { Plus } from "lucide-react";
 
 export default function GlobalCreateTaskButton() {
     const client = dataClient();
-    const { workspaceId, tenantId, isTenantAdmin } = useWorkspace();
+    const { workspaceId, organizationId, tenantId, isTenantAdmin } = useWorkspace();
 
     const [open, setOpen] = useState(false);
     const [boards, setBoards] = useState<any[]>([]);
     const [selectedBoard, setSelectedBoard] = useState<any>(null);
-    const [members, setMembers] = useState<any[]>([]);
 
     useEffect(() => {
-        loadContext();
-    }, [workspaceId, tenantId, isTenantAdmin]);
+        loadBoards();
+    }, [workspaceId, organizationId, tenantId, isTenantAdmin]);
 
-    async function loadContext() {
+    async function loadBoards() {
         if (!tenantId) return;
         if (!isTenantAdmin && !workspaceId) return;
 
         try {
-            // Tenant admins: load boards across entire tenant
-            // Owners/Members: load boards for active workspace only
             const boardFilter = isTenantAdmin
-                ? { tenantId: { eq: tenantId } }
+                ? organizationId
+                    ? { organizationId: { eq: organizationId } }
+                    : { tenantId: { eq: tenantId } }
                 : { workspaceId: { eq: workspaceId! } };
 
-            const [boardRes, profRes] = await Promise.all([
-                client.models.TaskBoard.list({ filter: boardFilter }),
-                client.models.UserProfile.list({ filter: { tenantId: { eq: tenantId } } }),
-            ]);
-
+            const boardRes = await client.models.TaskBoard.list({ filter: boardFilter });
             const wsBoards = boardRes.data || [];
             setBoards(wsBoards);
             setSelectedBoard(wsBoards[0] || null);
-
-            const profiles = profRes.data || [];
-            const profileByUser = new Map(profiles.map((p: any) => [p.userId, p]));
-
-            // Load members — for tenant admin use tenant-wide profiles, otherwise workspace memberships
-            if (!isTenantAdmin && workspaceId) {
-                const memRes = await client.models.Membership.listMembershipsByWorkspace({ workspaceId });
-                const activeMembers = (memRes.data || []).filter((m: any) => m.status !== "REMOVED");
-                const enriched = activeMembers.map((m: any) => ({
-                    ...m,
-                    email: profileByUser.get(m.userSub)?.email || m.userSub,
-                    firstName: profileByUser.get(m.userSub)?.firstName,
-                    lastName: profileByUser.get(m.userSub)?.lastName,
-                }));
-                setMembers(enriched);
-            } else {
-                const enriched = profiles.map((p: any) => ({
-                    userSub: p.userId,
-                    email: p.email || p.userId,
-                    firstName: p.firstName,
-                    lastName: p.lastName,
-                }));
-                setMembers(enriched);
-            }
         } catch (err) {
             console.error("Global create load error", err);
         }
     }
 
-    if (!workspaceId) return null;
+    if (!workspaceId && !isTenantAdmin) return null;
 
     return (
         <>
@@ -102,6 +73,8 @@ export default function GlobalCreateTaskButton() {
                         }}>
                             <label style={{ fontSize: 13, fontWeight: 500 }}>Board:</label>
                             <select
+                                id="global-task-board-select"
+                                name="global_task_board_select"
                                 className="modal-select"
                                 style={{ maxWidth: 260 }}
                                 value={selectedBoard.id}
@@ -118,7 +91,6 @@ export default function GlobalCreateTaskButton() {
                     )}
                     <CreateTaskModal
                         board={selectedBoard}
-                        members={members}
                         onClose={() => setOpen(false)}
                         onCreated={() => { setOpen(false); }}
                     />

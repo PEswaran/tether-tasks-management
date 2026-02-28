@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { fetchAuthSession } from "aws-amplify/auth";
 import { dataClient } from "../../../libs/data-client";
 import { getMyMemberships } from "../../../libs/isOwner";
 import { useWorkspace } from "../../../shared-components/workspace-context";
@@ -11,14 +10,13 @@ import {
 } from "recharts";
 import {
     LayoutDashboard, Users, CheckCircle2, ListTodo,
-    Clock, TrendingUp, Kanban, ArrowUpRight, Building2,
+    Clock, TrendingUp, Kanban, ArrowUpRight,
 } from "lucide-react";
 import { displayName } from "../../../libs/displayName";
 
 type Stats = {
     boards: number;
     members: number;
-    assignedToMe: number;
     todo: number;
     inProgress: number;
     done: number;
@@ -26,15 +24,34 @@ type Stats = {
     pendingInvites: number;
 };
 
+function enrichBoardsWithCounts(boardList: any[], tasks: any[]) {
+    const map = new Map<string, { todo: number; inProgress: number; done: number; total: number }>();
+    tasks.forEach((t: any) => {
+        const bid = t.taskBoardId;
+        if (!bid) return;
+        if (!map.has(bid)) map.set(bid, { todo: 0, inProgress: 0, done: 0, total: 0 });
+        const c = map.get(bid)!;
+        c.total++;
+        if (t.status === "TODO") c.todo++;
+        else if (t.status === "IN_PROGRESS") c.inProgress++;
+        else if (t.status === "DONE") c.done++;
+    });
+    return boardList.map((b: any) => ({
+        ...b,
+        _counts: map.get(b.id) || { todo: 0, inProgress: 0, done: 0, total: 0 },
+    }));
+}
+
 export default function OwnerDashboard() {
     const client = dataClient();
     const navigate = useNavigate();
-    const { workspaceId, workspaces, tenantId } = useWorkspace();
+    const { workspaceId, tenantId, workspaces } = useWorkspace();
 
     const [stats, setStats] = useState<Stats>({
-        boards: 0, members: 0, assignedToMe: 0, todo: 0,
+        boards: 0, members: 0, todo: 0,
         inProgress: 0, done: 0, total: 0, pendingInvites: 0,
     });
+    const [boards, setBoards] = useState<any[]>([]);
     const [recentMembers, setRecentMembers] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -47,20 +64,15 @@ export default function OwnerDashboard() {
             const active = memberships.filter((m: any) => m.status !== "REMOVED");
             if (!tenantId) { setLoading(false); return; }
 
-            const session = await fetchAuthSession();
-            const mySub = session.tokens?.accessToken?.payload?.sub as string | undefined;
-
-            const ownerWsIds = active
+            const ownerOrgIds = active
                 .filter((m: any) => m.role === "OWNER" && m.tenantId === tenantId)
-                .map((m: any) => m.workspaceId);
-
+                .map((m: any) => m.organizationId || m.workspaceId)
+                .filter(Boolean);
 
             if (workspaceId) {
-                await loadWorkspace(workspaceId, mySub);
-                console.log(tenantId);
-                console.log(mySub);
+                await loadWorkspace(workspaceId);
             } else {
-                await loadGlobal(ownerWsIds, tenantId, mySub);
+                await loadGlobal(ownerOrgIds, tenantId);
             }
         } catch (err) {
             console.error("Dashboard load error:", err);
@@ -69,7 +81,7 @@ export default function OwnerDashboard() {
         setLoading(false);
     }
 
-    async function loadGlobal(ids: string[], tenantId: string, mySub?: string) {
+    async function loadGlobal(ids: string[], tenantId: string) {
         let memberCount = 0;
         let pendingCount = 0;
         let allTasks: any[] = [];
@@ -79,9 +91,9 @@ export default function OwnerDashboard() {
 
         for (const id of ids) {
             const [memRes, taskRes, invRes] = await Promise.all([
-                client.models.Membership.listMembershipsByWorkspace({ workspaceId: id }),
-                client.models.Task.listTasksByWorkspace({ workspaceId: id }),
-                client.models.Invitation.listInvitesByWorkspace({ workspaceId: id }),
+                client.models.Membership.listMembershipsByOrganization({ organizationId: id }),
+                client.models.Task.listTasksByOrganization({ organizationId: id }),
+                client.models.Invitation.listInvitesByOrganization({ organizationId: id }),
             ]);
 
             const activeMembers = memRes.data.filter((m: any) => m.status !== "REMOVED");
@@ -92,17 +104,12 @@ export default function OwnerDashboard() {
         }
 
         const boardRes = await client.models.TaskBoard.listWorkspacesByTenant({ tenantId });
-        const assignedToMe = mySub
-            ? allTasks.filter((t: any) =>
-                t.assignedTo === mySub && t.status !== "DONE" && t.status !== "ARCHIVED"
-            ).length
-            : 0;
+        const enrichedBoards = enrichBoardsWithCounts(boardRes.data, allTasks);
+        setBoards(enrichedBoards);
 
-        console.log(assignedToMe);
         setStats({
             boards: boardRes.data.length,
             members: memberCount,
-            assignedToMe,
             todo: allTasks.filter(t => t.status === "TODO").length,
             inProgress: allTasks.filter(t => t.status === "IN_PROGRESS").length,
             done: allTasks.filter(t => t.status === "DONE").length,
@@ -117,11 +124,18 @@ export default function OwnerDashboard() {
         setRecentMembers(enriched.slice(0, 5));
     }
 
-    async function loadWorkspace(id: string, mySub?: string) {
+    async function loadWorkspace(id: string) {
+        const wsRes = await client.models.Workspace.get({ id });
+        const orgId = wsRes?.data?.organizationId;
+
         const [memRes, taskRes, invRes, boardRes, profRes] = await Promise.all([
-            client.models.Membership.listMembershipsByWorkspace({ workspaceId: id }),
+            orgId
+                ? client.models.Membership.listMembershipsByOrganization({ organizationId: orgId })
+                : client.models.Membership.listMembershipsByWorkspace({ workspaceId: id }),
             client.models.Task.listTasksByWorkspace({ workspaceId: id }),
-            client.models.Invitation.listInvitesByWorkspace({ workspaceId: id }),
+            orgId
+                ? client.models.Invitation.listInvitesByOrganization({ organizationId: orgId })
+                : client.models.Invitation.listInvitesByWorkspace({ workspaceId: id }),
             client.models.TaskBoard.list({ filter: { workspaceId: { eq: id } } }),
             tenantId
                 ? client.models.UserProfile.list({ filter: { tenantId: { eq: tenantId } } })
@@ -130,16 +144,12 @@ export default function OwnerDashboard() {
 
         const members = memRes.data.filter((m: any) => m.status !== "REMOVED");
         const tasks = taskRes.data;
-        const assignedToMe = mySub
-            ? tasks.filter((t: any) =>
-                t.assignedTo === mySub && t.status !== "DONE" && t.status !== "ARCHIVED"
-            ).length
-            : 0;
+        const enrichedBoards = enrichBoardsWithCounts(boardRes.data, tasks);
+        setBoards(enrichedBoards);
 
         setStats({
             boards: boardRes.data.length,
             members: members.length,
-            assignedToMe,
             todo: tasks.filter(t => t.status === "TODO").length,
             inProgress: tasks.filter(t => t.status === "IN_PROGRESS").length,
             done: tasks.filter(t => t.status === "DONE").length,
@@ -202,7 +212,7 @@ export default function OwnerDashboard() {
                     </h1>
                     <p className="dash-sub">
                         {workspaceId
-                            ? `Workspace overview`
+                            ? `${workspaces.find((w: any) => w.id === workspaceId)?.name || "Workspace"} workspace`
                             : `Overview across ${stats.boards} board${stats.boards !== 1 ? "s" : ""}`}
                     </p>
                 </div>
@@ -210,19 +220,6 @@ export default function OwnerDashboard() {
 
             {/* KPI CARDS */}
             <div className="kpi-grid">
-
-                <div className="kpi-card" onClick={() => navigate("/owner/workspaces")}>
-                    <div className="kpi-icon" style={{ background: "#fef3c7", color: "#d97706" }}>
-                        <Building2 size={20} />
-                    </div>
-                    <div className="kpi-body">
-                        <span className="kpi-label">Workspaces</span>
-                        <span className="kpi-value">
-                            <CountUp end={workspaces.length} duration={0.8} />
-                        </span>
-                    </div>
-                    <ArrowUpRight size={16} className="kpi-arrow" />
-                </div>
 
                 <div className="kpi-card" onClick={() => navigate("/owner/boards")}>
                     <div className="kpi-icon" style={{ background: "#eef2ff", color: "#4f46e5" }}>
@@ -266,19 +263,6 @@ export default function OwnerDashboard() {
                     <ArrowUpRight size={16} className="kpi-arrow" />
                 </div>
 
-                <div className="kpi-card" onClick={() => navigate("/owner/tasks?assigned=me")}>
-                    <div className="kpi-icon" style={{ background: "#fff7ed", color: "#ea580c" }}>
-                        <Clock size={20} />
-                    </div>
-                    <div className="kpi-body">
-                        <span className="kpi-label">Assigned to Me</span>
-                        <span className="kpi-value">
-                            <CountUp end={stats.assignedToMe} duration={0.8} />
-                        </span>
-                    </div>
-                    <ArrowUpRight size={16} className="kpi-arrow" />
-                </div>
-
                 <div className="kpi-card">
                     <div className="kpi-icon" style={{ background: "#f0fdf4", color: "#16a34a" }}>
                         <CheckCircle2 size={20} />
@@ -292,6 +276,37 @@ export default function OwnerDashboard() {
                 </div>
 
             </div>
+
+            {/* BOARD CARDS */}
+            {boards.length > 0 && (
+                <>
+                    <h3 className="board-section-title">Task Boards</h3>
+                    <div className="board-grid">
+                        {boards.map((b: any) => {
+                            const c = b._counts;
+                            return (
+                                <div key={b.id} className="board-card" onClick={() => navigate("/owner/boards")}>
+                                    <div className="board-card-name">{b.name}</div>
+                                    <div className="board-card-bar">
+                                        {c.total > 0 && (
+                                            <>
+                                                <div className="progress-segment todo" style={{ width: `${(c.todo / c.total) * 100}%` }} />
+                                                <div className="progress-segment active" style={{ width: `${(c.inProgress / c.total) * 100}%` }} />
+                                                <div className="progress-segment done" style={{ width: `${(c.done / c.total) * 100}%` }} />
+                                            </>
+                                        )}
+                                    </div>
+                                    <div className="board-card-stats">
+                                        <span><span className="dot todo" />{c.todo}</span>
+                                        <span><span className="dot active" />{c.inProgress}</span>
+                                        <span><span className="dot done" />{c.done}</span>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </>
+            )}
 
             {/* PROGRESS BAR */}
             <div className="progress-strip">

@@ -10,7 +10,7 @@ export default function OrganizationsPage() {
     const client = dataClient();
     const navigate = useNavigate();
     const { confirm, alert } = useConfirm();
-    const { tenantId, refreshWorkspaces } = useWorkspace();
+    const { tenantId, organizationId, refreshOrganizations, refreshWorkspaces, setOrganizationId } = useWorkspace();
     const [organizations, setOrganizations] = useState<any[]>([]);
     const [showCreate, setShowCreate] = useState(false);
     const [editOrg, setEditOrg] = useState<any>(null);
@@ -20,35 +20,43 @@ export default function OrganizationsPage() {
     async function load() {
         if (!tenantId) return;
 
-        const res = await client.models.Workspace.list({
+        const res = await client.models.Organization.list({
             filter: { tenantId: { eq: tenantId } },
         });
-        setOrganizations(res.data);
+        setOrganizations(res.data || []);
     }
 
     async function removeOrganization(id: string) {
-        if (!await confirm({ title: "Remove Workspace", message: "Are you sure you want to remove this workspace?", confirmLabel: "Remove", variant: "danger" })) return;
+        if (!await confirm({ title: "Remove Organization", message: "Are you sure you want to remove this organization?", confirmLabel: "Remove", variant: "danger" })) return;
 
         try {
-            await client.models.Workspace.delete({ id });
+            const res = await client.mutations.removeOrganizationAndData({ organizationId: id });
+            if (!res.data?.success) {
+                await alert({ title: "Error", message: res.data?.message || "Error removing organization", variant: "danger" });
+                return;
+            }
+            if (organizationId === id) {
+                setOrganizationId(null);
+            }
             load();
-            refreshWorkspaces();
+            await refreshOrganizations();
+            await refreshWorkspaces();
         } catch (err) {
             console.error(err);
-            await alert({ title: "Error", message: "Error removing workspace", variant: "danger" });
+            await alert({ title: "Error", message: "Error removing organization", variant: "danger" });
         }
     }
 
     return (
         <div>
-            <div className="page-title">Workspaces</div>
+            <div className="page-title">Organizations</div>
 
             <button
                 className="btn"
                 style={{ marginBottom: 20 }}
                 onClick={() => setShowCreate(true)}
             >
-                + Create Workspace
+                + Create Organization
             </button>
 
             {showCreate && (
@@ -58,7 +66,7 @@ export default function OrganizationsPage() {
                     onCreated={() => {
                         setShowCreate(false);
                         load();
-                        refreshWorkspaces();
+                        refreshOrganizations();
                     }}
                 />
             )}
@@ -67,9 +75,10 @@ export default function OrganizationsPage() {
                 <EditOrganizationModal
                     organization={editOrg}
                     onClose={() => setEditOrg(null)}
-                    onUpdated={() => {
+                    onUpdated={async () => {
                         setEditOrg(null);
                         load();
+                        await refreshOrganizations();
                     }}
                 />
             )}
@@ -90,7 +99,10 @@ export default function OrganizationsPage() {
                             <td>
                                 <button
                                     style={{ background: "none", border: "none", color: "#2563eb", cursor: "pointer", fontWeight: 500, fontSize: 14, padding: 0 }}
-                                    onClick={() => navigate(`/tenant/tasks?workspace=${org.id}`)}
+                                    onClick={() => {
+                                        setOrganizationId(org.id);
+                                        navigate(`/tenant/workspaces`);
+                                    }}
                                 >
                                     {org.name}
                                 </button>

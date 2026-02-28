@@ -1,76 +1,84 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { CalendarClock, AlertTriangle, UserCheck, ListTodo } from "lucide-react";
 import { getMyMemberships, getMySub } from "../../../libs/isMember";
 import { dataClient } from "../../../libs/data-client";
 import { useWorkspace } from "../../../shared-components/workspace-context";
 
+function enrichBoardsWithCounts(boardList: any[], tasks: any[]) {
+    const map = new Map<string, { todo: number; inProgress: number; done: number; total: number }>();
+    tasks.forEach((t: any) => {
+        const bid = t.taskBoardId;
+        if (!bid) return;
+        if (!map.has(bid)) map.set(bid, { todo: 0, inProgress: 0, done: 0, total: 0 });
+        const c = map.get(bid)!;
+        c.total++;
+        if (t.status === "TODO") c.todo++;
+        else if (t.status === "IN_PROGRESS") c.inProgress++;
+        else if (t.status === "DONE") c.done++;
+    });
+    return boardList.map((b: any) => ({
+        ...b,
+        _counts: map.get(b.id) || { todo: 0, inProgress: 0, done: 0, total: 0 },
+    }));
+}
+
 export default function MemberDashboard() {
     const client = dataClient();
     const navigate = useNavigate();
-    const { tenantId, email } = useWorkspace();
+    const { tenantId, email, workspaceId, workspaces } = useWorkspace();
 
-    const [memberships, setMemberships] = useState<any[]>([]);
-    const [organizations, setOrganizations] = useState<any[]>([]);
     const [notifications, setNotifications] = useState<any[]>([]);
-    const [dueDateFilter, setDueDateFilter] = useState("");
+    const [boards, setBoards] = useState<any[]>([]);
     const [stats, setStats] = useState({ dueToday: 0, overdue: 0, assignedToMe: 0, totalTasks: 0 });
     const [loading, setLoading] = useState(true);
-    const [mySub, setMySub] = useState<string | null>(null);
-    const [memberOrgIds, setMemberOrgIds] = useState<string[]>([]);
 
-    useEffect(() => { load(); }, [tenantId]);
-    useEffect(() => { if (mySub) recalcStats(); }, [dueDateFilter, mySub, tenantId, memberships, email]);
+    const currentWsName = workspaces.find((w: any) => w.id === workspaceId)?.name;
+
+    useEffect(() => { load(); }, [tenantId, workspaceId]);
 
     async function load() {
-        console.log("[MemberDashboard] load tenantId", tenantId);
         const sub = await getMySub();
         if (!sub) { setLoading(false); return; }
-        setMySub(sub);
-        console.log(memberOrgIds);
 
         const myMemberships = await getMyMemberships();
         const activeMemberships = myMemberships.filter((m: any) => m.status !== "REMOVED");
-        setMemberships(activeMemberships);
-        console.log(
-            "[MemberDashboard] memberships",
-            activeMemberships.map((m: any) => ({
-                tenantId: m.tenantId,
-                workspaceId: m.workspaceId,
-                role: m.role,
-                status: m.status,
-            }))
-        );
 
         if (!tenantId) { setLoading(false); return; }
 
         const orgIds = activeMemberships
             .filter((m: any) => m.role === "MEMBER" && m.tenantId === tenantId)
-            .map((m: any) => m.workspaceId);
-        setMemberOrgIds(orgIds);
-        console.log("[MemberDashboard] memberOrgIds", orgIds, "tenantId", tenantId);
+            .map((m: any) => m.organizationId)
+            .filter(Boolean);
 
-        // load orgs
-        const orgRes = await client.models.Workspace.list({
-            filter: { tenantId: { eq: tenantId } },
-        });
-        const myOrgs = orgRes.data.filter((o: any) => orgIds.includes(o.id));
-        setOrganizations(myOrgs);
-
-        // load tasks assigned to me (match by sub and email)
+        // load tasks assigned to me
         const allTasks = await loadAssignedTasks(sub);
-        console.log(
-            "[MemberDashboard] allAssignedTasks",
-            allTasks.map((t: any) => ({ id: t.id, workspaceId: t.workspaceId, assignedTo: t.assignedTo }))
-        );
-        const tenantTasks = allTasks.filter((t: any) => myOrgs.some((o: any) => o.id === t.workspaceId));
-        console.log(
-            "[MemberDashboard] tenantTasks",
-            tenantTasks.map((t: any) => ({ id: t.id, workspaceId: t.workspaceId, assignedTo: t.assignedTo }))
-        );
+        const tenantTasks = allTasks.filter((t: any) => orgIds.includes(t.organizationId));
 
-        calcStats(tenantTasks, "");
+        const scopedTasks = workspaceId
+            ? tenantTasks.filter((t: any) => t.workspaceId === workspaceId)
+            : tenantTasks;
+        calcStats(scopedTasks);
 
-        // load notifications (guard against model not yet deployed)
+        // load boards
+        try {
+            let boardList: any[] = [];
+            if (workspaceId) {
+                const boardRes = await client.models.TaskBoard.list({ filter: { workspaceId: { eq: workspaceId } } });
+                boardList = boardRes.data;
+            } else if (orgIds.length > 0) {
+                for (const oid of orgIds) {
+                    const boardRes = await client.models.TaskBoard.listTaskBoardsByOrganization({ organizationId: oid });
+                    boardList = boardList.concat(boardRes.data);
+                }
+            }
+            const enrichedBoards = enrichBoardsWithCounts(boardList, scopedTasks);
+            setBoards(enrichedBoards);
+        } catch (err) {
+            console.warn("Could not load boards:", err);
+        }
+
+        // load notifications
         try {
             if (client.models.Notification) {
                 const notifRes = await client.models.Notification.list({
@@ -88,21 +96,6 @@ export default function MemberDashboard() {
         setLoading(false);
     }
 
-    async function recalcStats() {
-        if (!mySub) return;
-        const allTasks = await loadAssignedTasks(mySub);
-        const orgIds = memberships
-            .filter((m: any) => m.role === "MEMBER" && m.tenantId === tenantId && m.status !== "REMOVED")
-            .map((m: any) => m.workspaceId);
-        const tenantTasks = allTasks.filter((t: any) => orgIds.includes(t.workspaceId));
-        console.log("[MemberDashboard] recalc tenantId", tenantId, "orgIds", orgIds);
-        console.log(
-            "[MemberDashboard] recalc tenantTasks",
-            tenantTasks.map((t: any) => ({ id: t.id, workspaceId: t.workspaceId, assignedTo: t.assignedTo }))
-        );
-        calcStats(tenantTasks, dueDateFilter);
-    }
-
     async function loadAssignedTasks(sub: string) {
         const results = await Promise.all([
             client.models.Task.list({ filter: { assignedTo: { eq: sub } } }),
@@ -118,27 +111,22 @@ export default function MemberDashboard() {
         return Array.from(merged.values());
     }
 
-    function calcStats(tasks: any[], filterDate: string) {
+    function calcStats(tasks: any[]) {
         const today = new Date().toISOString().split("T")[0];
 
-        let filtered = tasks;
-        if (filterDate) {
-            filtered = tasks.filter((t: any) => t.dueDate && t.dueDate.split("T")[0] <= filterDate);
-        }
-
-        const dueToday = filtered.filter(
+        const dueToday = tasks.filter(
             (t: any) => t.dueDate && t.dueDate.split("T")[0] === today && t.status !== "DONE" && t.status !== "ARCHIVED"
         ).length;
 
-        const overdue = filtered.filter(
+        const overdue = tasks.filter(
             (t: any) => t.dueDate && t.dueDate.split("T")[0] < today && t.status !== "DONE" && t.status !== "ARCHIVED"
         ).length;
 
-        const assignedToMe = filtered.filter(
+        const assignedToMe = tasks.filter(
             (t: any) => t.status !== "DONE" && t.status !== "ARCHIVED"
         ).length;
 
-        setStats({ dueToday, overdue, assignedToMe, totalTasks: filtered.length });
+        setStats({ dueToday, overdue, assignedToMe, totalTasks: tasks.length });
     }
 
     async function markAsRead(notif: any) {
@@ -155,69 +143,92 @@ export default function MemberDashboard() {
     if (loading) return <div>Loading dashboard...</div>;
 
     return (
-        <div>
-            <div className="page-title">Dashboard</div>
-
-            {/* org membership cards */}
-            <div className="card-grid">
-                {organizations.map((org) => {
-                    const mem = memberships.find((m: any) => m.workspaceId === org.id);
-                    return (
-                        <div className="card" key={org.id} onClick={() => navigate("/member/tasks")} style={{ cursor: "pointer" }}>
-                            <h3>{org.name}</h3>
-                            <p>
-                                <span className={`role-badge ${mem?.role?.toLowerCase()}`}>
-                                    {mem?.role}
-                                </span>
-                            </p>
-                        </div>
-                    );
-                })}
-            </div>
-
-            {/* due date filter */}
-            <div style={{ marginBottom: 16 }}>
-                <label style={{ fontSize: 13, color: "#64748b", marginRight: 8 }}>Filter by due date:</label>
-                <input
-                    type="date"
-                    value={dueDateFilter}
-                    onChange={(e) => setDueDateFilter(e.target.value)}
-                    style={{ padding: "4px 8px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: 13 }}
-                />
-                {dueDateFilter && (
-                    <button
-                        className="btn secondary"
-                        style={{ marginLeft: 8, fontSize: 12, padding: "4px 10px" }}
-                        onClick={() => setDueDateFilter("")}
-                    >
-                        Clear
-                    </button>
-                )}
-            </div>
-
-            {/* task metric cards */}
-            <div className="card-grid">
-                <div className="card" onClick={() => navigate("/member/tasks")} style={{ cursor: "pointer" }}>
-                    <h3>Due Today</h3>
-                    <p>{stats.dueToday}</p>
-                </div>
-                <div className="card" onClick={() => navigate("/member/tasks")} style={{ cursor: "pointer" }}>
-                    <h3>Overdue</h3>
-                    <p style={{ color: stats.overdue > 0 ? "#dc2626" : undefined }}>{stats.overdue}</p>
-                </div>
-                <div className="card" onClick={() => navigate("/member/tasks?assigned=me")} style={{ cursor: "pointer" }}>
-                    <h3>Assigned to Me</h3>
-                    <p>{stats.assignedToMe}</p>
-                </div>
-                <div className="card" onClick={() => navigate("/member/tasks")} style={{ cursor: "pointer" }}>
-                    <h3>Total Tasks</h3>
-                    <p>{stats.totalTasks}</p>
+        <div className="dash">
+            <div className="dash-header">
+                <div>
+                    <h1 className="dash-title" style={{ fontSize: 24, fontWeight: 700, display: "flex", alignItems: "center", gap: 10, margin: 0 }}>
+                        Dashboard
+                    </h1>
+                    <p className="dash-sub">
+                        {currentWsName ? currentWsName : "All workspaces"}
+                    </p>
                 </div>
             </div>
 
-            {/* notifications */}
-            <div style={{ marginTop: 32 }}>
-                <h3 style={{ fontSize: 18, fontWeight: 600, marginBottom: 12 }}>Notifications</h3>
+            {/* TASK METRIC CARDS */}
+            <div className="kpi-grid">
+                <div className="kpi-card" onClick={() => navigate("/member/tasks")} style={{ cursor: "pointer" }}>
+                    <div className="kpi-icon" style={{ background: "#fff7ed", color: "#ea580c" }}>
+                        <CalendarClock size={18} />
+                    </div>
+                    <div className="kpi-body">
+                        <span className="kpi-label">Due Today</span>
+                        <span className="kpi-value">{stats.dueToday}</span>
+                    </div>
+                </div>
+                <div className="kpi-card" onClick={() => navigate("/member/tasks")} style={{ cursor: "pointer" }}>
+                    <div className="kpi-icon" style={{ background: "#fee2e2", color: "#dc2626" }}>
+                        <AlertTriangle size={18} />
+                    </div>
+                    <div className="kpi-body">
+                        <span className="kpi-label">Overdue</span>
+                        <span className="kpi-value" style={{ color: stats.overdue > 0 ? "#dc2626" : undefined }}>{stats.overdue}</span>
+                    </div>
+                </div>
+                <div className="kpi-card" onClick={() => navigate("/member/tasks?assigned=me")} style={{ cursor: "pointer" }}>
+                    <div className="kpi-icon" style={{ background: "#eff6ff", color: "#3b82f6" }}>
+                        <UserCheck size={18} />
+                    </div>
+                    <div className="kpi-body">
+                        <span className="kpi-label">Assigned to Me</span>
+                        <span className="kpi-value">{stats.assignedToMe}</span>
+                    </div>
+                </div>
+                <div className="kpi-card" onClick={() => navigate("/member/tasks")} style={{ cursor: "pointer" }}>
+                    <div className="kpi-icon" style={{ background: "#eef2ff", color: "#4f46e5" }}>
+                        <ListTodo size={18} />
+                    </div>
+                    <div className="kpi-body">
+                        <span className="kpi-label">Total Tasks</span>
+                        <span className="kpi-value">{stats.totalTasks}</span>
+                    </div>
+                </div>
+            </div>
+
+            {/* BOARD CARDS */}
+            {boards.length > 0 && (
+                <>
+                    <h3 className="board-section-title">Task Boards</h3>
+                    <div className="board-grid">
+                        {boards.map((b: any) => {
+                            const c = b._counts;
+                            return (
+                                <div key={b.id} className="board-card" onClick={() => navigate("/member/tasks")}>
+                                    <div className="board-card-name">{b.name}</div>
+                                    <div className="board-card-bar">
+                                        {c.total > 0 && (
+                                            <>
+                                                <div className="progress-segment todo" style={{ width: `${(c.todo / c.total) * 100}%` }} />
+                                                <div className="progress-segment active" style={{ width: `${(c.inProgress / c.total) * 100}%` }} />
+                                                <div className="progress-segment done" style={{ width: `${(c.done / c.total) * 100}%` }} />
+                                            </>
+                                        )}
+                                    </div>
+                                    <div className="board-card-stats">
+                                        <span><span className="dot todo" />{c.todo}</span>
+                                        <span><span className="dot active" />{c.inProgress}</span>
+                                        <span><span className="dot done" />{c.done}</span>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </>
+            )}
+
+            {/* NOTIFICATIONS */}
+            <div style={{ marginTop: 20 }}>
+                <h3 className="board-section-title">Notifications</h3>
                 {notifications.length === 0 && (
                     <p style={{ color: "#94a3b8", fontSize: 14 }}>No notifications.</p>
                 )}

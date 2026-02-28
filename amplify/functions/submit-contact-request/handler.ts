@@ -2,6 +2,7 @@ import {
     CognitoIdentityProviderClient,
     ListUsersInGroupCommand,
 } from "@aws-sdk/client-cognito-identity-provider";
+import { SESClient, SendEmailCommand } from "@aws-sdk/client-ses";
 
 import { generateClient } from "aws-amplify/data";
 import { Amplify } from "aws-amplify";
@@ -16,12 +17,15 @@ Amplify.configure(resourceConfig, libraryOptions);
 
 const client = generateClient<Schema>();
 const cognito = new CognitoIdentityProviderClient({});
+const ses = new SESClient({});
 
 export const handler: Schema["submitContactRequest"]["functionHandler"] =
     async (event) => {
 
         const { name, email, companyName, phone, teamSize, numberOfOrgs, businessType, message } = event.arguments;
         const userPoolId = process.env.USER_POOL_ID;
+        const destinationEmail = process.env.CONTACT_REQUEST_TO_EMAIL || "parveeneswaran@outlook.com";
+        const sourceEmail = process.env.CONTACT_REQUEST_FROM_EMAIL || "no-reply@tethertasks.cloudling88.com";
 
         if (!userPoolId) throw new Error("Missing USER_POOL_ID");
 
@@ -77,6 +81,53 @@ export const handler: Schema["submitContactRequest"]["functionHandler"] =
                     createdAt: new Date().toISOString(),
                 });
             }
+
+            /* =========================================================
+               SEND EMAIL TO CONTACT INBOX
+            ========================================================= */
+            const subject = `New Contact Request: ${companyName}`;
+            const textBody = [
+                "New contact request submitted.",
+                `Name: ${name}`,
+                `Email: ${email}`,
+                `Company: ${companyName}`,
+                `Phone: ${phone || "—"}`,
+                `Team Size: ${teamSize || "—"}`,
+                `Number of Orgs: ${numberOfOrgs || "—"}`,
+                `Business Type: ${businessType || "—"}`,
+                "",
+                "Message:",
+                message,
+            ].join("\n");
+
+            const htmlBody = `
+                <div style="font-family: Inter, system-ui, -apple-system, Segoe UI, sans-serif; color: #0f172a;">
+                    <h2 style="margin: 0 0 12px;">New Contact Request</h2>
+                    <p style="margin: 0 0 8px;"><strong>Name:</strong> ${name}</p>
+                    <p style="margin: 0 0 8px;"><strong>Email:</strong> ${email}</p>
+                    <p style="margin: 0 0 8px;"><strong>Company:</strong> ${companyName}</p>
+                    <p style="margin: 0 0 8px;"><strong>Phone:</strong> ${phone || "—"}</p>
+                    <p style="margin: 0 0 8px;"><strong>Team Size:</strong> ${teamSize || "—"}</p>
+                    <p style="margin: 0 0 8px;"><strong>Number of Orgs:</strong> ${numberOfOrgs || "—"}</p>
+                    <p style="margin: 0 0 8px;"><strong>Business Type:</strong> ${businessType || "—"}</p>
+                    <p style="margin: 12px 0 4px;"><strong>Message:</strong></p>
+                    <div style="padding: 12px; border: 1px solid #e2e8f0; border-radius: 8px; white-space: pre-wrap;">${message}</div>
+                </div>
+            `;
+
+            await ses.send(
+                new SendEmailCommand({
+                    Source: sourceEmail,
+                    Destination: { ToAddresses: [destinationEmail] },
+                    Message: {
+                        Subject: { Data: subject },
+                        Body: {
+                            Text: { Data: textBody },
+                            Html: { Data: htmlBody },
+                        },
+                    },
+                })
+            );
 
             console.log("CONTACT REQUEST PROCESSED:", email, "notified", adminSubs.length, "admins");
 

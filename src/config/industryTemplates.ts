@@ -7,7 +7,7 @@ export const INDUSTRY_TEMPLATES: any = {
                 { title: "Review weekly priorities", status: "TODO", priority: "MEDIUM" },
                 { title: "Team check-in meeting", status: "TODO", priority: "LOW" },
                 { title: "Prepare monthly report", status: "IN_PROGRESS", priority: "HIGH" },
-                { title: "Workspace setup complete", status: "DONE", priority: "LOW" },
+                { title: "Organization setup complete", status: "DONE", priority: "LOW" },
             ]
         },
         {

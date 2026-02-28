@@ -12,7 +12,7 @@ export default function EditMemberRoleModal({ member, members, onClose, onUpdate
     function orgHasOtherOwner() {
         return members.some(
             (m: any) =>
-                m.workspaceId === member.workspaceId &&
+                m.organizationId === member.organizationId &&
                 m.role === "OWNER" &&
                 m.status !== "REMOVED" &&
                 m.id !== member.id
@@ -58,6 +58,8 @@ export default function EditMemberRoleModal({ member, members, onClose, onUpdate
                 </p>
 
                 <select
+                    id="edit-member-role"
+                    name="edit_member_role"
                     className="modal-select"
                     value={role}
                     onChange={(e) => setRole(e.target.value)}

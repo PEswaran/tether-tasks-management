@@ -53,8 +53,8 @@ export default function NoAccessPage() {
                     }
 
                     // Load org name
-                    if (inv.workspaceId) {
-                        const oRes = await client.models.Workspace.get({ id: inv.workspaceId });
+                    if (inv.organizationId) {
+                        const oRes = await client.models.Organization.get({ id: inv.organizationId });
                         if (oRes.data?.name) setOrgName(oRes.data.name);
                     }
 
@@ -88,6 +88,7 @@ export default function NoAccessPage() {
 
             await client.models.AuditLog.create({
                 tenantId: invitation?.tenantId || undefined,
+                organizationId: invitation?.organizationId || undefined,
                 workspaceId: invitation?.workspaceId || undefined,
                 userId: sub || "unknown",
                 action: "CREATE",
@@ -191,6 +192,8 @@ export default function NoAccessPage() {
                             )}
                         </p>
                         <textarea
+                            id="no-access-message"
+                            name="no_access_message"
                             style={styles.textarea}
                             rows={4}
                             placeholder="Hi, I need access to... (explain your request)"

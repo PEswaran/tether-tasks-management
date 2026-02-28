@@ -13,7 +13,7 @@ export default function Breadcrumbs({ workspaces = [] }: any) {
 
     function pageName() {
         if (location.pathname.includes("/members")) return "Members";
-        if (location.pathname.includes("/tasks")) return "Workspaces";
+        if (location.pathname.includes("/tasks")) return "Organizations";
         return "Dashboard";
     }
 

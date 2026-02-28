@@ -8,7 +8,6 @@ export default function GlobalTaskModal() {
     const client = dataClient();
 
     const [task, setTask] = useState<any>(null);
-    const [members, setMembers] = useState<any[]>([]);
 
     useEffect(() => {
         if (taskId) {
@@ -18,24 +17,10 @@ export default function GlobalTaskModal() {
 
     async function loadTask(id: string) {
         try {
-            console.log("GLOBAL MODAL loading task:", id);
-
             const res = await client.models.Task.get({ id });
-            if (!res.data) {
-                console.log("task not found");
-                return;
-            }
+            if (!res.data) return;
 
-            const t = res.data;
-            setTask({ ...t, fromNotification: true });
-
-
-            // load members for edit modal
-            const memRes = await client.models.Membership.list({
-                filter: { workspaceId: { eq: t.workspaceId } }
-            });
-
-            setMembers(memRes.data || []);
+            setTask({ ...res.data, fromNotification: true });
         } catch (err) {
             console.error("global modal load error", err);
         }
@@ -46,7 +31,6 @@ export default function GlobalTaskModal() {
     return (
         <EditTaskModal
             task={task}
-            members={members}
             onClose={() => {
                 setTask(null);
                 closeTask();

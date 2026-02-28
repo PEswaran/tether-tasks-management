@@ -1,9 +1,9 @@
 import { Link, Outlet, useNavigate, useLocation } from "react-router-dom";
 import { signOut } from "aws-amplify/auth";
-import { LogOut, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { LogOut, PanelLeftClose, PanelLeftOpen, ChevronDown } from "lucide-react";
 import NotificationBell from "../components/ui/notification-bell";
 import { useWorkspace } from "../shared-components/workspace-context";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { dataClient } from "../libs/data-client";
 import { getCurrentUser } from "aws-amplify/auth";
 import GlobalCreateTaskBtn from "../components/ui/global-create-task-btn";
@@ -14,14 +14,24 @@ type NavItem = {
     icon?: any;
     parent?: string;
     section?: string;
+    badge?: React.ReactNode;
+    onClick?: () => void;
 };
+
+function resolveSectionName(item: NavItem) {
+    return item.section || "Overview";
+}
 
 export default function AppShell({
     companyName,
     navItems,
+    brandContent,
+    hideWorkspaceContext,
 }: {
     companyName?: string;
     navItems: NavItem[];
+    brandContent?: React.ReactNode;
+    hideWorkspaceContext?: boolean;
 }) {
     const navigate = useNavigate();
     const location = useLocation();
@@ -33,9 +43,32 @@ export default function AppShell({
         tenantId,
         workspaceId,
         switchTenant,
+        organizationId,
+        organizations,
+        workspaces,
+        setWorkspaceId,
     } = useWorkspace();
 
     const displayName = tenantName || companyName || "TetherTasks";
+
+    const currentOrg = organizations.find((o) => o.id === organizationId);
+    const currentOrgName = currentOrg?.name || displayName;
+    const currentWorkspaceName =
+        workspaces.find((w) => w.id === workspaceId)?.name || "Select workspace";
+
+    const [wsSwitcherOpen, setWsSwitcherOpen] = useState(false);
+    const wsSwitcherRef = useRef<HTMLDivElement>(null);
+
+    // close dropdown on outside click
+    useEffect(() => {
+        function handleClick(e: MouseEvent) {
+            if (wsSwitcherRef.current && !wsSwitcherRef.current.contains(e.target as Node)) {
+                setWsSwitcherOpen(false);
+            }
+        }
+        document.addEventListener("mousedown", handleClick);
+        return () => document.removeEventListener("mousedown", handleClick);
+    }, []);
 
     const [tenantNames, setTenantNames] = useState<Record<string, string>>({});
     const [companyOpen, setCompanyOpen] = useState(false);
@@ -77,16 +110,18 @@ export default function AppShell({
     useEffect(() => {
         if (!role) return;
 
-        if (role === "OWNER" && !location.pathname.startsWith("/owner")) {
+        const onGeneralRoute = location.pathname.startsWith("/general");
+
+        if (role === "OWNER" && !onGeneralRoute && !location.pathname.startsWith("/owner")) {
             navigate("/owner");
         }
         if (role === "TENANT_ADMIN" && !location.pathname.startsWith("/tenant")) {
             navigate("/tenant");
         }
-        if (role === "MEMBER" && !location.pathname.startsWith("/member")) {
+        if (role === "MEMBER" && !onGeneralRoute && !location.pathname.startsWith("/member")) {
             navigate("/member");
         }
-    }, [role]);
+    }, [role, location.pathname, navigate]);
 
     /* ---------------- USER PROFILE ---------------- */
     const [userEmail, setUserEmail] = useState("");
@@ -141,35 +176,97 @@ export default function AppShell({
                     {collapsed ? <PanelLeftOpen size={14} /> : <PanelLeftClose size={14} />}
                 </button>
 
+                {/* BRAND — logo + app name (or custom brandContent) */}
                 <div className="app-brand">
-                    <div className="app-logo-tile" onClick={() => navigate("/")}>
-                        <img src="/logo.png" className="app-logo" />
-                    </div>
-
-                    {!collapsed && (
-                        <div className="brand-text">
-                            <div className="app-company">{displayName}</div>
-                            <div className={`role-badge`}>
-                                {role?.replaceAll("_", " ") || "User"}
+                    {brandContent && !collapsed ? (
+                        brandContent
+                    ) : (
+                        <>
+                            <div className="app-logo-tile" onClick={() => navigate("/")}>
+                                <img src="/logo.png" className="app-logo" />
                             </div>
-                        </div>
+                            {!collapsed && (
+                                <div className="brand-text">
+                                    <div className="app-company">{displayName}</div>
+                                </div>
+                            )}
+                        </>
                     )}
                 </div>
 
-                <nav className="app-nav">
-                    {navItems.map((n) => (
-                        <Link
-                            key={n.path}
-                            to={n.path}
-                            className={location.pathname === n.path ? "active" : ""}
+                {/* WORKSPACE CONTEXT — org label + workspace switcher */}
+                {!collapsed && !hideWorkspaceContext && workspaces.length > 0 && (
+                    <div className="sidebar-context" ref={wsSwitcherRef}>
+                        <div className="sidebar-org-label">{currentOrgName}</div>
+                        <button
+                            className="sidebar-ws-switch"
+                            onClick={() => setWsSwitcherOpen((v) => !v)}
                         >
-                            {n.icon && <span className="nav-icon">{n.icon}</span>}
-                            {!collapsed && n.label}
-                        </Link>
-                    ))}
+                            <span className="sidebar-ws-name">{currentWorkspaceName}</span>
+                            <ChevronDown size={14} className={`sidebar-ws-caret ${wsSwitcherOpen ? "open" : ""}`} />
+                        </button>
+
+                        {wsSwitcherOpen && (
+                            <div className="sidebar-ws-dropdown">
+                                {workspaces.map((ws) => (
+                                    <div
+                                        key={ws.id}
+                                        className={`sidebar-ws-option ${ws.id === workspaceId ? "active" : ""}`}
+                                        onClick={() => {
+                                            setWorkspaceId(ws.id);
+                                            setWsSwitcherOpen(false);
+                                        }}
+                                    >
+                                        {ws.name || ws.id}
+                                        {ws.id === workspaceId && <span className="sidebar-ws-check">&#10003;</span>}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                <nav className="app-nav">
+                    {Array.from(new Set(navItems.map((item) => resolveSectionName(item)))).map((sectionName) => {
+                        const sectionItems = navItems.filter((item) => resolveSectionName(item) === sectionName);
+                        return (
+                            <div key={sectionName}>
+                                {!collapsed && <div className="nav-section-label">{sectionName}</div>}
+                                {sectionItems.map((n) => (
+                                    <Link
+                                        key={n.path}
+                                        to={n.path}
+                                        className={location.pathname === n.path ? "active" : ""}
+                                        onClick={n.onClick}
+                                    >
+                                        {n.icon && <span className="nav-icon">{n.icon}</span>}
+                                        {!collapsed && n.label}
+                                        {!collapsed && n.badge && (
+                                            <div className="nav-badge-inline">{n.badge}</div>
+                                        )}
+                                    </Link>
+                                ))}
+                            </div>
+                        );
+                    })}
                 </nav>
 
                 <div className="sidebar-bottom">
+                    {/* USER CARD */}
+                    {!collapsed && (
+                        <div className="sidebar-user-card">
+                            <div className="sidebar-user-avatar">
+                                {(userName || userEmail)?.[0]?.toUpperCase() || "U"}
+                            </div>
+                            <div className="sidebar-user-info">
+                                <div className="sidebar-user-name">{userName || userEmail}</div>
+                                <div className="sidebar-user-role">
+                                    {role?.replaceAll("_", " ") || "User"}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                     <button
                         onClick={async () => {
                             await signOut();

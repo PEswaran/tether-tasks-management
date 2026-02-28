@@ -13,7 +13,7 @@ type WsStats = {
 export default function OwnerWorkspacesPage() {
     const client = dataClient();
     const navigate = useNavigate();
-    const { workspaces, memberships, setWorkspaceId } = useWorkspace();
+    const { workspaces, memberships, setWorkspaceId, organizations, organizationId, setOrganizationId } = useWorkspace();
 
     const [statsMap, setStatsMap] = useState<Record<string, WsStats>>({});
     const [loading, setLoading] = useState(true);
@@ -22,6 +22,12 @@ export default function OwnerWorkspacesPage() {
         loadStats();
     }, [workspaces]);
 
+    useEffect(() => {
+        if (!organizationId && organizations.length > 0) {
+            setOrganizationId(organizations[0].id);
+        }
+    }, [organizationId, organizations, setOrganizationId]);
+
     async function loadStats() {
         if (!workspaces.length) { setLoading(false); return; }
 
@@ -29,8 +35,11 @@ export default function OwnerWorkspacesPage() {
 
         await Promise.all(
             workspaces.map(async (ws) => {
+                const orgId = ws.organizationId;
                 const [memRes, boardRes] = await Promise.all([
-                    client.models.Membership.listMembershipsByWorkspace({ workspaceId: ws.id }),
+                    orgId
+                        ? client.models.Membership.listMembershipsByOrganization({ organizationId: orgId })
+                        : client.models.Membership.listMembershipsByWorkspace({ workspaceId: ws.id }),
                     client.models.TaskBoard.list({ filter: { workspaceId: { eq: ws.id } } }),
                 ]);
 
@@ -46,13 +55,23 @@ export default function OwnerWorkspacesPage() {
         setLoading(false);
     }
 
-    function getRole(wsId: string): string {
-        const mem = memberships.find((m: any) => m.workspaceId === wsId);
-        return mem?.role || "MEMBER";
+    function getRole(orgId?: string, wsId?: string): string {
+        if (wsId) {
+            const wsMem = memberships.find((m: any) => m.workspaceId === wsId);
+            if (wsMem?.role) return wsMem.role;
+        }
+        if (orgId) {
+            const orgMem = memberships.find((m: any) => m.organizationId === orgId);
+            if (orgMem?.role) return orgMem.role;
+        }
+        return "MEMBER";
     }
 
     function handleClick(ws: any) {
-        const role = getRole(ws.id);
+        const role = getRole(ws.organizationId, ws.id);
+        if (ws.organizationId) {
+            setOrganizationId(ws.organizationId);
+        }
         setWorkspaceId(ws.id);
 
         if (role === "MEMBER") {
@@ -68,13 +87,30 @@ export default function OwnerWorkspacesPage() {
                 <div>
                     <h1 className="page-title" style={{ display: "flex", alignItems: "center", gap: 10 }}>
                         <Building2 size={24} />
-                        My Workspaces
+                        Workspaces
                     </h1>
                     <p className="page-sub">
                         {workspaces.length} workspace{workspaces.length !== 1 ? "s" : ""}
                     </p>
                 </div>
             </div>
+
+            {organizations.length > 0 && (
+                <div style={{ marginBottom: 16 }}>
+                    <select
+                        id="owner-workspaces-organization-select"
+                        name="owner_workspaces_organization_select"
+                        className="workspace-select"
+                        value={organizationId || ""}
+                        onChange={(e) => setOrganizationId(e.target.value || null)}
+                    >
+                        <option value="">Select organization</option>
+                        {organizations.map((org: any) => (
+                            <option key={org.id} value={org.id}>{org.name}</option>
+                        ))}
+                    </select>
+                </div>
+            )}
 
             {loading ? (
                 <div className="dash-skeleton">
@@ -91,7 +127,7 @@ export default function OwnerWorkspacesPage() {
             ) : (
                 <div className="ws-grid">
                     {workspaces.map((ws: any) => {
-                        const role = getRole(ws.id);
+                        const role = getRole(ws.organizationId, ws.id);
                         const st = statsMap[ws.id];
                         return (
                             <div

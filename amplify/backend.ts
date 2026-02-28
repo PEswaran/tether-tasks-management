@@ -7,6 +7,7 @@ import { inviteMemberToOrgFn } from './functions/invite-member-to-org/resource';
 import { sendAssignmentEmail } from './functions/sendAssignmentEmail/resource';
 import { replaceTenantAdminFn } from './functions/replace-tenant-admin/resource';
 import { submitContactRequestFn } from './functions/submit-contact-request/resource';
+import { deleteOrganizationFn } from './functions/delete-organization/resource';
 import { data } from './data/resource';
 
 
@@ -19,6 +20,7 @@ const backend = defineBackend({
   sendAssignmentEmail,
   replaceTenantAdminFn,
   submitContactRequestFn,
+  deleteOrganizationFn,
 });
 
 // Configure createTenantAdmin function
@@ -80,10 +82,26 @@ backend.submitContactRequestFn.addEnvironment(
   "USER_POOL_ID",
   backend.auth.resources.userPool.userPoolId
 );
+backend.submitContactRequestFn.addEnvironment(
+  "CONTACT_REQUEST_TO_EMAIL",
+  "parveeneswaran@outlook.com"
+);
+backend.submitContactRequestFn.addEnvironment(
+  "CONTACT_REQUEST_FROM_EMAIL",
+  "no-reply@tethertasks.cloudling88.com"
+);
 
 backend.auth.resources.userPool.grant(
   backend.submitContactRequestFn.resources.lambda,
   "cognito-idp:ListUsersInGroup"
+);
+
+backend.submitContactRequestFn.resources.lambda.addToRolePolicy(
+  new PolicyStatement({
+    effect: Effect.ALLOW,
+    actions: ["ses:SendEmail", "ses:SendRawEmail"],
+    resources: ["*"],
+  })
 );
 
 // Configure sendAssignmentEmail function — SES permissions

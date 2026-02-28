@@ -213,6 +213,57 @@
   flex-wrap: wrap;
 }
 
+/* ---------- Capacity Strip ---------- */
+.landing-capacity-strip {
+  padding: 18px 40px 8px;
+  background: linear-gradient(180deg, rgba(238, 242, 255, 0.35), rgba(255, 255, 255, 0));
+}
+
+.landing-capacity-grid {
+  max-width: 1100px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.landing-capacity-card {
+  padding: 16px 18px;
+  border-radius: 14px;
+  border: 1px solid #e2e8f0;
+  background: linear-gradient(180deg, #ffffff, #f8fafc);
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.05);
+}
+
+.landing-capacity-card.featured {
+  border-color: #c7d2fe;
+  background: linear-gradient(135deg, #eef2ff, #f8fafc);
+  box-shadow: 0 10px 24px rgba(79, 70, 229, 0.14);
+}
+
+.landing-capacity-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.7px;
+  color: #64748b;
+}
+
+.landing-capacity-value {
+  margin-top: 6px;
+  font-size: 18px;
+  line-height: 1.2;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.landing-capacity-card p {
+  margin: 8px 0 0;
+  font-size: 13px;
+  color: #64748b;
+  line-height: 1.5;
+}
+
 /* ---------- Trusted By ---------- */
 .landing-trusted {
   padding: 48px 40px;
@@ -802,6 +853,12 @@
    RESPONSIVE
 ========================================= */
 @media (max-width: 900px) {
+  .landing-capacity-grid {
+    grid-template-columns: 1fr;
+    max-width: 540px;
+    margin: 0 auto;
+  }
+
   .landing-features-grid,
   .landing-pricing-grid {
     grid-template-columns: 1fr;
@@ -863,6 +920,10 @@
 
   .landing-section {
     padding: 64px 20px;
+  }
+
+  .landing-capacity-strip {
+    padding: 12px 20px 4px;
   }
 
   .landing-cta-banner {

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { fetchAuthSession } from "aws-amplify/auth";
 import { useWorkspace } from "../../../shared-components/workspace-context";
 import { useConfirm } from "../../../shared-components/confirm-context";
@@ -19,8 +19,9 @@ type View = "boards" | "tasks";
 export default function TasksPage({ role }: { role: TaskRole }) {
     const perms = taskPermissions[role];
     const client = useMemo(() => dataClient(), []);
-    const { workspaceId, tenantId, userId, email } = useWorkspace();
+    const { workspaceId, organizationId, tenantId, userId, email, organizations, setOrganizationId } = useWorkspace();
     const location = useLocation();
+    const navigate = useNavigate();
     const { confirm, alert } = useConfirm();
 
     const {
@@ -28,13 +29,19 @@ export default function TasksPage({ role }: { role: TaskRole }) {
         tasks,
         members,
         profiles,
-        organizations,
+        organizations: workspaces,
         reload,
         loading,
-    } = useTasks({ workspaceId, tenantId });
+    } = useTasks({
+        workspaceId,
+        organizationId,
+        tenantId,
+        scope: role === "TENANT_ADMIN" ? (organizationId ? "organization" : "tenant") : "workspace",
+    });
 
     const [view, setView] = useState<View>("boards");
     const [selectedBoard, setSelectedBoard] = useState<any>(null);
+    const [focusTaskId, setFocusTaskId] = useState<string | null>(null);
 
     const [showCreateBoard, setShowCreateBoard] = useState(false);
     const [createTaskBoard, setCreateTaskBoard] = useState<any>(null);
@@ -70,7 +77,40 @@ export default function TasksPage({ role }: { role: TaskRole }) {
         setView("boards");
     }, [showAssignedIndicators]);
 
-    function orgName(id: string) {
+    useEffect(() => {
+        const search = location.search || window.location.search || "";
+        const params = new URLSearchParams(search);
+        const taskId = params.get("task");
+        const explicitBoardId = params.get("board");
+        const derivedBoardId = taskId ? tasks.find((t: any) => t.id === taskId)?.taskBoardId : null;
+        const boardId = explicitBoardId || derivedBoardId || null;
+
+        if (!taskId && !boardId) {
+            setFocusTaskId(null);
+            return;
+        }
+
+        if (taskId) setFocusTaskId(taskId);
+
+        if (!boardId) return;
+        const board = boards.find((b: any) => b.id === boardId);
+        if (!board) return;
+        setSelectedBoard(board);
+        setView("tasks");
+    }, [location.search, boards, tasks]);
+
+    useEffect(() => {
+        if (!focusTaskId || view !== "tasks") return;
+        const row = document.getElementById(`task-row-${focusTaskId}`);
+        if (!row) return;
+        row.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, [focusTaskId, view, selectedBoard, tasks]);
+
+    function workspaceName(id: string) {
+        return workspaces.find((o: any) => o.id === id)?.name || "—";
+    }
+
+    function organizationName(id: string) {
         return organizations.find((o: any) => o.id === id)?.name || "—";
     }
 
@@ -156,38 +196,139 @@ export default function TasksPage({ role }: { role: TaskRole }) {
     const boardTasks = selectedBoard
         ? tasks.filter((t: any) => t.taskBoardId === selectedBoard.id)
         : [];
+    const tasksInCurrentScope = view === "tasks" && selectedBoard ? boardTasks : tasks;
+    const boardCount = boards.length;
+    const activeBoardCount = boards.filter((b: any) => b.isActive !== false).length;
+    const openTaskCount = tasksInCurrentScope.filter(
+        (t: any) => t.status !== "DONE" && t.status !== "ARCHIVED"
+    ).length;
+    const doneTaskCount = tasksInCurrentScope.filter((t: any) => t.status === "DONE").length;
+    const assignedToMeCount = tasksInCurrentScope.filter(
+        (t: any) =>
+            Boolean(t.assignedTo) &&
+            (t.assignedTo === assigneeId || (assigneeEmail && t.assignedTo === assigneeEmail))
+    ).length;
 
 
-    const boardMembers = selectedBoard
-        ? members.filter((m: any) => m.workspaceId === selectedBoard.workspaceId)
-        : members;
 
 
 
     if (loading) return <div style={{ padding: 20 }}>Loading tasks...</div>;
 
+    const orgLabel = selectedBoard?.organizationId
+        ? organizationName(selectedBoard.organizationId)
+        : organizationId
+            ? organizationName(organizationId)
+            : null;
+
+    const dashboardPath =
+        role === "TENANT_ADMIN"
+            ? "/tenant"
+            : role === "OWNER"
+                ? "/owner"
+                : "/member";
+
 
 
     return (
         <div>
+            {orgLabel && (
+                <div className="breadcrumb">
+                    <span className="crumb clickable" onClick={() => navigate(dashboardPath)}>
+                        Dashboard
+                    </span>
+                    <span className="crumb-sep">/</span>
+                    <span className="crumb workspace">{orgLabel}</span>
+                    <span className="crumb-sep">/</span>
+                    <span className="crumb current">Task Boards</span>
+                </div>
+            )}
             <div className="page-title">Tasks</div>
 
-            {/* ───────── BOARDS VIEW ───────── */}
             {view === "boards" && (
-                <>
+                <div className="tasks-page-controls">
+                    {role === "TENANT_ADMIN" && organizations.length > 0 && (
+                        <select
+                            id="tasks-organization-select"
+                            name="tasks_organization_select"
+                            className="tasks-page-org-select"
+                            value={organizationId || ""}
+                            onChange={(e) => setOrganizationId(e.target.value || null)}
+                        >
+                            <option value="">Select organization</option>
+                            {organizations.map((org: any) => (
+                                <option key={org.id} value={org.id}>{org.name}</option>
+                            ))}
+                        </select>
+                    )}
+
                     {perms.canCreateBoard && (
                         <button
-                            className="btn"
-                            style={{ marginBottom: 20 }}
+                            className="tasks-page-btn tasks-page-btn-primary"
                             onClick={() => setShowCreateBoard(true)}
                         >
                             + Create Board
                         </button>
                     )}
 
+                    {role === "TENANT_ADMIN" && (
+                        <button
+                            className="tasks-page-btn tasks-page-btn-secondary"
+                            onClick={() => navigate("/tenant/organizations")}
+                        >
+                            View Organizations
+                        </button>
+                    )}
+                </div>
+            )}
+
+            <div className="tasks-metrics-grid">
+                <div className="tasks-metric-card">
+                    <div className="tasks-metric-label">Taskboards</div>
+                    <div className="tasks-metric-value">{boardCount}</div>
+                    <div className="tasks-metric-meta">Active: {activeBoardCount}</div>
+                </div>
+                <div className="tasks-metric-card">
+                    <div className="tasks-metric-label">Open Tasks</div>
+                    <div className="tasks-metric-value">{openTaskCount}</div>
+                    <div className="tasks-metric-meta">Current scope</div>
+                </div>
+                <div className="tasks-metric-card">
+                    <div className="tasks-metric-label">Completed Tasks</div>
+                    <div className="tasks-metric-value">{doneTaskCount}</div>
+                    <div className="tasks-metric-meta">Current scope</div>
+                </div>
+                <div className="tasks-metric-card">
+                    <div className="tasks-metric-label">Assigned to Me</div>
+                    <div className="tasks-metric-value">{assignedToMeCount}</div>
+                    <div className="tasks-metric-meta">Current scope</div>
+                </div>
+            </div>
+
+            {role === "TENANT_ADMIN" && organizations.length > 0 && view === "tasks" && (
+                <div style={{ marginBottom: 16 }}>
+                    <select
+                        id="tasks-organization-select"
+                        name="tasks_organization_select"
+                        className="modal-select"
+                        value={organizationId || ""}
+                        onChange={(e) => setOrganizationId(e.target.value || null)}
+                    >
+                        <option value="">Select organization</option>
+                        {organizations.map((org: any) => (
+                            <option key={org.id} value={org.id}>{org.name}</option>
+                        ))}
+                    </select>
+                </div>
+            )}
+
+            {/* ───────── BOARDS VIEW ───────── */}
+            {view === "boards" && (
+                <>
                     {showCreateBoard && (
                         <CreateTaskBoardModal
-                            organizations={organizations}
+                            workspaces={workspaces}
+                            members={members}
                             tenantId={tenantId}
                             onClose={() => setShowCreateBoard(false)}
                             onCreated={() => {
@@ -236,7 +377,7 @@ export default function TasksPage({ role }: { role: TaskRole }) {
                                                 </span>
                                             )}
                                         </td>
-                                        <td>{orgName(b.workspaceId)}</td>
+                                        <td>{workspaceName(b.workspaceId)}</td>
                                         <td>{count}</td>
                                         <td>
                                             {b.createdAt
@@ -290,7 +431,6 @@ export default function TasksPage({ role }: { role: TaskRole }) {
                     {createTaskBoard && (
                         <CreateTaskModal
                             board={createTaskBoard}
-                            members={boardMembers}
                             onClose={() => setCreateTaskBoard(null)}
                             onCreated={() => {
                                 setCreateTaskBoard(null);
@@ -302,7 +442,6 @@ export default function TasksPage({ role }: { role: TaskRole }) {
                     {editTask && (
                         <EditTaskModal
                             task={editTask}
-                            members={boardMembers}
                             onClose={() => setEditTask(null)}
                             onUpdated={() => {
                                 setEditTask(null);
@@ -336,9 +475,22 @@ export default function TasksPage({ role }: { role: TaskRole }) {
                         </thead>
 
                         <tbody>
-                            {boardTasks.map((t: any) => (
-                                <tr key={t.id}>
+                            {boardTasks.map((t: any) => {
+                                const assignedToMe =
+                                    Boolean(t.assignedTo) &&
+                                    (t.assignedTo === assigneeId || (assigneeEmail && t.assignedTo === assigneeEmail));
+                                return (
+                                <tr
+                                    key={t.id}
+                                    id={`task-row-${t.id}`}
+                                    className={focusTaskId === t.id ? "tasks-row-focus" : ""}
+                                >
                                     <td>
+                                        {assignedToMe && (
+                                            <span className="tasks-assigned-me-pill" title="Assigned to me" aria-label="Assigned to me">
+                                                Assigned
+                                            </span>
+                                        )}
                                         <button
                                             style={{
                                                 background: "none",
@@ -392,7 +544,8 @@ export default function TasksPage({ role }: { role: TaskRole }) {
                                         )}
                                     </td>
                                 </tr>
-                            ))}
+                                );
+                            })}
 
                             {boardTasks.length === 0 && (
                                 <tr>
