@@ -7,6 +7,8 @@ import { useEffect, useRef, useState } from "react";
 import { dataClient } from "../libs/data-client";
 import { getCurrentUser } from "aws-amplify/auth";
 import GlobalCreateTaskBtn from "../components/ui/global-create-task-btn";
+import DemoBanner from "../components/ui/demo-banner";
+import { clearDemoFlag } from "../config/demo";
 
 type NavItem = {
     label: string;
@@ -54,7 +56,7 @@ export default function AppShell({
     const currentOrg = organizations.find((o) => o.id === organizationId);
     const currentOrgName = currentOrg?.name || displayName;
     const currentWorkspaceName =
-        workspaces.find((w) => w.id === workspaceId)?.name || "Select workspace";
+        workspaces.find((w) => w.id === workspaceId)?.name || "All workspaces";
 
     const [wsSwitcherOpen, setWsSwitcherOpen] = useState(false);
     const wsSwitcherRef = useRef<HTMLDivElement>(null);
@@ -168,6 +170,8 @@ export default function AppShell({
 
     /* ---------------- UI ---------------- */
     return (
+        <>
+        <DemoBanner />
         <div className="app-shell">
 
             {/* SIDEBAR */}
@@ -208,6 +212,18 @@ export default function AppShell({
 
                         {wsSwitcherOpen && (
                             <div className="sidebar-ws-dropdown">
+                                {role === "TENANT_ADMIN" && (
+                                    <div
+                                        className={`sidebar-ws-option ${!workspaceId ? "active" : ""}`}
+                                        onClick={() => {
+                                            setWorkspaceId(null);
+                                            setWsSwitcherOpen(false);
+                                        }}
+                                    >
+                                        All workspaces
+                                        {!workspaceId && <span className="sidebar-ws-check">&#10003;</span>}
+                                    </div>
+                                )}
                                 {workspaces.map((ws) => (
                                     <div
                                         key={ws.id}
@@ -269,6 +285,7 @@ export default function AppShell({
 
                     <button
                         onClick={async () => {
+                            clearDemoFlag();
                             await signOut();
                             navigate("/");
                         }}
@@ -367,6 +384,7 @@ export default function AppShell({
                                     <div
                                         className="profile-item danger"
                                         onClick={async () => {
+                                            clearDemoFlag();
                                             await signOut();
                                             navigate("/");
                                         }}
@@ -386,5 +404,6 @@ export default function AppShell({
                 <GlobalCreateTaskBtn />
             </main>
         </div>
+        </>
     );
 }

@@ -50,7 +50,7 @@ type WorkspaceCtx = {
     isTenantAdmin: boolean;
     isMember: boolean;
 
-    refreshSession: () => Promise<string | null>;
+    refreshSession: () => Promise<{ tenantId: string; orgId: string | null } | null>;
     refreshOrganizations: () => Promise<void>;
     refreshWorkspaces: () => Promise<void>;
     switchTenant: (tenantId: string) => void;
@@ -107,7 +107,7 @@ export function WorkspaceProvider({ children }: any) {
        LOAD SESSION STATE ONLY
     =============================== */
 
-    async function refreshSession(): Promise<string | null> {
+    async function refreshSession(): Promise<{ tenantId: string; orgId: string | null } | null> {
         try {
             let user;
             try {
@@ -159,13 +159,25 @@ export function WorkspaceProvider({ children }: any) {
                     localStorage.setItem("activeWorkspace", m.workspaceId);
                 }
 
-                if (m.role === "TENANT_ADMIN") {
-                    // Tenant admins should land on Control Center scoped to all organizations.
+                // Check if user has memberships across multiple organizations
+                const uniqueOrgIds = new Set(
+                    active.map((mem: any) => mem.organizationId).filter(Boolean)
+                );
+                const isMultiOrg = uniqueOrgIds.size > 1;
+
+                let resolvedOrgId: string | null = null;
+
+                if (m.role === "TENANT_ADMIN" || isMultiOrg) {
+                    // Tenant admins and multi-org users default to "All Organizations" / "All Workspaces"
                     setOrganizationIdState(null);
                     localStorage.removeItem("activeOrganization");
+                    setWorkspaceIdState(null);
+                    localStorage.removeItem("activeWorkspace");
+                    resolvedOrgId = null;
                 } else if (m.organizationId) {
                     setOrganizationIdState(m.organizationId);
                     localStorage.setItem("activeOrganization", m.organizationId);
+                    resolvedOrgId = m.organizationId;
                 } else if (m.workspaceId) {
                     try {
                         const wsRes = await client.models.Workspace.get({ id: m.workspaceId });
@@ -173,6 +185,7 @@ export function WorkspaceProvider({ children }: any) {
                         if (orgId) {
                             setOrganizationIdState(orgId);
                             localStorage.setItem("activeOrganization", orgId);
+                            resolvedOrgId = orgId;
                         }
                     } catch {
                         // ignore
@@ -182,7 +195,7 @@ export function WorkspaceProvider({ children }: any) {
                 const tenant = await client.models.Tenant.get({ id: m.tenantId });
                 setTenantName(tenant?.data?.companyName || "");
 
-                return m.tenantId; // 🔥 RETURN TENANT
+                return { tenantId: m.tenantId, orgId: resolvedOrgId };
             }
 
             // check pending invite
@@ -233,7 +246,11 @@ export function WorkspaceProvider({ children }: any) {
        LOAD WORKSPACES
     =============================== */
 
-    async function loadWorkspaces(currentTenantId: string, source?: any[]) {
+    async function loadWorkspaces(currentTenantId: string, source?: any[], orgOverride?: string | null) {
+        // Use orgOverride when provided (avoids stale closure during init).
+        // undefined = use React state; null = explicitly no org selected.
+        const effectiveOrgId = orgOverride !== undefined ? orgOverride : organizationId;
+
         const list =
             source && source.length ? source :
                 membershipsRef.current.length ? membershipsRef.current : memberships;
@@ -252,9 +269,9 @@ export function WorkspaceProvider({ children }: any) {
         // Tenant admins can have org-level or tenant-level memberships with no workspaceId.
         // Load all tenant workspaces by default, or organization-scoped list when an org is selected.
         if (isTenantAdminForTenant) {
-            if (organizationId) {
+            if (effectiveOrgId) {
                 const orgWsRes = await client.models.Workspace.list({
-                    filter: { organizationId: { eq: organizationId } },
+                    filter: { organizationId: { eq: effectiveOrgId } },
                 });
                 setWorkspaces(orgWsRes.data || []);
             } else {
@@ -266,27 +283,45 @@ export function WorkspaceProvider({ children }: any) {
             return;
         }
 
-        if (organizationId) {
+        if (effectiveOrgId) {
             const res = await client.models.Workspace.list({
-                filter: { organizationId: { eq: organizationId } },
+                filter: { organizationId: { eq: effectiveOrgId } },
             });
             setWorkspaces(res.data || []);
             return;
         }
 
+        // No org selected — load workspaces from all the user's org-level memberships
+        const orgIds = [...new Set(
+            activeMemberships.map((m: any) => m.organizationId).filter(Boolean)
+        )];
         const wsIds = activeMemberships.map((m: any) => m.workspaceId).filter(Boolean);
-        if (!wsIds.length) {
-            setWorkspaces([]);
-            return;
-        }
 
-        const results = await Promise.all(
-            wsIds.map((id: string) => client.models.Workspace.get({ id }))
+        const orgResults = await Promise.all(
+            orgIds.map((orgId: string) =>
+                client.models.Workspace.list({ filter: { organizationId: { eq: orgId } } })
+            )
         );
 
-        const ws = results.map(r => r.data).filter(Boolean) as Workspace[];
+        const wsFromOrgs = orgResults.flatMap((r: any) => r.data || []);
 
-        setWorkspaces(ws);
+        // Also load any workspace-level membership workspaces
+        const directResults = await Promise.all(
+            wsIds.map((id: string) => client.models.Workspace.get({ id }))
+        );
+        const wsFromDirect = directResults.map(r => r.data).filter(Boolean) as Workspace[];
+
+        // Merge and deduplicate
+        const seen = new Set<string>();
+        const allWs: Workspace[] = [];
+        for (const ws of [...wsFromOrgs, ...wsFromDirect]) {
+            if (ws?.id && !seen.has(ws.id)) {
+                seen.add(ws.id);
+                allWs.push(ws);
+            }
+        }
+
+        setWorkspaces(allWs);
     }
 
     useEffect(() => {
@@ -300,12 +335,14 @@ export function WorkspaceProvider({ children }: any) {
         if (workspaceId || workspaces.length === 0) return;
         // TENANT_ADMIN lands on workspace grid — don't auto-select
         if (role === "TENANT_ADMIN") return;
+        // Multi-org users (organizationId is null) default to "All Workspaces" — don't auto-select
+        if (!organizationId) return;
         const first = workspaces[0]?.id;
         if (first) {
             setWorkspaceIdState(first);
             localStorage.setItem("activeWorkspace", first);
         }
-    }, [workspaces, workspaceId, role]);
+    }, [workspaces, workspaceId, role, organizationId]);
 
     async function refreshWorkspaces() {
         if (!tenantId) return;
@@ -348,12 +385,25 @@ export function WorkspaceProvider({ children }: any) {
             localStorage.removeItem("activeWorkspace");
         }
 
+        let switchedOrgId: string | null = null;
+
         if (mem?.role === "TENANT_ADMIN") {
             setOrganizationIdState(null);
             localStorage.removeItem("activeOrganization");
         } else if (mem?.organizationId) {
-            setOrganizationIdState(mem.organizationId);
-            localStorage.setItem("activeOrganization", mem.organizationId);
+            // Check if multi-org within this tenant
+            const tenantMems = list.filter(
+                (m: any) => m.tenantId === newTenantId && m.status === "ACTIVE"
+            );
+            const uniqueOrgs = new Set(tenantMems.map((m: any) => m.organizationId).filter(Boolean));
+            if (uniqueOrgs.size > 1) {
+                setOrganizationIdState(null);
+                localStorage.removeItem("activeOrganization");
+            } else {
+                setOrganizationIdState(mem.organizationId);
+                localStorage.setItem("activeOrganization", mem.organizationId);
+                switchedOrgId = mem.organizationId;
+            }
         } else {
             setOrganizationIdState(null);
             localStorage.removeItem("activeOrganization");
@@ -364,7 +414,7 @@ export function WorkspaceProvider({ children }: any) {
         });
 
         loadOrganizations(newTenantId);
-        loadWorkspaces(newTenantId, membershipsRef.current);
+        loadWorkspaces(newTenantId, membershipsRef.current, switchedOrgId);
     }
 
     /* ===============================
@@ -441,11 +491,11 @@ export function WorkspaceProvider({ children }: any) {
                     return;
                 }
 
-                const tid = await refreshSession();
+                const result = await refreshSession();
 
-                if (tid) {
-                    await loadOrganizations(tid);
-                    await loadWorkspaces(tid, membershipsRef.current); // 🔥 DIRECT LOAD
+                if (result) {
+                    await loadOrganizations(result.tenantId);
+                    await loadWorkspaces(result.tenantId, membershipsRef.current, result.orgId);
                 }
 
             } catch {

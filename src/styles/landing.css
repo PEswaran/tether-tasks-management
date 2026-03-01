@@ -213,6 +213,39 @@
   flex-wrap: wrap;
 }
 
+.landing-hero-eyebrow {
+  display: inline-block;
+  padding: 6px 18px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  background: rgba(79, 70, 229, 0.1);
+  color: var(--primary);
+  margin-bottom: 20px;
+}
+
+.landing-hero-proof {
+  display: flex;
+  justify-content: center;
+  gap: 24px;
+  margin-top: 28px;
+  flex-wrap: wrap;
+}
+
+.landing-hero-proof span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--muted);
+}
+
+.landing-hero-proof span svg {
+  color: var(--success, #10b981);
+}
+
 /* ---------- Capacity Strip ---------- */
 .landing-capacity-strip {
   padding: 18px 40px 8px;
@@ -665,6 +698,12 @@
   margin-left: auto;
   margin-right: auto;
   line-height: 1.6;
+}
+
+.landing-cta-subtext {
+  margin-top: 16px;
+  font-size: 13px;
+  opacity: 0.7;
 }
 
 /* ---------- Footer ---------- */

@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { confirmSignIn, signIn } from "aws-amplify/auth";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Eye, EyeOff } from "lucide-react";
+import { DEMO_EMAIL, DEMO_PASSWORD, setDemoFlag } from "../../../config/demo";
 
 type LoginProps = {
     onSignedIn?: () => void;
@@ -9,6 +10,9 @@ type LoginProps = {
 
 export default function Login({ onSignedIn }: LoginProps) {
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
+
+    const isDemo = searchParams.get("demo") === "true";
 
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
@@ -19,6 +23,14 @@ export default function Login({ onSignedIn }: LoginProps) {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
     const [step, setStep] = useState<"signIn" | "newPassword">("signIn");
+
+    useEffect(() => {
+        if (isDemo) {
+            setEmail(DEMO_EMAIL);
+            setPassword(DEMO_PASSWORD);
+            setDemoFlag();
+        }
+    }, [isDemo]);
 
     function clearPostLoginCache() {
         // Clear stale tenant/workspace UI scope from previous sessions.
@@ -139,6 +151,12 @@ export default function Login({ onSignedIn }: LoginProps) {
                                 {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                             </button>
                         </div>
+
+                        {isDemo && !error && (
+                            <div className="auth-demo-hint">
+                                Demo credentials loaded — click Sign In to explore
+                            </div>
+                        )}
 
                         {error && <div className="auth-error">{error}</div>}
 

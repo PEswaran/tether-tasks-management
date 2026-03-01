@@ -167,15 +167,16 @@ export default function GeneralDashboard() {
                 return true;
             });
 
-            const orgIdsFromScopedWorkspaces = new Set(
-                scopedWorkspaces.map((ws: any) => ws.organizationId).filter(Boolean) as string[]
+            // Derive user org IDs from memberships (not workspaces) so all orgs show in pills
+            const orgIdsFromMemberships = new Set(
+                activeMemberships.map((m: any) => m.organizationId).filter(Boolean) as string[]
             );
-            if (organizationId) orgIdsFromScopedWorkspaces.add(organizationId);
-            setUserOrgIds(Array.from(orgIdsFromScopedWorkspaces));
+            if (organizationId) orgIdsFromMemberships.add(organizationId);
+            setUserOrgIds(Array.from(orgIdsFromMemberships));
 
             const organizationIds = organizationId
                 ? [organizationId]
-                : Array.from(orgIdsFromScopedWorkspaces) as string[];
+                : Array.from(orgIdsFromMemberships) as string[];
 
             const organizationStats = await Promise.all(
                 organizationIds.map(async (orgId) => {
