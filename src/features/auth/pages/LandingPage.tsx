@@ -46,10 +46,12 @@ export default function LandingPage({ onSignIn, onGetStarted }: LandingPageProps
     <div className="landing-page">
       {/* ========== NAVBAR ========== */}
       <nav className={`landing-nav${scrolled ? " scrolled" : ""}`}>
-        <div className="landing-nav-logo">
-          <img src="/logo.png" alt="TetherTasks logo" className="landing-logo-img" />
+        <a href="/" className="landing-nav-logo" onClick={(e) => { e.preventDefault(); navigate("/"); }}>
+          <div className="landing-logo-tile">
+            <img src="/logo.png" alt="TetherTasks logo" className="landing-logo-img" />
+          </div>
           TetherTasks
-        </div>
+        </a>
         <div className="landing-nav-links">
           <a href="#features" onClick={(e) => { e.preventDefault(); scrollTo("features"); }}>Features</a>
           <a href="#how-it-works" onClick={(e) => { e.preventDefault(); scrollTo("how-it-works"); }}>How It Works</a>
@@ -240,7 +242,7 @@ export default function LandingPage({ onSignIn, onGetStarted }: LandingPageProps
             {
               icon: <Briefcase size={28} />,
               title: "Consultants",
-              desc: "Separate workspace per client. Invite their team, assign deliverables, track execution &mdash; without any data leaking between accounts."
+              desc: "Separate workspace per client. Invite their team, assign deliverables, track execution - without any data leaking between accounts."
             },
             {
               icon: <Users size={28} />,
@@ -450,7 +452,12 @@ export default function LandingPage({ onSignIn, onGetStarted }: LandingPageProps
       {/* ========== FOOTER ========== */}
       <footer className="landing-footer">
         <div className="landing-footer-inner">
-          <div className="landing-footer-logo">TetherTasks</div>
+          <a href="/" className="landing-footer-logo" onClick={(e) => { e.preventDefault(); navigate("/"); }}>
+            <div className="landing-logo-tile landing-logo-tile-sm">
+              <img src="/logo.png" alt="TetherTasks logo" className="landing-logo-img" />
+            </div>
+            TetherTasks
+          </a>
           <div className="landing-footer-links">
             <a href="#features" onClick={(e) => { e.preventDefault(); scrollTo("features"); }}>Features</a>
             <a href="#pricing" onClick={(e) => { e.preventDefault(); scrollTo("pricing"); }}>Pricing</a>

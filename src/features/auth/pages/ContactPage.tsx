@@ -67,10 +67,12 @@ export default function ContactPage({ onBack }: ContactPageProps) {
     <div className="landing-page">
       {/* Navbar */}
       <nav className="landing-nav">
-        <div className="landing-nav-logo">
-          <img src="/logo.png" alt="TetherTasks logo" className="landing-logo-img" />
+        <a href="/" className="landing-nav-logo" onClick={(e) => { e.preventDefault(); onBack(); }}>
+          <div className="landing-logo-tile">
+            <img src="/logo.png" alt="TetherTasks logo" className="landing-logo-img" />
+          </div>
           TetherTasks
-        </div>
+        </a>
         <div className="landing-nav-actions">
           <button className="landing-btn landing-btn-outline" onClick={onBack}>
             <ArrowLeft size={16} /> Back to Home

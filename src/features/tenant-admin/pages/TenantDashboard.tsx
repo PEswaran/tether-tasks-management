@@ -117,6 +117,7 @@ export default function TenantDashboard() {
     const [memberQuery, setMemberQuery] = useState("");
     const [memberSort, setMemberSort] = useState<"name" | "role" | "organization">("name");
     const [memberStatus, setMemberStatus] = useState<"ALL" | "ACTIVE" | "REMOVED">("ACTIVE");
+    const [activeTab, setActiveTab] = useState<"workspaces" | "boards" | "members">("workspaces");
     const [usageMetrics, setUsageMetrics] = useState({
         plan: "STARTER",
         orgUsed: 0,
@@ -592,347 +593,376 @@ export default function TenantDashboard() {
                 </div>
 
                 <div className="workspace-directory">
-                    <div className="workspace-directory-head">
-                        <h3>Workspace Directory</h3>
-                        <div className="workspace-directory-head-right">
-                            <span className="workspace-directory-total">
-                                {filteredWorkspaces.length} workspace{filteredWorkspaces.length !== 1 ? "s" : ""}
-                            </span>
-                            {organizationId && usageCard(
-                                "Plan Limit",
-                                usageMetrics.workspaceUsed,
-                                usageMetrics.workspaceLimit,
-                                workspacePlanPercent,
-                                workspacePlanOverLimit
-                            )}
-                            <button
-                                className="directory-expand-btn"
-                                onClick={() => navigate("/tenant/workspaces")}
-                                title="Manage workspaces"
-                            >
-                                <ArrowUpRight size={14} />
-                            </button>
-                        </div>
+                    <div className="cc-tab-bar">
+                        <button
+                            className={`cc-tab ${activeTab === "workspaces" ? "active" : ""}`}
+                            onClick={() => setActiveTab("workspaces")}
+                        >
+                            <Layers size={15} /> Workspaces ({filteredWorkspaces.length})
+                        </button>
+                        <button
+                            className={`cc-tab ${activeTab === "boards" ? "active" : ""}`}
+                            onClick={() => setActiveTab("boards")}
+                        >
+                            <Kanban size={15} /> Boards ({filteredBoards.length})
+                        </button>
+                        <button
+                            className={`cc-tab ${activeTab === "members" ? "active" : ""}`}
+                            onClick={() => setActiveTab("members")}
+                        >
+                            <Users size={15} /> Members ({filteredMemberDirectory.length})
+                        </button>
                     </div>
-                    {allOrganizationsSelected ? (
-                        <div className="workspace-directory-empty">
-                            Workspace details are collapsed. Select an organization to view workspace cards and details.
-                        </div>
-                    ) : (
+
+                    {activeTab === "workspaces" && (
                         <>
-                            <div className="workspace-filter-bar board-filter-bar">
-                                <input
-                                    id="workspace-directory-search"
-                                    name="workspace_directory_search"
-                                    className="workspace-filter-input"
-                                    placeholder="Search workspace by name or description"
-                                    value={workspaceQuery}
-                                    onChange={(e) => setWorkspaceQuery(e.target.value)}
-                                />
-                                <select
-                                    id="workspace-directory-sort"
-                                    name="workspace_directory_sort"
-                                    className="workspace-filter-select"
-                                    value={workspaceSort}
-                                    onChange={(e) => setWorkspaceSort(e.target.value as "name" | "boards" | "members")}
-                                >
-                                    <option value="name">Sort: Name</option>
-                                    <option value="boards">Sort: Most Boards</option>
-                                    <option value="members">Sort: Most Members</option>
-                                </select>
-                                <select
-                                    id="workspace-directory-status"
-                                    name="workspace_directory_status"
-                                    className="workspace-filter-select"
-                                    value={workspaceStatus}
-                                    onChange={(e) => setWorkspaceStatus(e.target.value as "ALL" | "ACTIVE" | "INACTIVE")}
-                                >
-                                    <option value="ALL">Status: All</option>
-                                    <option value="ACTIVE">Status: Active</option>
-                                    <option value="INACTIVE">Status: Inactive</option>
-                                </select>
-                            </div>
-                            {selectedWorkspace && (
-                                <div className="workspace-section-actions">
+                            <div className="workspace-directory-head">
+                                <h3>Workspace Directory</h3>
+                                <div className="workspace-directory-head-right">
+                                    <span className="workspace-directory-total">
+                                        {filteredWorkspaces.length} workspace{filteredWorkspaces.length !== 1 ? "s" : ""}
+                                    </span>
+                                    {organizationId && usageCard(
+                                        "Plan Limit",
+                                        usageMetrics.workspaceUsed,
+                                        usageMetrics.workspaceLimit,
+                                        workspacePlanPercent,
+                                        workspacePlanOverLimit
+                                    )}
                                     <button
-                                        className="workspace-section-btn"
-                                        onClick={() => setWorkspaceId(selectedWorkspace.id)}
+                                        className="directory-expand-btn"
+                                        onClick={() => navigate("/tenant/workspaces")}
+                                        title="Manage workspaces"
                                     >
-                                        Open Workspace
-                                    </button>
-                                    <button
-                                        className="workspace-section-btn"
-                                        onClick={() => {
-                                            setWorkspaceId(selectedWorkspace.id);
-                                            navigate("/tenant/tasks");
-                                        }}
-                                    >
-                                        View Tasks
-                                    </button>
-                                    <button
-                                        className="workspace-section-btn"
-                                        onClick={() => {
-                                            setWorkspaceId(selectedWorkspace.id);
-                                            navigate("/tenant/members");
-                                        }}
-                                    >
-                                        Manage Members
+                                        <ArrowUpRight size={14} />
                                     </button>
                                 </div>
-                            )}
-                            {gridLoading ? (
-                                <div className="workspace-directory-empty">Loading workspaces...</div>
-                            ) : filteredWorkspaces.length === 0 ? (
-                                <div className="workspace-directory-empty">No workspaces available for this organization.</div>
+                            </div>
+                            {allOrganizationsSelected ? (
+                                <div className="workspace-directory-empty">
+                                    Workspace details are collapsed. Select an organization to view workspace cards and details.
+                                </div>
                             ) : (
-                                <div className="cc-content-grid">
-                                    <div className="ws-grid">
-                                        {filteredWorkspaces.map((ws) => {
-                                            const s = wsStats[ws.id] || { boards: 0, members: 0, tasks: 0 };
-                                            const isSelected = ws.id === selectedWorkspaceId;
-                                            return (
-                                                <div
-                                                    key={ws.id}
-                                                    className={`ws-card ${isSelected ? "selected" : ""}`}
-                                                    onClick={() => setSelectedWorkspaceId(ws.id)}
-                                                >
-                                                    <div className="ws-card-header">
-                                                        <div className="ws-card-name">{ws.name || ws.id}</div>
-                                                        <div className="ws-org-icon" title={organizations.find((org: any) => org.id === ws.organizationId)?.name || "Organization"}>
-                                                            {organizationInitialsForWorkspace(ws)}
-                                                        </div>
-                                                    </div>
-                                                    {ws.description && (
-                                                        <div className="ws-card-desc">{ws.description}</div>
-                                                    )}
-                                                    <div className="ws-card-stats">
-                                                        <span className="ws-stat">
-                                                            <Kanban size={14} /> {s.boards} boards
-                                                        </span>
-                                                        <span className="ws-stat">
-                                                            <Users size={14} /> {s.members} members
-                                                        </span>
-                                                        <span className="ws-stat">
-                                                            <ListTodo size={14} /> {s.tasks} tasks
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                            );
-                                        })}
+                                <>
+                                    <div className="workspace-filter-bar board-filter-bar">
+                                        <input
+                                            id="workspace-directory-search"
+                                            name="workspace_directory_search"
+                                            className="workspace-filter-input"
+                                            placeholder="Search workspace by name or description"
+                                            value={workspaceQuery}
+                                            onChange={(e) => setWorkspaceQuery(e.target.value)}
+                                        />
+                                        <select
+                                            id="workspace-directory-sort"
+                                            name="workspace_directory_sort"
+                                            className="workspace-filter-select"
+                                            value={workspaceSort}
+                                            onChange={(e) => setWorkspaceSort(e.target.value as "name" | "boards" | "members")}
+                                        >
+                                            <option value="name">Sort: Name</option>
+                                            <option value="boards">Sort: Most Boards</option>
+                                            <option value="members">Sort: Most Members</option>
+                                        </select>
+                                        <select
+                                            id="workspace-directory-status"
+                                            name="workspace_directory_status"
+                                            className="workspace-filter-select"
+                                            value={workspaceStatus}
+                                            onChange={(e) => setWorkspaceStatus(e.target.value as "ALL" | "ACTIVE" | "INACTIVE")}
+                                        >
+                                            <option value="ALL">Status: All</option>
+                                            <option value="ACTIVE">Status: Active</option>
+                                            <option value="INACTIVE">Status: Inactive</option>
+                                        </select>
                                     </div>
-
-                                    <aside className="workspace-drawer">
-                                        {selectedWorkspace ? (
-                                            <>
-                                                <h3 className="workspace-drawer-title">{selectedWorkspace.name || selectedWorkspace.id}</h3>
-                                                <p className="workspace-drawer-sub">
-                                                    {(selectedWorkspace.description || "No description") as string}
-                                                </p>
-                                                <div className="workspace-drawer-stats">
-                                                    <div><strong>{wsStats[selectedWorkspace.id]?.boards || 0}</strong><span>Boards</span></div>
-                                                    <div><strong>{wsStats[selectedWorkspace.id]?.members || 0}</strong><span>Members</span></div>
-                                                    <div><strong>{wsStats[selectedWorkspace.id]?.tasks || 0}</strong><span>Tasks</span></div>
-                                                </div>
-                                                <div className="workspace-drawer-actions">
-                                                    <button
-                                                        className="btn"
-                                                        onClick={() => setWorkspaceId(selectedWorkspace.id)}
-                                                    >
-                                                        Open Workspace Dashboard
-                                                    </button>
-                                                    <button
-                                                        className="btn secondary"
-                                                        onClick={() => {
-                                                            setWorkspaceId(selectedWorkspace.id);
-                                                            navigate("/tenant/tasks");
-                                                        }}
-                                                    >
-                                                        View Tasks
-                                                    </button>
-                                                    <button
-                                                        className="btn secondary"
-                                                        onClick={() => {
-                                                            setWorkspaceId(selectedWorkspace.id);
-                                                            navigate("/tenant/members");
-                                                        }}
-                                                    >
-                                                        Manage Members
-                                                    </button>
-                                                </div>
-                                            </>
-                                        ) : (
-                                            <div className="workspace-directory-empty">Select a workspace to view quick details.</div>
-                                        )}
-                                    </aside>
-                                </div>
-                            )}
-                        </>
-                    )}
-                </div>
-
-                <div className="workspace-directory">
-                    <div className="workspace-directory-head">
-                        <h3>Board Directory</h3>
-                        <div className="workspace-directory-head-right">
-                            <span className="workspace-directory-total">
-                                {filteredBoards.length} board{filteredBoards.length !== 1 ? "s" : ""}
-                            </span>
-                            <button
-                                className="directory-expand-btn"
-                                onClick={() => navigate("/tenant/tasks")}
-                                title="Manage task boards"
-                            >
-                                <ArrowUpRight size={14} />
-                            </button>
-                        </div>
-                    </div>
-                    {allOrganizationsSelected ? (
-                        <div className="workspace-directory-empty">
-                            Board details are collapsed. Select an organization to view board cards and filters.
-                        </div>
-                    ) : (
-                        <>
-                            <div className="workspace-filter-bar board-filter-bar">
-                                <input
-                                    id="board-directory-search"
-                                    name="board_directory_search"
-                                    className="workspace-filter-input"
-                                    placeholder="Search board by name or workspace"
-                                    value={boardQuery}
-                                    onChange={(e) => setBoardQuery(e.target.value)}
-                                />
-                                <select
-                                    id="board-directory-sort"
-                                    name="board_directory_sort"
-                                    className="workspace-filter-select"
-                                    value={boardSort}
-                                    onChange={(e) => setBoardSort(e.target.value as "name" | "workspace" | "tasks")}
-                                >
-                                    <option value="name">Sort: Name</option>
-                                    <option value="workspace">Sort: Workspace</option>
-                                    <option value="tasks">Sort: Most Tasks</option>
-                                </select>
-                                <select
-                                    id="board-directory-status"
-                                    name="board_directory_status"
-                                    className="workspace-filter-select"
-                                    value={boardStatus}
-                                    onChange={(e) => setBoardStatus(e.target.value as "ALL" | "ACTIVE" | "INACTIVE")}
-                                >
-                                    <option value="ALL">Status: All</option>
-                                    <option value="ACTIVE">Status: Active</option>
-                                    <option value="INACTIVE">Status: Inactive</option>
-                                </select>
-                            </div>
-                            {gridLoading ? (
-                                <div className="workspace-directory-empty">Loading boards...</div>
-                            ) : filteredBoards.length === 0 ? (
-                                <div className="workspace-directory-empty">No boards match your current filters.</div>
-                            ) : (
-                                <div className="board-grid">
-                                    {filteredBoards.map((board) => (
-                                        <div key={board.id} className="board-card board-directory-card">
-                                            <div className="board-card-name">{board.name || board.id}</div>
-                                            <div className="board-card-stats">
-                                                <span>{board.workspaceName}</span>
-                                                <span>{board.taskCount} task{board.taskCount !== 1 ? "s" : ""}</span>
-                                                <span>{board.isActive === false ? "Inactive" : "Active"}</span>
-                                            </div>
-                                            {board.workspaceId && (
-                                                <button
-                                                    className="btn secondary"
-                                                    style={{ marginTop: 10 }}
-                                                    onClick={() => setWorkspaceId(board.workspaceId || null)}
-                                                >
-                                                    Open Workspace Details
-                                                </button>
-                                            )}
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </>
-                    )}
-                </div>
-
-                <div className="workspace-directory">
-                    <div className="workspace-directory-head">
-                        <h3>Member Directory</h3>
-                        <div className="workspace-directory-head-right">
-                            <span className="workspace-directory-total">
-                                {filteredMemberDirectory.length} member{filteredMemberDirectory.length !== 1 ? "s" : ""}
-                            </span>
-                            <button
-                                className="directory-expand-btn"
-                                onClick={() => navigate("/tenant/members")}
-                                title="Manage members"
-                            >
-                                <ArrowUpRight size={14} />
-                            </button>
-                        </div>
-                    </div>
-                    {allOrganizationsSelected ? (
-                        <div className="workspace-directory-empty">
-                            Member details are collapsed. Select an organization to view member cards and filters.
-                        </div>
-                    ) : (
-                        <>
-                            <div className="workspace-filter-bar board-filter-bar">
-                                <input
-                                    id="member-directory-search"
-                                    name="member_directory_search"
-                                    className="workspace-filter-input"
-                                    placeholder="Search member by email, role, or organization"
-                                    value={memberQuery}
-                                    onChange={(e) => setMemberQuery(e.target.value)}
-                                />
-                                <select
-                                    id="member-directory-sort"
-                                    name="member_directory_sort"
-                                    className="workspace-filter-select"
-                                    value={memberSort}
-                                    onChange={(e) => setMemberSort(e.target.value as "name" | "role" | "organization")}
-                                >
-                                    <option value="name">Sort: Email</option>
-                                    <option value="role">Sort: Role</option>
-                                    <option value="organization">Sort: Organization</option>
-                                </select>
-                                <select
-                                    id="member-directory-status"
-                                    name="member_directory_status"
-                                    className="workspace-filter-select"
-                                    value={memberStatus}
-                                    onChange={(e) => setMemberStatus(e.target.value as "ALL" | "ACTIVE" | "REMOVED")}
-                                >
-                                    <option value="ACTIVE">Status: Active</option>
-                                    <option value="ALL">Status: All</option>
-                                    <option value="REMOVED">Status: Removed</option>
-                                </select>
-                            </div>
-                            {gridLoading ? (
-                                <div className="workspace-directory-empty">Loading members...</div>
-                            ) : filteredMemberDirectory.length === 0 ? (
-                                <div className="workspace-directory-empty">No members match your current filters.</div>
-                            ) : (
-                                <div className="board-grid">
-                                    {filteredMemberDirectory.map((member) => (
-                                        <div key={member.id} className="board-card board-directory-card">
-                                            <div className="board-card-name">{member.email}</div>
-                                            <div className="board-card-stats">
-                                                <span>{member.organizationName || "Organization"}</span>
-                                                <span>{member.role || "MEMBER"}</span>
-                                                <span>{member.status || "ACTIVE"}</span>
-                                            </div>
+                                    {selectedWorkspace && (
+                                        <div className="workspace-section-actions">
                                             <button
-                                                className="btn secondary"
-                                                style={{ marginTop: 10 }}
-                                                onClick={() => navigate("/tenant/members")}
+                                                className="workspace-section-btn"
+                                                onClick={() => setWorkspaceId(selectedWorkspace.id)}
                                             >
-                                                Open Members
+                                                Open Workspace
+                                            </button>
+                                            <button
+                                                className="workspace-section-btn"
+                                                onClick={() => {
+                                                    setWorkspaceId(selectedWorkspace.id);
+                                                    navigate("/tenant/tasks");
+                                                }}
+                                            >
+                                                View Tasks
+                                            </button>
+                                            <button
+                                                className="workspace-section-btn"
+                                                onClick={() => {
+                                                    setWorkspaceId(selectedWorkspace.id);
+                                                    navigate("/tenant/members");
+                                                }}
+                                            >
+                                                Manage Members
                                             </button>
                                         </div>
-                                    ))}
+                                    )}
+                                    {gridLoading ? (
+                                        <div className="workspace-directory-empty">Loading workspaces...</div>
+                                    ) : filteredWorkspaces.length === 0 ? (
+                                        <div className="workspace-directory-empty">No workspaces available for this organization.</div>
+                                    ) : (
+                                        <div className="cc-content-grid">
+                                            <div className="ws-grid">
+                                                {filteredWorkspaces.map((ws) => {
+                                                    const s = wsStats[ws.id] || { boards: 0, members: 0, tasks: 0 };
+                                                    const isSelected = ws.id === selectedWorkspaceId;
+                                                    return (
+                                                        <div
+                                                            key={ws.id}
+                                                            className={`ws-card ${isSelected ? "selected" : ""}`}
+                                                            onClick={() => setSelectedWorkspaceId(ws.id)}
+                                                        >
+                                                            <div className="ws-card-header">
+                                                                <div className="ws-card-name">{ws.name || ws.id}</div>
+                                                                <div className="ws-org-icon" title={organizations.find((org: any) => org.id === ws.organizationId)?.name || "Organization"}>
+                                                                    {organizationInitialsForWorkspace(ws)}
+                                                                </div>
+                                                            </div>
+                                                            {ws.description && (
+                                                                <div className="ws-card-desc">{ws.description}</div>
+                                                            )}
+                                                            <div className="ws-card-stats">
+                                                                <span className="ws-stat">
+                                                                    <Kanban size={14} /> {s.boards} boards
+                                                                </span>
+                                                                <span className="ws-stat">
+                                                                    <Users size={14} /> {s.members} members
+                                                                </span>
+                                                                <span className="ws-stat">
+                                                                    <ListTodo size={14} /> {s.tasks} tasks
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+
+                                            <aside className="workspace-drawer">
+                                                {selectedWorkspace ? (
+                                                    <>
+                                                        <h3 className="workspace-drawer-title">{selectedWorkspace.name || selectedWorkspace.id}</h3>
+                                                        <p className="workspace-drawer-sub">
+                                                            {(selectedWorkspace.description || "No description") as string}
+                                                        </p>
+                                                        <div className="workspace-drawer-stats">
+                                                            <div><strong>{wsStats[selectedWorkspace.id]?.boards || 0}</strong><span>Boards</span></div>
+                                                            <div><strong>{wsStats[selectedWorkspace.id]?.members || 0}</strong><span>Members</span></div>
+                                                            <div><strong>{wsStats[selectedWorkspace.id]?.tasks || 0}</strong><span>Tasks</span></div>
+                                                        </div>
+                                                        <div className="workspace-drawer-actions">
+                                                            <button
+                                                                className="btn"
+                                                                onClick={() => setWorkspaceId(selectedWorkspace.id)}
+                                                            >
+                                                                Open Workspace Dashboard
+                                                            </button>
+                                                            <button
+                                                                className="btn secondary"
+                                                                onClick={() => {
+                                                                    setWorkspaceId(selectedWorkspace.id);
+                                                                    navigate("/tenant/tasks");
+                                                                }}
+                                                            >
+                                                                View Tasks
+                                                            </button>
+                                                            <button
+                                                                className="btn secondary"
+                                                                onClick={() => {
+                                                                    setWorkspaceId(selectedWorkspace.id);
+                                                                    navigate("/tenant/members");
+                                                                }}
+                                                            >
+                                                                Manage Members
+                                                            </button>
+                                                        </div>
+                                                    </>
+                                                ) : (
+                                                    <div className="workspace-directory-empty">Select a workspace to view quick details.</div>
+                                                )}
+                                            </aside>
+                                        </div>
+                                    )}
+                                </>
+                            )}
+                        </>
+                    )}
+
+                    {activeTab === "boards" && (
+                        <>
+                            <div className="workspace-directory-head">
+                                <h3>Board Directory</h3>
+                                <div className="workspace-directory-head-right">
+                                    <span className="workspace-directory-total">
+                                        {filteredBoards.length} board{filteredBoards.length !== 1 ? "s" : ""}
+                                    </span>
+                                    <button
+                                        className="directory-expand-btn"
+                                        onClick={() => navigate("/tenant/tasks")}
+                                        title="Manage task boards"
+                                    >
+                                        <ArrowUpRight size={14} />
+                                    </button>
                                 </div>
+                            </div>
+                            {allOrganizationsSelected ? (
+                                <div className="workspace-directory-empty">
+                                    Board details are collapsed. Select an organization to view board cards and filters.
+                                </div>
+                            ) : (
+                                <>
+                                    <div className="workspace-filter-bar board-filter-bar">
+                                        <input
+                                            id="board-directory-search"
+                                            name="board_directory_search"
+                                            className="workspace-filter-input"
+                                            placeholder="Search board by name or workspace"
+                                            value={boardQuery}
+                                            onChange={(e) => setBoardQuery(e.target.value)}
+                                        />
+                                        <select
+                                            id="board-directory-sort"
+                                            name="board_directory_sort"
+                                            className="workspace-filter-select"
+                                            value={boardSort}
+                                            onChange={(e) => setBoardSort(e.target.value as "name" | "workspace" | "tasks")}
+                                        >
+                                            <option value="name">Sort: Name</option>
+                                            <option value="workspace">Sort: Workspace</option>
+                                            <option value="tasks">Sort: Most Tasks</option>
+                                        </select>
+                                        <select
+                                            id="board-directory-status"
+                                            name="board_directory_status"
+                                            className="workspace-filter-select"
+                                            value={boardStatus}
+                                            onChange={(e) => setBoardStatus(e.target.value as "ALL" | "ACTIVE" | "INACTIVE")}
+                                        >
+                                            <option value="ALL">Status: All</option>
+                                            <option value="ACTIVE">Status: Active</option>
+                                            <option value="INACTIVE">Status: Inactive</option>
+                                        </select>
+                                    </div>
+                                    {gridLoading ? (
+                                        <div className="workspace-directory-empty">Loading boards...</div>
+                                    ) : filteredBoards.length === 0 ? (
+                                        <div className="workspace-directory-empty">No boards match your current filters.</div>
+                                    ) : (
+                                        <div className="board-grid">
+                                            {filteredBoards.map((board) => (
+                                                <div key={board.id} className="board-card board-directory-card">
+                                                    <div className="board-card-name">{board.name || board.id}</div>
+                                                    <div className="board-card-stats">
+                                                        <span>{board.workspaceName}</span>
+                                                        <span>{board.taskCount} task{board.taskCount !== 1 ? "s" : ""}</span>
+                                                        <span>{board.isActive === false ? "Inactive" : "Active"}</span>
+                                                    </div>
+                                                    {board.workspaceId && (
+                                                        <button
+                                                            className="btn secondary"
+                                                            style={{ marginTop: 10 }}
+                                                            onClick={() => setWorkspaceId(board.workspaceId || null)}
+                                                        >
+                                                            Open Workspace Details
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </>
+                            )}
+                        </>
+                    )}
+
+                    {activeTab === "members" && (
+                        <>
+                            <div className="workspace-directory-head">
+                                <h3>Member Directory</h3>
+                                <div className="workspace-directory-head-right">
+                                    <span className="workspace-directory-total">
+                                        {filteredMemberDirectory.length} member{filteredMemberDirectory.length !== 1 ? "s" : ""}
+                                    </span>
+                                    <button
+                                        className="directory-expand-btn"
+                                        onClick={() => navigate("/tenant/members")}
+                                        title="Manage members"
+                                    >
+                                        <ArrowUpRight size={14} />
+                                    </button>
+                                </div>
+                            </div>
+                            {allOrganizationsSelected ? (
+                                <div className="workspace-directory-empty">
+                                    Member details are collapsed. Select an organization to view member cards and filters.
+                                </div>
+                            ) : (
+                                <>
+                                    <div className="workspace-filter-bar board-filter-bar">
+                                        <input
+                                            id="member-directory-search"
+                                            name="member_directory_search"
+                                            className="workspace-filter-input"
+                                            placeholder="Search member by email, role, or organization"
+                                            value={memberQuery}
+                                            onChange={(e) => setMemberQuery(e.target.value)}
+                                        />
+                                        <select
+                                            id="member-directory-sort"
+                                            name="member_directory_sort"
+                                            className="workspace-filter-select"
+                                            value={memberSort}
+                                            onChange={(e) => setMemberSort(e.target.value as "name" | "role" | "organization")}
+                                        >
+                                            <option value="name">Sort: Email</option>
+                                            <option value="role">Sort: Role</option>
+                                            <option value="organization">Sort: Organization</option>
+                                        </select>
+                                        <select
+                                            id="member-directory-status"
+                                            name="member_directory_status"
+                                            className="workspace-filter-select"
+                                            value={memberStatus}
+                                            onChange={(e) => setMemberStatus(e.target.value as "ALL" | "ACTIVE" | "REMOVED")}
+                                        >
+                                            <option value="ACTIVE">Status: Active</option>
+                                            <option value="ALL">Status: All</option>
+                                            <option value="REMOVED">Status: Removed</option>
+                                        </select>
+                                    </div>
+                                    {gridLoading ? (
+                                        <div className="workspace-directory-empty">Loading members...</div>
+                                    ) : filteredMemberDirectory.length === 0 ? (
+                                        <div className="workspace-directory-empty">No members match your current filters.</div>
+                                    ) : (
+                                        <div className="board-grid">
+                                            {filteredMemberDirectory.map((member) => (
+                                                <div key={member.id} className="board-card board-directory-card">
+                                                    <div className="board-card-name">{member.email}</div>
+                                                    <div className="board-card-stats">
+                                                        <span>{member.organizationName || "Organization"}</span>
+                                                        <span>{member.role || "MEMBER"}</span>
+                                                        <span>{member.status || "ACTIVE"}</span>
+                                                    </div>
+                                                    <button
+                                                        className="btn secondary"
+                                                        style={{ marginTop: 10 }}
+                                                        onClick={() => navigate("/tenant/members")}
+                                                    >
+                                                        Open Members
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </>
                             )}
                         </>
                     )}

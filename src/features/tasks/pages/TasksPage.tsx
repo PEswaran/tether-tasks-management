@@ -5,7 +5,7 @@ import { useWorkspace } from "../../../shared-components/workspace-context";
 import { useConfirm } from "../../../shared-components/confirm-context";
 import { displayName } from "../../../libs/displayName";
 import { dataClient } from "../../../libs/data-client";
-
+import { ListTodo, AlertTriangle, CalendarClock, Clock, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 
 import CreateTaskBoardModal from "../../../components/shared/modals/create-task-board-modal";
 import CreateTaskModal from "../../../components/shared/modals/create-task-modal";
@@ -16,7 +16,7 @@ import { useTasks } from "../../../hooks/useTasks";
 
 type View = "boards" | "tasks";
 
-export default function TasksPage({ role }: { role: TaskRole }) {
+export default function TasksPage({ role, assignedToMe }: { role: TaskRole; assignedToMe?: boolean }) {
     const perms = taskPermissions[role];
     const client = useMemo(() => dataClient(), []);
     const { workspaceId, organizationId, tenantId, userId, email, organizations, setOrganizationId } = useWorkspace();
@@ -48,6 +48,9 @@ export default function TasksPage({ role }: { role: TaskRole }) {
     const [editTask, setEditTask] = useState<any>(null);
     const [requestDeleteTask, setRequestDeleteTask] = useState<any>(null);
 
+    const [sortKey, setSortKey] = useState<"status" | "priority" | "dueDate" | null>(null);
+    const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+
     const [mySub, setMySub] = useState<string | null>(null);
 
     useEffect(() => {
@@ -67,9 +70,10 @@ export default function TasksPage({ role }: { role: TaskRole }) {
     }, [userId]);
 
     const showAssignedIndicators = useMemo(() => {
+        if (assignedToMe) return true;
         const search = location.search || window.location.search || "";
         return new URLSearchParams(search).get("assigned") === "me";
-    }, [location.search]);
+    }, [location.search, assignedToMe]);
 
     useEffect(() => {
         if (!showAssignedIndicators) return;
@@ -193,9 +197,43 @@ export default function TasksPage({ role }: { role: TaskRole }) {
         setView("boards");
     }
 
-    const boardTasks = selectedBoard
+    const STATUS_ORDER: Record<string, number> = { TODO: 0, IN_PROGRESS: 1, DONE: 2, ARCHIVED: 3 };
+    const PRIORITY_ORDER: Record<string, number> = { URGENT: 0, HIGH: 1, MEDIUM: 2, LOW: 3 };
+
+    function toggleSort(key: "status" | "priority" | "dueDate") {
+        if (sortKey === key) {
+            setSortDir(prev => prev === "asc" ? "desc" : "asc");
+        } else {
+            setSortKey(key);
+            setSortDir("asc");
+        }
+    }
+
+    const boardTasksRaw = selectedBoard
         ? tasks.filter((t: any) => t.taskBoardId === selectedBoard.id)
         : [];
+
+    const boardTasks = useMemo(() => {
+        if (!sortKey) return boardTasksRaw;
+        const sorted = [...boardTasksRaw].sort((a: any, b: any) => {
+            let cmp = 0;
+            if (sortKey === "status") {
+                cmp = (STATUS_ORDER[a.status] ?? 99) - (STATUS_ORDER[b.status] ?? 99);
+            } else if (sortKey === "priority") {
+                cmp = (PRIORITY_ORDER[a.priority] ?? 99) - (PRIORITY_ORDER[b.priority] ?? 99);
+            } else if (sortKey === "dueDate") {
+                const aDate = a.dueDate || "";
+                const bDate = b.dueDate || "";
+                if (!aDate && !bDate) cmp = 0;
+                else if (!aDate) cmp = 1;
+                else if (!bDate) cmp = -1;
+                else cmp = aDate.localeCompare(bDate);
+            }
+            return sortDir === "desc" ? -cmp : cmp;
+        });
+        return sorted;
+    }, [boardTasksRaw, sortKey, sortDir]);
+
     const tasksInCurrentScope = view === "tasks" && selectedBoard ? boardTasks : tasks;
     const boardCount = boards.length;
     const activeBoardCount = boards.filter((b: any) => b.isActive !== false).length;
@@ -209,8 +247,34 @@ export default function TasksPage({ role }: { role: TaskRole }) {
             (t.assignedTo === assigneeId || (assigneeEmail && t.assignedTo === assigneeEmail))
     ).length;
 
+    // Urgency metrics for "My Tasks" view
+    const myOpenTasks = useMemo(() => {
+        if (!assignedToMe) return [];
+        return tasksInCurrentScope.filter(
+            (t: any) =>
+                t.status !== "DONE" && t.status !== "ARCHIVED" &&
+                Boolean(t.assignedTo) &&
+                (t.assignedTo === assigneeId || (assigneeEmail && t.assignedTo === assigneeEmail))
+        );
+    }, [tasksInCurrentScope, assignedToMe, assigneeId, assigneeEmail]);
 
+    const urgency = useMemo(() => {
+        if (!assignedToMe) return { overdue: 0, dueToday: 0, dueSoon: 0, open: 0 };
+        const today = new Date().toISOString().split("T")[0];
+        const soon = new Date();
+        soon.setDate(soon.getDate() + 3);
+        const soonStr = soon.toISOString().split("T")[0];
 
+        let overdue = 0, dueToday = 0, dueSoon = 0;
+        for (const t of myOpenTasks) {
+            if (!t.dueDate) continue;
+            const d = t.dueDate.split("T")[0];
+            if (d < today) overdue++;
+            else if (d === today) dueToday++;
+            else if (d <= soonStr) dueSoon++;
+        }
+        return { overdue, dueToday, dueSoon, open: myOpenTasks.length };
+    }, [myOpenTasks, assignedToMe]);
 
 
     if (loading) return <div style={{ padding: 20 }}>Loading tasks...</div>;
@@ -243,7 +307,7 @@ export default function TasksPage({ role }: { role: TaskRole }) {
                     <span className="crumb current">Task Boards</span>
                 </div>
             )}
-            <div className="page-title">Tasks</div>
+            <div className="page-title">{assignedToMe ? "My Tasks" : "Tasks"}</div>
 
             {view === "boards" && (
                 <div className="tasks-page-controls">
@@ -282,28 +346,69 @@ export default function TasksPage({ role }: { role: TaskRole }) {
                 </div>
             )}
 
-            <div className="tasks-metrics-grid">
-                <div className="tasks-metric-card">
-                    <div className="tasks-metric-label">Taskboards</div>
-                    <div className="tasks-metric-value">{boardCount}</div>
-                    <div className="tasks-metric-meta">Active: {activeBoardCount}</div>
+            {assignedToMe ? (
+                <div className="tasks-metrics-grid">
+                    <div className="tasks-metric-card">
+                        <div className="tasks-metric-icon" style={{ background: "#eff6ff", color: "#3b82f6" }}>
+                            <ListTodo size={18} />
+                        </div>
+                        <div className="tasks-metric-label">Open</div>
+                        <div className="tasks-metric-value">{urgency.open}</div>
+                        <div className="tasks-metric-meta">Assigned to me</div>
+                    </div>
+                    <div className={`tasks-metric-card${urgency.overdue > 0 ? " tasks-metric-danger" : ""}`}>
+                        <div className="tasks-metric-icon" style={{ background: "#fee2e2", color: "#dc2626" }}>
+                            <AlertTriangle size={18} />
+                        </div>
+                        <div className="tasks-metric-label">Overdue</div>
+                        <div className="tasks-metric-value" style={urgency.overdue > 0 ? { color: "#dc2626" } : undefined}>
+                            {urgency.overdue}
+                        </div>
+                        <div className="tasks-metric-meta">Past due date</div>
+                    </div>
+                    <div className={`tasks-metric-card${urgency.dueToday > 0 ? " tasks-metric-warn" : ""}`}>
+                        <div className="tasks-metric-icon" style={{ background: "#fff7ed", color: "#ea580c" }}>
+                            <CalendarClock size={18} />
+                        </div>
+                        <div className="tasks-metric-label">Due Today</div>
+                        <div className="tasks-metric-value" style={urgency.dueToday > 0 ? { color: "#ea580c" } : undefined}>
+                            {urgency.dueToday}
+                        </div>
+                        <div className="tasks-metric-meta">Needs attention</div>
+                    </div>
+                    <div className="tasks-metric-card">
+                        <div className="tasks-metric-icon" style={{ background: "#fefce8", color: "#ca8a04" }}>
+                            <Clock size={18} />
+                        </div>
+                        <div className="tasks-metric-label">Due Soon</div>
+                        <div className="tasks-metric-value">{urgency.dueSoon}</div>
+                        <div className="tasks-metric-meta">Next 3 days</div>
+                    </div>
                 </div>
-                <div className="tasks-metric-card">
-                    <div className="tasks-metric-label">Open Tasks</div>
-                    <div className="tasks-metric-value">{openTaskCount}</div>
-                    <div className="tasks-metric-meta">Current scope</div>
+            ) : (
+                <div className="tasks-metrics-grid">
+                    <div className="tasks-metric-card">
+                        <div className="tasks-metric-label">Taskboards</div>
+                        <div className="tasks-metric-value">{boardCount}</div>
+                        <div className="tasks-metric-meta">Active: {activeBoardCount}</div>
+                    </div>
+                    <div className="tasks-metric-card">
+                        <div className="tasks-metric-label">Open Tasks</div>
+                        <div className="tasks-metric-value">{openTaskCount}</div>
+                        <div className="tasks-metric-meta">Current scope</div>
+                    </div>
+                    <div className="tasks-metric-card">
+                        <div className="tasks-metric-label">Completed Tasks</div>
+                        <div className="tasks-metric-value">{doneTaskCount}</div>
+                        <div className="tasks-metric-meta">Current scope</div>
+                    </div>
+                    <div className="tasks-metric-card">
+                        <div className="tasks-metric-label">Assigned to Me</div>
+                        <div className="tasks-metric-value">{assignedToMeCount}</div>
+                        <div className="tasks-metric-meta">Current scope</div>
+                    </div>
                 </div>
-                <div className="tasks-metric-card">
-                    <div className="tasks-metric-label">Completed Tasks</div>
-                    <div className="tasks-metric-value">{doneTaskCount}</div>
-                    <div className="tasks-metric-meta">Current scope</div>
-                </div>
-                <div className="tasks-metric-card">
-                    <div className="tasks-metric-label">Assigned to Me</div>
-                    <div className="tasks-metric-value">{assignedToMeCount}</div>
-                    <div className="tasks-metric-meta">Current scope</div>
-                </div>
-            </div>
+            )}
 
             {role === "TENANT_ADMIN" && organizations.length > 0 && view === "tasks" && (
                 <div style={{ marginBottom: 16 }}>
@@ -353,15 +458,23 @@ export default function TasksPage({ role }: { role: TaskRole }) {
                                 const count = tasks.filter(
                                     (t: any) => t.taskBoardId === b.id
                                 ).length;
-                                const assignedCount = showAssignedIndicators && (assigneeId || assigneeEmail)
+                                const myBoardTasks = showAssignedIndicators && (assigneeId || assigneeEmail)
                                     ? tasks.filter(
                                         (t: any) =>
                                             t.taskBoardId === b.id &&
                                             (t.assignedTo === assigneeId || (assigneeEmail && t.assignedTo === assigneeEmail)) &&
                                             t.status !== "DONE" &&
                                             t.status !== "ARCHIVED"
-                                    ).length
-                                    : 0;
+                                    )
+                                    : [];
+                                const assignedCount = myBoardTasks.length;
+                                const todayStr = new Date().toISOString().split("T")[0];
+                                const boardOverdue = myBoardTasks.filter(
+                                    (t: any) => t.dueDate && t.dueDate.split("T")[0] < todayStr
+                                ).length;
+                                const boardDueToday = myBoardTasks.filter(
+                                    (t: any) => t.dueDate && t.dueDate.split("T")[0] === todayStr
+                                ).length;
                                 return (
                                     <tr key={b.id}>
                                         <td>
@@ -373,7 +486,17 @@ export default function TasksPage({ role }: { role: TaskRole }) {
                                             </button>
                                             {assignedCount >= 1 && (
                                                 <span className="pill-badge amber" style={{ marginLeft: 8 }}>
-                                                    Assigned
+                                                    {assignedCount} Assigned
+                                                </span>
+                                            )}
+                                            {boardOverdue > 0 && (
+                                                <span className="pill-badge red" style={{ marginLeft: 6 }}>
+                                                    <AlertTriangle size={12} /> {boardOverdue} Overdue
+                                                </span>
+                                            )}
+                                            {boardDueToday > 0 && (
+                                                <span className="pill-badge amber" style={{ marginLeft: 6 }}>
+                                                    <CalendarClock size={12} /> {boardDueToday} Due Today
                                                 </span>
                                             )}
                                         </td>
@@ -466,10 +589,25 @@ export default function TasksPage({ role }: { role: TaskRole }) {
                         <thead>
                             <tr>
                                 <th>Title</th>
-                                <th>Status</th>
-                                <th>Priority</th>
+                                <th className="th-sortable" onClick={() => toggleSort("status")}>
+                                    Status
+                                    {sortKey === "status"
+                                        ? (sortDir === "asc" ? <ArrowUp size={13} /> : <ArrowDown size={13} />)
+                                        : <ArrowUpDown size={13} className="sort-icon-idle" />}
+                                </th>
+                                <th className="th-sortable" onClick={() => toggleSort("priority")}>
+                                    Priority
+                                    {sortKey === "priority"
+                                        ? (sortDir === "asc" ? <ArrowUp size={13} /> : <ArrowDown size={13} />)
+                                        : <ArrowUpDown size={13} className="sort-icon-idle" />}
+                                </th>
                                 <th>Assigned</th>
-                                <th>Due</th>
+                                <th className="th-sortable" onClick={() => toggleSort("dueDate")}>
+                                    Due
+                                    {sortKey === "dueDate"
+                                        ? (sortDir === "asc" ? <ArrowUp size={13} /> : <ArrowDown size={13} />)
+                                        : <ArrowUpDown size={13} className="sort-icon-idle" />}
+                                </th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
@@ -479,6 +617,11 @@ export default function TasksPage({ role }: { role: TaskRole }) {
                                 const assignedToMe =
                                     Boolean(t.assignedTo) &&
                                     (t.assignedTo === assigneeId || (assigneeEmail && t.assignedTo === assigneeEmail));
+                                const todayStr = new Date().toISOString().split("T")[0];
+                                const dueDateStr = t.dueDate ? t.dueDate.split("T")[0] : null;
+                                const isOpen = t.status !== "DONE" && t.status !== "ARCHIVED";
+                                const isOverdue = isOpen && dueDateStr && dueDateStr < todayStr;
+                                const isDueToday = isOpen && dueDateStr && dueDateStr === todayStr;
                                 return (
                                 <tr
                                     key={t.id}
@@ -517,6 +660,16 @@ export default function TasksPage({ role }: { role: TaskRole }) {
                                         {t.dueDate
                                             ? new Date(t.dueDate).toLocaleDateString()
                                             : "—"}
+                                        {isOverdue && (
+                                            <span className="pill-badge red" style={{ marginLeft: 6 }}>
+                                                <AlertTriangle size={12} /> Overdue
+                                            </span>
+                                        )}
+                                        {isDueToday && (
+                                            <span className="pill-badge amber" style={{ marginLeft: 6 }}>
+                                                <CalendarClock size={12} /> Due Today
+                                            </span>
+                                        )}
                                     </td>
                                     <td>
                                         <button

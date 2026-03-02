@@ -175,7 +175,7 @@ export default function MemberDashboard() {
                         <span className="kpi-value" style={{ color: stats.overdue > 0 ? "#dc2626" : undefined }}>{stats.overdue}</span>
                     </div>
                 </div>
-                <div className="kpi-card" onClick={() => navigate("/member/tasks?assigned=me")} style={{ cursor: "pointer" }}>
+                <div className="kpi-card" onClick={() => navigate("/member/my-tasks")} style={{ cursor: "pointer" }}>
                     <div className="kpi-icon" style={{ background: "#eff6ff", color: "#3b82f6" }}>
                         <UserCheck size={18} />
                     </div>

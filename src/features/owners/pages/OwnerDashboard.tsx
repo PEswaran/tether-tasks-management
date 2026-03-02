@@ -10,8 +10,9 @@ import {
 } from "recharts";
 import {
     LayoutDashboard, Users, CheckCircle2, ListTodo,
-    Clock, TrendingUp, Kanban, ArrowUpRight,
+    Clock, TrendingUp, Kanban, ArrowUpRight, UserCheck,
 } from "lucide-react";
+import { getMySub } from "../../../libs/isMember";
 import { displayName } from "../../../libs/displayName";
 
 type Stats = {
@@ -45,7 +46,7 @@ function enrichBoardsWithCounts(boardList: any[], tasks: any[]) {
 export default function OwnerDashboard() {
     const client = dataClient();
     const navigate = useNavigate();
-    const { workspaceId, tenantId, workspaces } = useWorkspace();
+    const { workspaceId, tenantId, workspaces, email } = useWorkspace();
 
     const [stats, setStats] = useState<Stats>({
         boards: 0, members: 0, todo: 0,
@@ -53,6 +54,7 @@ export default function OwnerDashboard() {
     });
     const [boards, setBoards] = useState<any[]>([]);
     const [recentMembers, setRecentMembers] = useState<any[]>([]);
+    const [myTasks, setMyTasks] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => { load(); }, [workspaceId, tenantId]);
@@ -60,6 +62,7 @@ export default function OwnerDashboard() {
     async function load() {
         setLoading(true);
         try {
+            const sub = await getMySub();
             const memberships = await getMyMemberships();
             const active = memberships.filter((m: any) => m.status !== "REMOVED");
             if (!tenantId) { setLoading(false); return; }
@@ -70,9 +73,9 @@ export default function OwnerDashboard() {
                 .filter(Boolean);
 
             if (workspaceId) {
-                await loadWorkspace(workspaceId);
+                await loadWorkspace(workspaceId, sub);
             } else {
-                await loadGlobal(ownerOrgIds, tenantId);
+                await loadGlobal(ownerOrgIds, tenantId, sub);
             }
         } catch (err) {
             console.error("Dashboard load error:", err);
@@ -81,7 +84,7 @@ export default function OwnerDashboard() {
         setLoading(false);
     }
 
-    async function loadGlobal(ids: string[], tenantId: string) {
+    async function loadGlobal(ids: string[], tenantId: string, sub: string | null) {
         let memberCount = 0;
         let pendingCount = 0;
         let allTasks: any[] = [];
@@ -107,6 +110,21 @@ export default function OwnerDashboard() {
         const enrichedBoards = enrichBoardsWithCounts(boardRes.data, allTasks);
         setBoards(enrichedBoards);
 
+        // Build board name lookup and filter tasks assigned to me
+        const boardNameMap = new Map<string, string>();
+        (boardRes.data || []).forEach((b: any) => {
+            if (b?.id) boardNameMap.set(b.id, b.name || b.id);
+        });
+        const assigned = allTasks
+            .filter((t: any) => {
+                if (!t.assignedTo) return false;
+                if (sub && t.assignedTo === sub) return true;
+                if (email && t.assignedTo === email) return true;
+                return false;
+            })
+            .map((t: any) => ({ ...t, _boardName: boardNameMap.get(t.taskBoardId) || "Board" }));
+        setMyTasks(assigned);
+
         setStats({
             boards: boardRes.data.length,
             members: memberCount,
@@ -124,7 +142,7 @@ export default function OwnerDashboard() {
         setRecentMembers(enriched.slice(0, 5));
     }
 
-    async function loadWorkspace(id: string) {
+    async function loadWorkspace(id: string, sub: string | null) {
         const wsRes = await client.models.Workspace.get({ id });
         const orgId = wsRes?.data?.organizationId;
 
@@ -146,6 +164,21 @@ export default function OwnerDashboard() {
         const tasks = taskRes.data;
         const enrichedBoards = enrichBoardsWithCounts(boardRes.data, tasks);
         setBoards(enrichedBoards);
+
+        // Build board name lookup and filter tasks assigned to me
+        const boardNameMap = new Map<string, string>();
+        (boardRes.data || []).forEach((b: any) => {
+            if (b?.id) boardNameMap.set(b.id, b.name || b.id);
+        });
+        const assigned = tasks
+            .filter((t: any) => {
+                if (!t.assignedTo) return false;
+                if (sub && t.assignedTo === sub) return true;
+                if (email && t.assignedTo === email) return true;
+                return false;
+            })
+            .map((t: any) => ({ ...t, _boardName: boardNameMap.get(t.taskBoardId) || "Board" }));
+        setMyTasks(assigned);
 
         setStats({
             boards: boardRes.data.length,
@@ -183,8 +216,9 @@ export default function OwnerDashboard() {
         );
     }
 
-    const completionRate = stats.total > 0
-        ? Math.round((stats.done / stats.total) * 100) : 0;
+    const assignedToMeCount = myTasks.filter(
+        (t: any) => t.status !== "DONE" && t.status !== "ARCHIVED"
+    ).length;
 
     const barData = [
         { name: "Todo", value: stats.todo, fill: "#94a3b8" },
@@ -263,16 +297,17 @@ export default function OwnerDashboard() {
                     <ArrowUpRight size={16} className="kpi-arrow" />
                 </div>
 
-                <div className="kpi-card">
-                    <div className="kpi-icon" style={{ background: "#f0fdf4", color: "#16a34a" }}>
-                        <CheckCircle2 size={20} />
+                <div className="kpi-card" onClick={() => navigate("/owner/my-tasks")}>
+                    <div className="kpi-icon" style={{ background: "#eff6ff", color: "#3b82f6" }}>
+                        <UserCheck size={20} />
                     </div>
                     <div className="kpi-body">
-                        <span className="kpi-label">Completion</span>
+                        <span className="kpi-label">Assigned to Me</span>
                         <span className="kpi-value">
-                            <CountUp end={completionRate} duration={1} />%
+                            <CountUp end={assignedToMeCount} duration={0.8} />
                         </span>
                     </div>
+                    <ArrowUpRight size={16} className="kpi-arrow" />
                 </div>
 
             </div>
@@ -307,6 +342,45 @@ export default function OwnerDashboard() {
                     </div>
                 </>
             )}
+
+            {/* MY ASSIGNMENTS */}
+            <div className="workspace-directory">
+                <div className="workspace-directory-head">
+                    <h3>My Assignments</h3>
+                    <span className="workspace-directory-total">
+                        {assignedToMeCount} task{assignedToMeCount !== 1 ? "s" : ""}
+                    </span>
+                </div>
+                {myTasks.filter((t: any) => t.status !== "DONE" && t.status !== "ARCHIVED").length === 0 ? (
+                    <div className="workspace-directory-empty">No tasks currently assigned to you.</div>
+                ) : (
+                    <div className="general-assignment-list">
+                        {myTasks
+                            .filter((t: any) => t.status !== "DONE" && t.status !== "ARCHIVED")
+                            .slice(0, 8)
+                            .map((task: any) => (
+                                <button
+                                    key={task.id}
+                                    type="button"
+                                    className="general-assignment-item general-assignment-item-btn"
+                                    onClick={() => {
+                                        const query = new URLSearchParams();
+                                        if (task.taskBoardId) query.set("board", task.taskBoardId);
+                                        query.set("task", task.id);
+                                        navigate(`/owner/tasks?${query.toString()}`);
+                                    }}
+                                >
+                                    <div className="general-assignment-title">{task.title}</div>
+                                    <div className="general-assignment-meta">
+                                        <span>{task._boardName}</span>
+                                        <span>{task.status}</span>
+                                        <span>{task.dueDate ? new Date(task.dueDate).toLocaleDateString() : "No due date"}</span>
+                                    </div>
+                                </button>
+                            ))}
+                    </div>
+                )}
+            </div>
 
             {/* PROGRESS BAR */}
             <div className="progress-strip">

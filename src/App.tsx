@@ -32,7 +32,7 @@ import GeneralDashboard from "./features/general/pages/GeneralDashboard";
 import GeneralWorkspacesPage from "./features/general/pages/GeneralWorkspacesPage";
 import AdminUserDirectoryPage from "./features/admin/pages/AdminUserDirectoryPage";
 
-function GeneralTasksRoute() {
+function GeneralTasksRoute({ assignedToMe }: { assignedToMe?: boolean } = {}) {
   const { role, memberships, workspaceId, organizationId, workspaces, tenantId } = useWorkspace();
 
   const activeMemberships = (memberships || []).filter(
@@ -65,7 +65,7 @@ function GeneralTasksRoute() {
 
   const tenantAdminInScope = role === "TENANT_ADMIN" || activeMemberships.some((m: any) => m.role === "TENANT_ADMIN");
   const resolvedRole = tenantAdminInScope ? "TENANT_ADMIN" : ownerInScope ? "OWNER" : "MEMBER";
-  return <TasksPage role={resolvedRole} />;
+  return <TasksPage role={resolvedRole} assignedToMe={assignedToMe} />;
 }
 
 export default function App() {
@@ -112,6 +112,7 @@ export default function App() {
           {/* ================= OWNER ================= */}
           <Route path="/owner" element={<OwnerShell />}>
             <Route index element={<OwnerDashboard />} />
+            <Route path="my-tasks" element={<TasksPage role="OWNER" assignedToMe />} />
             <Route path="workspaces" element={<OwnerWorkspacesPage />} />
             <Route path="members" element={<MembersPage />} />
             <Route path="tasks" element={<TasksPage role="OWNER" />} />
@@ -121,6 +122,7 @@ export default function App() {
           {/* ================= MEMBER ================= */}
           <Route path="/member" element={<MemberShell />}>
             <Route index element={<MemberDashboard />} />
+            <Route path="my-tasks" element={<TasksPage role="MEMBER" assignedToMe />} />
             <Route path="members" element={<MembersPage />} />
             <Route path="tasks" element={<TasksPage role="MEMBER" />} />
           </Route>
@@ -128,6 +130,7 @@ export default function App() {
           {/* ================= GENERAL MEMBER ================= */}
           <Route path="/general" element={<GeneralMemberShell />}>
             <Route index element={<GeneralDashboard />} />
+            <Route path="my-tasks" element={<GeneralTasksRoute assignedToMe />} />
             <Route path="workspaces" element={<GeneralWorkspacesPage />} />
             <Route path="members" element={<MembersPage />} />
             <Route path="tasks" element={<GeneralTasksRoute />} />

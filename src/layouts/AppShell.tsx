@@ -6,7 +6,6 @@ import { useWorkspace } from "../shared-components/workspace-context";
 import { useEffect, useRef, useState } from "react";
 import { dataClient } from "../libs/data-client";
 import { getCurrentUser } from "aws-amplify/auth";
-import GlobalCreateTaskBtn from "../components/ui/global-create-task-btn";
 import DemoBanner from "../components/ui/demo-banner";
 import { clearDemoFlag } from "../config/demo";
 
@@ -171,239 +170,238 @@ export default function AppShell({
     /* ---------------- UI ---------------- */
     return (
         <>
-        <DemoBanner />
-        <div className="app-shell">
+            <DemoBanner />
+            <div className="app-shell">
 
-            {/* SIDEBAR */}
-            <aside className={`app-sidebar ${collapsed ? "collapsed" : ""}`}>
-                <button className="collapse-btn" onClick={() => setCollapsed(!collapsed)}>
-                    {collapsed ? <PanelLeftOpen size={14} /> : <PanelLeftClose size={14} />}
-                </button>
-
-                {/* BRAND — logo + app name (or custom brandContent) */}
-                <div className="app-brand">
-                    {brandContent && !collapsed ? (
-                        brandContent
-                    ) : (
-                        <>
-                            <div className="app-logo-tile" onClick={() => navigate("/")}>
-                                <img src="/logo.png" className="app-logo" />
-                            </div>
-                            {!collapsed && (
-                                <div className="brand-text">
-                                    <div className="app-company">{displayName}</div>
-                                </div>
-                            )}
-                        </>
-                    )}
-                </div>
-
-                {/* WORKSPACE CONTEXT — org label + workspace switcher */}
-                {!collapsed && !hideWorkspaceContext && workspaces.length > 0 && (
-                    <div className="sidebar-context" ref={wsSwitcherRef}>
-                        <div className="sidebar-org-label">{currentOrgName}</div>
-                        <button
-                            className="sidebar-ws-switch"
-                            onClick={() => setWsSwitcherOpen((v) => !v)}
-                        >
-                            <span className="sidebar-ws-name">{currentWorkspaceName}</span>
-                            <ChevronDown size={14} className={`sidebar-ws-caret ${wsSwitcherOpen ? "open" : ""}`} />
-                        </button>
-
-                        {wsSwitcherOpen && (
-                            <div className="sidebar-ws-dropdown">
-                                {role === "TENANT_ADMIN" && (
-                                    <div
-                                        className={`sidebar-ws-option ${!workspaceId ? "active" : ""}`}
-                                        onClick={() => {
-                                            setWorkspaceId(null);
-                                            setWsSwitcherOpen(false);
-                                        }}
-                                    >
-                                        All workspaces
-                                        {!workspaceId && <span className="sidebar-ws-check">&#10003;</span>}
-                                    </div>
-                                )}
-                                {workspaces.map((ws) => (
-                                    <div
-                                        key={ws.id}
-                                        className={`sidebar-ws-option ${ws.id === workspaceId ? "active" : ""}`}
-                                        onClick={() => {
-                                            setWorkspaceId(ws.id);
-                                            setWsSwitcherOpen(false);
-                                        }}
-                                    >
-                                        {ws.name || ws.id}
-                                        {ws.id === workspaceId && <span className="sidebar-ws-check">&#10003;</span>}
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-                )}
-
-                <nav className="app-nav">
-                    {Array.from(new Set(navItems.map((item) => resolveSectionName(item)))).map((sectionName) => {
-                        const sectionItems = navItems.filter((item) => resolveSectionName(item) === sectionName);
-                        return (
-                            <div key={sectionName}>
-                                {!collapsed && <div className="nav-section-label">{sectionName}</div>}
-                                {sectionItems.map((n) => (
-                                    <Link
-                                        key={n.path}
-                                        to={n.path}
-                                        className={location.pathname === n.path ? "active" : ""}
-                                        onClick={n.onClick}
-                                    >
-                                        {n.icon && <span className="nav-icon">{n.icon}</span>}
-                                        {!collapsed && n.label}
-                                        {!collapsed && n.badge && (
-                                            <div className="nav-badge-inline">{n.badge}</div>
-                                        )}
-                                    </Link>
-                                ))}
-                            </div>
-                        );
-                    })}
-                </nav>
-
-                <div className="sidebar-bottom">
-                    {/* USER CARD */}
-                    {!collapsed && (
-                        <div className="sidebar-user-card">
-                            <div className="sidebar-user-avatar">
-                                {(userName || userEmail)?.[0]?.toUpperCase() || "U"}
-                            </div>
-                            <div className="sidebar-user-info">
-                                <div className="sidebar-user-name">{userName || userEmail}</div>
-                                <div className="sidebar-user-role">
-                                    {role?.replaceAll("_", " ") || "User"}
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    <button
-                        onClick={async () => {
-                            clearDemoFlag();
-                            await signOut();
-                            navigate("/");
-                        }}
-                        className="app-signout"
-                    >
-                        <span className="nav-icon">
-                            <LogOut size={16} />
-                        </span>
-                        {!collapsed && "Sign out"}
+                {/* SIDEBAR */}
+                <aside className={`app-sidebar ${collapsed ? "collapsed" : ""}`}>
+                    <button className="collapse-btn" onClick={() => setCollapsed(!collapsed)}>
+                        {collapsed ? <PanelLeftOpen size={14} /> : <PanelLeftClose size={14} />}
                     </button>
-                </div>
-            </aside>
 
-            {/* MAIN */}
-            <main className="app-main">
-
-                {/* TOPBAR */}
-                <div className="app-topbar">
-
-                    {/* 🔥 ELITE COMPANY SWITCHER */}
-                    <div className="top-left">
-                        {tenants.length > 1 && (
-                            <div className="company-switch-wrap">
-
-                                <div
-                                    className="company-switch"
-                                    onClick={() => setCompanyOpen(v => !v)}
-                                >
-                                    <div className="company-avatar">
-                                        {(tenantName || "C")[0]?.toUpperCase()}
-                                    </div>
-
-                                    <div className="company-meta">
-                                        <div className="company-name">
-                                            {tenantName || "Company"}
-                                        </div>
-                                        <div className="company-role">
-                                            {role?.replaceAll("_", " ")}
-                                        </div>
-                                    </div>
-
-                                    <div className="company-caret">▾</div>
+                    {/* BRAND — logo + app name (or custom brandContent) */}
+                    <div className="app-brand">
+                        {brandContent && !collapsed ? (
+                            brandContent
+                        ) : (
+                            <>
+                                <div className="app-logo-tile" onClick={() => navigate("/")}>
+                                    <img src="/logo.png" className="app-logo" />
                                 </div>
-
-                                {companyOpen && (
-                                    <div className="company-dropdown">
-                                        {tenants.map((t: any) => {
-                                            const active = t.id === tenantId;
-
-                                            return (
-                                                <div
-                                                    key={t.id}
-                                                    className={`company-option ${active ? "active" : ""}`}
-                                                    onClick={() => {
-                                                        setCompanyOpen(false);
-                                                        switchTenant(t.id);
-                                                    }}
-                                                >
-                                                    <div className="company-avatar small">
-                                                        {t.name?.[0]?.toUpperCase()}
-                                                    </div>
-
-                                                    <div className="company-meta">
-                                                        <div className="company-name">{t.name}</div>
-                                                        <div className="company-role">
-                                                            {t.role?.replaceAll("_", " ")}
-                                                        </div>
-                                                    </div>
-
-                                                    {active && <div className="company-check">✓</div>}
-                                                </div>
-                                            );
-                                        })}
+                                {!collapsed && (
+                                    <div className="brand-text">
+                                        <div className="app-company">{displayName}</div>
                                     </div>
                                 )}
-                            </div>
+                            </>
                         )}
                     </div>
 
-                    <div className="top-right">
-                        <NotificationBell />
-
-                        <div className="profile-wrap">
-                            <div
-                                className="app-user clickable"
-                                onClick={() => setProfileOpen(!profileOpen)}
+                    {/* WORKSPACE CONTEXT — org label + workspace switcher */}
+                    {!collapsed && !hideWorkspaceContext && workspaces.length > 0 && (
+                        <div className="sidebar-context" ref={wsSwitcherRef}>
+                            <div className="sidebar-org-label">{currentOrgName}</div>
+                            <button
+                                className="sidebar-ws-switch"
+                                onClick={() => setWsSwitcherOpen((v) => !v)}
                             >
-                                {(userName || userEmail)?.[0]?.toUpperCase() || "U"}
-                            </div>
+                                <span className="sidebar-ws-name">{currentWorkspaceName}</span>
+                                <ChevronDown size={14} className={`sidebar-ws-caret ${wsSwitcherOpen ? "open" : ""}`} />
+                            </button>
 
-                            {profileOpen && (
-                                <div className="profile-menu">
-                                    <div className="profile-email">{userName || userEmail}</div>
-                                    <div className="profile-role">{role}</div>
-
-                                    <div
-                                        className="profile-item danger"
-                                        onClick={async () => {
-                                            clearDemoFlag();
-                                            await signOut();
-                                            navigate("/");
-                                        }}
-                                    >
-                                        Sign out
-                                    </div>
+                            {wsSwitcherOpen && (
+                                <div className="sidebar-ws-dropdown">
+                                    {role === "TENANT_ADMIN" && (
+                                        <div
+                                            className={`sidebar-ws-option ${!workspaceId ? "active" : ""}`}
+                                            onClick={() => {
+                                                setWorkspaceId(null);
+                                                setWsSwitcherOpen(false);
+                                            }}
+                                        >
+                                            All workspaces
+                                            {!workspaceId && <span className="sidebar-ws-check">&#10003;</span>}
+                                        </div>
+                                    )}
+                                    {workspaces.map((ws) => (
+                                        <div
+                                            key={ws.id}
+                                            className={`sidebar-ws-option ${ws.id === workspaceId ? "active" : ""}`}
+                                            onClick={() => {
+                                                setWorkspaceId(ws.id);
+                                                setWsSwitcherOpen(false);
+                                            }}
+                                        >
+                                            {ws.name || ws.id}
+                                            {ws.id === workspaceId && <span className="sidebar-ws-check">&#10003;</span>}
+                                        </div>
+                                    ))}
                                 </div>
                             )}
                         </div>
+                    )}
+
+                    <nav className="app-nav">
+                        {Array.from(new Set(navItems.map((item) => resolveSectionName(item)))).map((sectionName) => {
+                            const sectionItems = navItems.filter((item) => resolveSectionName(item) === sectionName);
+                            return (
+                                <div key={sectionName}>
+                                    {!collapsed && <div className="nav-section-label">{sectionName}</div>}
+                                    {sectionItems.map((n) => (
+                                        <Link
+                                            key={n.path}
+                                            to={n.path}
+                                            className={location.pathname === n.path ? "active" : ""}
+                                            onClick={n.onClick}
+                                        >
+                                            {n.icon && <span className="nav-icon">{n.icon}</span>}
+                                            {!collapsed && n.label}
+                                            {!collapsed && n.badge && (
+                                                <div className="nav-badge-inline">{n.badge}</div>
+                                            )}
+                                        </Link>
+                                    ))}
+                                </div>
+                            );
+                        })}
+                    </nav>
+
+                    <div className="sidebar-bottom">
+                        {/* USER CARD */}
+                        {!collapsed && (
+                            <div className="sidebar-user-card">
+                                <div className="sidebar-user-avatar">
+                                    {(userName || userEmail)?.[0]?.toUpperCase() || "U"}
+                                </div>
+                                <div className="sidebar-user-info">
+                                    <div className="sidebar-user-name">{userName || userEmail}</div>
+                                    <div className="sidebar-user-role">
+                                        {role?.replaceAll("_", " ") || "User"}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        <button
+                            onClick={async () => {
+                                clearDemoFlag();
+                                await signOut();
+                                navigate("/");
+                            }}
+                            className="app-signout"
+                        >
+                            <span className="nav-icon">
+                                <LogOut size={16} />
+                            </span>
+                            {!collapsed && "Sign out"}
+                        </button>
                     </div>
-                </div>
+                </aside>
 
-                <div className="app-content">
-                    <Outlet key={`${tenantId || "no-tenant"}:${workspaceId || "no-workspace"}`} />
-                </div>
+                {/* MAIN */}
+                <main className="app-main">
 
-                <GlobalCreateTaskBtn />
-            </main>
-        </div>
+                    {/* TOPBAR */}
+                    <div className="app-topbar">
+
+                        {/* 🔥 ELITE COMPANY SWITCHER */}
+                        <div className="top-left">
+                            {tenants.length > 1 && (
+                                <div className="company-switch-wrap">
+
+                                    <div
+                                        className="company-switch"
+                                        onClick={() => setCompanyOpen(v => !v)}
+                                    >
+                                        <div className="company-avatar">
+                                            {(tenantName || "C")[0]?.toUpperCase()}
+                                        </div>
+
+                                        <div className="company-meta">
+                                            <div className="company-name">
+                                                {tenantName || "Company"}
+                                            </div>
+                                            <div className="company-role">
+                                                {role?.replaceAll("_", " ")}
+                                            </div>
+                                        </div>
+
+                                        <div className="company-caret">▾</div>
+                                    </div>
+
+                                    {companyOpen && (
+                                        <div className="company-dropdown">
+                                            {tenants.map((t: any) => {
+                                                const active = t.id === tenantId;
+
+                                                return (
+                                                    <div
+                                                        key={t.id}
+                                                        className={`company-option ${active ? "active" : ""}`}
+                                                        onClick={() => {
+                                                            setCompanyOpen(false);
+                                                            switchTenant(t.id);
+                                                        }}
+                                                    >
+                                                        <div className="company-avatar small">
+                                                            {t.name?.[0]?.toUpperCase()}
+                                                        </div>
+
+                                                        <div className="company-meta">
+                                                            <div className="company-name">{t.name}</div>
+                                                            <div className="company-role">
+                                                                {t.role?.replaceAll("_", " ")}
+                                                            </div>
+                                                        </div>
+
+                                                        {active && <div className="company-check">✓</div>}
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="top-right">
+                            <NotificationBell />
+
+                            <div className="profile-wrap">
+                                <div
+                                    className="app-user clickable"
+                                    onClick={() => setProfileOpen(!profileOpen)}
+                                >
+                                    {(userName || userEmail)?.[0]?.toUpperCase() || "U"}
+                                </div>
+
+                                {profileOpen && (
+                                    <div className="profile-menu">
+                                        <div className="profile-email">{userName || userEmail}</div>
+                                        <div className="profile-role">{role}</div>
+
+                                        <div
+                                            className="profile-item danger"
+                                            onClick={async () => {
+                                                clearDemoFlag();
+                                                await signOut();
+                                                navigate("/");
+                                            }}
+                                        >
+                                            Sign out
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="app-content">
+                        <Outlet key={`${tenantId || "no-tenant"}:${workspaceId || "no-workspace"}`} />
+                    </div>
+
+                </main>
+            </div>
         </>
     );
 }
