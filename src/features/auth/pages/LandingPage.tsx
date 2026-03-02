@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   LayoutGrid,
   Shield,
@@ -13,6 +14,10 @@ import {
   Briefcase,
   Store,
   Rocket,
+  Zap,
+  Globe,
+  Lock,
+  Play,
 } from "lucide-react";
 
 interface LandingPageProps {
@@ -22,6 +27,7 @@ interface LandingPageProps {
 }
 
 export default function LandingPage({ onSignIn, onGetStarted }: LandingPageProps) {
+  const navigate = useNavigate();
   const [scrolled, setScrolled] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
 
@@ -39,12 +45,15 @@ export default function LandingPage({ onSignIn, onGetStarted }: LandingPageProps
     <div className="landing-page">
       {/* ========== NAVBAR ========== */}
       <nav className={`landing-nav${scrolled ? " scrolled" : ""}`}>
-        <div className="landing-nav-logo">
-          <img src="/logo.png" alt="TetherTasks logo" className="landing-logo-img" />
+        <a href="/" className="landing-nav-logo" onClick={(e) => { e.preventDefault(); navigate("/"); }}>
+          <div className="landing-logo-tile">
+            <img src="/logo.png" alt="TetherTasks logo" className="landing-logo-img" />
+          </div>
           TetherTasks
-        </div>
+        </a>
         <div className="landing-nav-links">
           <a href="#features" onClick={(e) => { e.preventDefault(); scrollTo("features"); }}>Features</a>
+          <a href="#how-it-works" onClick={(e) => { e.preventDefault(); scrollTo("how-it-works"); }}>How It Works</a>
           <a href="#pricing" onClick={(e) => { e.preventDefault(); scrollTo("pricing"); }}>Pricing</a>
           <a href="#faq" onClick={(e) => { e.preventDefault(); scrollTo("faq"); }}>FAQ</a>
         </div>
@@ -53,7 +62,7 @@ export default function LandingPage({ onSignIn, onGetStarted }: LandingPageProps
             Sign In
           </button>
           <button className="landing-btn landing-btn-primary" onClick={onGetStarted}>
-            Get Started
+            Start Free
           </button>
         </div>
       </nav>
@@ -66,58 +75,110 @@ export default function LandingPage({ onSignIn, onGetStarted }: LandingPageProps
           <div className="landing-hero-shape" />
         </div>
         <div className="landing-hero-content">
+          <span className="landing-hero-eyebrow">Task management built for multi-company operators</span>
           <h1>
-            One Dashboard. <span>Every Company.</span>
+            One Login. <span>Every Company.</span> Total Control.
           </h1>
           <p>
-            Manage all your organizations, teams, and tasks from a single
-            account. Built for consultants, agencies, and founders who run
-            more than one company.
+            Stop switching between accounts to manage your businesses.
+            TetherTasks gives consultants, agencies, and operators a single
+            dashboard to run every organization, workspace, and team
+            &mdash; with complete data isolation between them.
           </p>
           <div className="landing-hero-buttons">
             <button className="landing-btn landing-btn-primary landing-btn-lg" onClick={onGetStarted}>
-              Start Free <ArrowRight size={18} />
+              Create Free Account <ArrowRight size={18} />
             </button>
             <button
               className="landing-btn landing-btn-outline landing-btn-lg"
-              onClick={() => scrollTo("features")}
+              onClick={() => navigate("/contact")}
             >
-              See How It Works
+              Contact for a Demo <Play size={16} />
             </button>
+          </div>
+          <div className="landing-hero-proof">
+            <span><Check size={14} /> Free forever plan</span>
+            <span><Check size={14} /> No credit card required</span>
+            <span><Check size={14} /> Set up in under 2 minutes</span>
           </div>
         </div>
       </section>
 
-      {/* ========== TRUSTED BY ========== */}
-      {/*   <section className="landing-trusted">
-        <p>Trusted by teams at</p>
-        <div className="landing-trusted-logos">
-          <span>Acme Corp</span>
-          <span>Globex</span>
-          <span>Initech</span>
-          <span>Umbrella Co</span>
-          <span>Stark Ind</span>
+      {/* ========== PROBLEM / SOLUTION STRIP ========== */}
+      <section className="landing-capacity-strip">
+        <div className="landing-capacity-grid">
+          <div className="landing-capacity-card">
+            <div className="landing-capacity-label">The Problem</div>
+            <div className="landing-capacity-value">Separate tools per company</div>
+            <p>Most task platforms force a new account for each business. You end up with scattered logins, disconnected teams, and no unified view.</p>
+          </div>
+          <div className="landing-capacity-card featured">
+            <div className="landing-capacity-label">The TetherTasks Way</div>
+            <div className="landing-capacity-value">One account, every company</div>
+            <p>Add organizations to your account. Each gets isolated workspaces, members, and task boards. Switch between them in one click.</p>
+          </div>
+          <div className="landing-capacity-card">
+            <div className="landing-capacity-label">The Result</div>
+            <div className="landing-capacity-value">Clarity as you scale</div>
+            <p>Plan-aware capacity limits keep growth intentional. Role-based access keeps data secure. Audit trails keep you compliant.</p>
+          </div>
         </div>
-      </section> */}
+      </section>
+
+      {/* ========== SOCIAL PROOF STRIP ========== */}
+      <section className="landing-trusted">
+        <p>Built for operators managing</p>
+        <div className="landing-trusted-logos">
+          <span>Consulting Firms</span>
+          <span>Marketing Agencies</span>
+          <span>Franchise Groups</span>
+          <span>Holding Companies</span>
+          <span>Multi-Brand Portfolios</span>
+        </div>
+      </section>
 
       {/* ========== FEATURES ========== */}
       <section className="landing-section" id="features">
         <div className="landing-section-header">
-          <span className="landing-section-badge">Features</span>
-          <h2>Run Multiple Companies From One Login</h2>
+          <span className="landing-section-badge">Why TetherTasks</span>
+          <h2>Everything You Need to Run Multiple Companies</h2>
           <p>
-            No more juggling separate accounts. TetherTasks is the only task
-            platform built for people who manage more than one organization.
+            The only task platform designed from day one for operators who manage
+            more than one organization. No workarounds. No compromises.
           </p>
         </div>
         <div className="landing-features-grid">
           {[
-            { icon: <Building2 size={24} />, title: "Multi-Company Management", desc: "Switch between organizations instantly. Each company gets its own workspaces, members, and data — completely isolated." },
-            { icon: <LayoutGrid size={24} />, title: "Workspaces", desc: "Organize projects into dedicated workspaces with their own members and task boards." },
-            { icon: <Kanban size={24} />, title: "Kanban Boards", desc: "Visual task boards with drag-and-drop columns to track work from start to finish." },
-            { icon: <Shield size={24} />, title: "Role-Based Access", desc: "Fine-grained permissions for admins, owners, and members across every organization." },
-            { icon: <Bell size={24} />, title: "Notifications", desc: "Real-time alerts keep your team informed about task assignments and updates." },
-            { icon: <ClipboardList size={24} />, title: "Audit Trail", desc: "Full activity logs so you can see who did what and when — complete transparency." },
+            {
+              icon: <Building2 size={24} />,
+              title: "Multi-Company Dashboard",
+              desc: "Switch between organizations instantly from one control center. Each company gets fully isolated workspaces, members, and data."
+            },
+            {
+              icon: <LayoutGrid size={24} />,
+              title: "Capacity Planning Built In",
+              desc: "Know exactly how many workspaces and members each organization uses. Plan-aware limits prevent uncontrolled sprawl as you grow."
+            },
+            {
+              icon: <Kanban size={24} />,
+              title: "Visual Kanban Boards",
+              desc: "Move tasks through customizable columns. See what's todo, in progress, and done at a glance across every workspace."
+            },
+            {
+              icon: <Shield size={24} />,
+              title: "Granular Role Permissions",
+              desc: "Admins, owners, and members each see only what they should. Assign tasks, manage teams, and control access per organization."
+            },
+            {
+              icon: <Bell size={24} />,
+              title: "Real-Time Notifications",
+              desc: "Task assignments, status changes, and team updates delivered instantly. Email notifications keep remote teams in sync."
+            },
+            {
+              icon: <ClipboardList size={24} />,
+              title: "Complete Audit Trail",
+              desc: "Every admin action, role change, and invitation is logged. Full visibility for compliance, accountability, and peace of mind."
+            },
           ].map((f) => (
             <div className="landing-feature-card" key={f.title}>
               <div className="landing-feature-icon">{f.icon}</div>
@@ -129,17 +190,29 @@ export default function LandingPage({ onSignIn, onGetStarted }: LandingPageProps
       </section>
 
       {/* ========== HOW IT WORKS ========== */}
-      <section className="landing-section" style={{ background: "var(--panel-soft)" }}>
+      <section className="landing-section" id="how-it-works" style={{ background: "var(--panel-soft)" }}>
         <div className="landing-section-header">
           <span className="landing-section-badge">How It Works</span>
-          <h2>Up and Running in Minutes</h2>
-          <p>Three simple steps to manage all your companies from one place.</p>
+          <h2>From Sign-Up to Full Control in 3 Steps</h2>
+          <p>No complex onboarding. No sales calls. Just sign up and start organizing.</p>
         </div>
         <div className="landing-steps">
           {[
-            { n: "1", title: "Create Your First Company", desc: "Sign up and set up your first organization with workspaces and team members." },
-            { n: "2", title: "Add More Organizations", desc: "Launch a new venture or onboard another client — add it to your account in seconds." },
-            { n: "3", title: "Switch Between Them Instantly", desc: "One dashboard, every company. Jump between organizations without logging out." },
+            {
+              n: "1",
+              title: "Create Your Account",
+              desc: "Sign up free. Set up your first organization, invite your team, and create your first task board in minutes."
+            },
+            {
+              n: "2",
+              title: "Add More Organizations",
+              desc: "Onboard a new client or launch a new venture. Each organization gets its own workspaces, members, and complete data isolation."
+            },
+            {
+              n: "3",
+              title: "Manage Everything From One Place",
+              desc: "Switch between companies in one click. Assign tasks, track progress, and manage teams across every organization from a single dashboard."
+            },
           ].map((s) => (
             <div className="landing-step" key={s.n}>
               <div className="landing-step-number">{s.n}</div>
@@ -154,18 +227,34 @@ export default function LandingPage({ onSignIn, onGetStarted }: LandingPageProps
       <section className="landing-section">
         <div className="landing-section-header">
           <span className="landing-section-badge">Who It's For</span>
-          <h2>Built for People Who Wear Multiple Hats</h2>
+          <h2>Built for People Who Run More Than One Thing</h2>
           <p>
-            If you manage more than one company, team, or client — TetherTasks
-            was made for you.
+            If you've ever wished all your companies lived in one tool
+            &mdash; they can now.
           </p>
         </div>
         <div className="landing-persona-grid">
           {[
-            { icon: <Briefcase size={28} />, title: "Consultants", desc: "Keep each client's projects, teams, and tasks organized in their own space — no cross-contamination." },
-            { icon: <Users size={28} />, title: "Agencies", desc: "Manage multiple brands and client accounts from one login. Each gets their own workspace and team." },
-            { icon: <Store size={28} />, title: "Franchise Operators", desc: "Oversee every location with its own org, members, and task boards — all from a single dashboard." },
-            { icon: <Rocket size={28} />, title: "Serial Entrepreneurs", desc: "Running two companies? Five? Switch between them instantly without juggling logins." },
+            {
+              icon: <Briefcase size={28} />,
+              title: "Consultants",
+              desc: "Separate workspace per client. Invite their team, assign deliverables, track execution - without any data leaking between accounts."
+            },
+            {
+              icon: <Users size={28} />,
+              title: "Agencies",
+              desc: "Manage every brand and retainer from one login. Each client gets their own organization with isolated boards, members, and reporting."
+            },
+            {
+              icon: <Store size={28} />,
+              title: "Franchise Operators",
+              desc: "One dashboard for every location. Each franchise gets its own org, team, and task boards while you maintain full oversight."
+            },
+            {
+              icon: <Rocket size={28} />,
+              title: "Serial Entrepreneurs",
+              desc: "Running multiple companies? Stop juggling logins. TetherTasks lets you switch between businesses instantly from one control center."
+            },
           ].map((p) => (
             <div className="landing-persona-card" key={p.title}>
               <div className="landing-persona-icon">{p.icon}</div>
@@ -176,29 +265,64 @@ export default function LandingPage({ onSignIn, onGetStarted }: LandingPageProps
         </div>
       </section>
 
+      {/* ========== KEY DIFFERENTIATORS ========== */}
+      <section className="landing-section" style={{ background: "var(--panel-soft)" }}>
+        <div className="landing-section-header">
+          <span className="landing-section-badge">Why Us</span>
+          <h2>What Makes TetherTasks Different</h2>
+          <p>Other tools are built for single teams. We're built for operators.</p>
+        </div>
+        <div className="landing-features-grid">
+          {[
+            {
+              icon: <Globe size={24} />,
+              title: "True Multi-Tenancy",
+              desc: "Not just separate projects — fully isolated organizations with their own members, workspaces, and data. No cross-contamination, ever."
+            },
+            {
+              icon: <Zap size={24} />,
+              title: "Instant Context Switching",
+              desc: "One click to move between companies. No logging out, no re-authenticating, no waiting. Your workspace state is preserved."
+            },
+            {
+              icon: <Lock size={24} />,
+              title: "Enterprise-Grade Security",
+              desc: "AWS infrastructure with encryption at rest and in transit. Role-based access, audit logging, and Cognito authentication baked in."
+            },
+          ].map((f) => (
+            <div className="landing-feature-card" key={f.title}>
+              <div className="landing-feature-icon">{f.icon}</div>
+              <h3>{f.title}</h3>
+              <p>{f.desc}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
       {/* ========== PRICING ========== */}
       <section className="landing-section" id="pricing">
         <div className="landing-section-header">
           <span className="landing-section-badge">Pricing</span>
-          <h2>Simple, Transparent Pricing</h2>
-          <p>Start free. Upgrade when you're ready.</p>
+          <h2>Simple Pricing That Scales With You</h2>
+          <p>Start free with one company. Add more as you grow. No hidden fees.</p>
         </div>
         <div className="landing-pricing-grid">
           {/* Starter */}
           <div className="landing-pricing-card">
             <h3>Starter</h3>
-            <p className="landing-pricing-desc">For individuals managing one company</p>
+            <p className="landing-pricing-desc">Perfect for testing the waters with one company</p>
             <div className="landing-pricing-price">
               $0<span>/mo</span>
             </div>
             <ul className="landing-pricing-features">
               <li><Check size={16} /> 1 organization</li>
               <li><Check size={16} /> 1 workspace</li>
-              <li><Check size={16} /> Up to 5 members</li>
-              <li><Check size={16} /> Kanban boards</li>
+              <li><Check size={16} /> Up to 5 team members</li>
+              <li><Check size={16} /> Kanban boards + task assignments</li>
+              <li><Check size={16} /> Email notifications</li>
             </ul>
             <button className="landing-btn landing-btn-outline" onClick={onGetStarted}>
-              Get Started
+              Get Started Free
             </button>
           </div>
 
@@ -206,35 +330,42 @@ export default function LandingPage({ onSignIn, onGetStarted }: LandingPageProps
           <div className="landing-pricing-card popular">
             <span className="landing-pricing-popular-badge">Most Popular</span>
             <h3>Professional</h3>
-            <p className="landing-pricing-desc">For professionals managing multiple companies</p>
+            <p className="landing-pricing-desc">For operators managing 2-3 companies or clients</p>
             <div className="landing-pricing-price">
               $29<span>/mo</span>
             </div>
             <ul className="landing-pricing-features">
               <li><Check size={16} /> 3 organizations</li>
-              <li><Check size={16} /> Unlimited workspaces</li>
-              <li><Check size={16} /> Up to 50 members</li>
-              <li><Check size={16} /> Audit trail</li>
+              <li><Check size={16} /> 5 workspaces per organization</li>
+              <li><Check size={16} /> Up to 50 team members</li>
+              <li><Check size={16} /> Admin control center</li>
+              <li><Check size={16} /> Full audit trail</li>
+              <li><Check size={16} /> Priority support</li>
             </ul>
             <button className="landing-btn landing-btn-primary" onClick={onGetStarted}>
-              Start Free Trial
+              Start 14-Day Free Trial
             </button>
           </div>
 
           {/* Enterprise */}
           <div className="landing-pricing-card">
             <h3>Enterprise</h3>
-            <p className="landing-pricing-desc">For agencies and operators at scale</p>
+            <p className="landing-pricing-desc">For agencies and operators managing at scale</p>
             <div className="landing-pricing-price">
               $99<span>/mo</span>
             </div>
             <ul className="landing-pricing-features">
-              <li><Check size={16} /> Unlimited organizations</li>
-              <li><Check size={16} /> Unlimited workspaces</li>
-              <li><Check size={16} /> Unlimited members</li>
-              <li><Check size={16} /> Dedicated support</li>
+              <li><Check size={16} /> Up to 100 organizations</li>
+              <li><Check size={16} /> 100 workspaces per organization</li>
+              <li><Check size={16} /> Unlimited team members</li>
+              <li><Check size={16} /> Everything in Professional</li>
+              <li><Check size={16} /> Dedicated account support</li>
+              <li><Check size={16} /> Custom onboarding</li>
             </ul>
-            <button className="landing-btn landing-btn-outline" onClick={onGetStarted}>
+            <button
+              className="landing-btn landing-btn-outline"
+              onClick={() => navigate("/contact")}
+            >
               Contact Sales
             </button>
           </div>
@@ -245,17 +376,43 @@ export default function LandingPage({ onSignIn, onGetStarted }: LandingPageProps
       <section className="landing-section" id="faq" style={{ background: "var(--panel-soft)" }}>
         <div className="landing-section-header">
           <span className="landing-section-badge">FAQ</span>
-          <h2>Frequently Asked Questions</h2>
-          <p>Got questions? We've got answers.</p>
+          <h2>Common Questions</h2>
+          <p>Everything you need to know before getting started.</p>
         </div>
         <div className="landing-faq-list">
           {[
-            { q: "Can I manage multiple companies from one account?", a: "Yes — it's what TetherTasks is built for. Unlike other task tools that force you to create separate accounts, you can switch between organizations instantly from a single dashboard." },
-            { q: "How many organizations can I have?", a: "It depends on your plan. Starter includes 1 organization, Professional supports up to 3, and Enterprise gives you unlimited organizations. Upgrade anytime as you grow." },
-            { q: "Is there a free plan?", a: "Yes! Our Starter plan is completely free and includes 1 organization, 1 workspace, and up to 5 team members. No credit card required." },
-            { q: "Is my data isolated between companies?", a: "Completely. Each organization gets its own workspaces, members, tasks, and data. Nothing is shared between organizations unless you choose to." },
-            { q: "Can I upgrade or downgrade anytime?", a: "Absolutely. You can switch between plans at any time. Changes take effect immediately, and billing is prorated." },
-            { q: "Is my data secure?", a: "Yes. We use AWS infrastructure with encryption at rest and in transit, role-based access controls, and comprehensive audit logging." },
+            {
+              q: "How is TetherTasks different from Asana, Monday, or Trello?",
+              a: "Those tools are designed for single teams. TetherTasks is built from the ground up for operators who manage multiple companies. Each organization gets fully isolated data, members, and workspaces — something other tools can't do without separate paid accounts."
+            },
+            {
+              q: "Can I really manage multiple companies from one login?",
+              a: "Yes — it's the core reason TetherTasks exists. Add as many organizations as your plan allows. Switch between them instantly from one dashboard. No logging out, no separate accounts."
+            },
+            {
+              q: "Is data truly isolated between my organizations?",
+              a: "Completely. Each organization has its own workspaces, members, task boards, and data. Nothing is shared between organizations. A member in Company A cannot see anything from Company B."
+            },
+            {
+              q: "How do workspace and organization limits work?",
+              a: "Limits are per plan. Starter includes 1 organization with 1 workspace. Professional gives you 3 organizations with up to 5 workspaces each (15 total). Enterprise scales to 100 organizations with 100 workspaces each."
+            },
+            {
+              q: "Is there a free plan?",
+              a: "Yes. Starter is free forever — no credit card required. It includes 1 organization, 1 workspace, and up to 5 team members with full access to kanban boards and task assignments."
+            },
+            {
+              q: "Can I upgrade or downgrade anytime?",
+              a: "Yes. Switch between plans at any time. Upgrades take effect immediately. Downgrades take effect at the end of your billing cycle. Billing is always prorated."
+            },
+            {
+              q: "How secure is my data?",
+              a: "TetherTasks runs on AWS infrastructure with encryption at rest and in transit. Authentication is handled by Amazon Cognito. Role-based access controls and comprehensive audit logging are built in at every level."
+            },
+            {
+              q: "Can I invite team members with different permission levels?",
+              a: "Yes. Every organization supports three role levels: Admins (full management), Owners (workspace-level control), and Members (task execution). Each role sees only what they need to."
+            },
           ].map((item, i) => (
             <div className={`landing-faq-item${openFaq === i ? " open" : ""}`} key={i}>
               <button
@@ -275,24 +432,33 @@ export default function LandingPage({ onSignIn, onGetStarted }: LandingPageProps
 
       {/* ========== CTA BANNER ========== */}
       <section className="landing-cta-banner">
-        <h2>Stop Juggling Logins</h2>
+        <h2>Your Companies Deserve One Home</h2>
         <p>
-          Manage every company, team, and task from one account.
-          Start free — upgrade when you add more organizations.
+          Join operators who manage every organization, workspace, and team
+          from a single control center. Free to start, scales as you grow.
         </p>
         <button className="landing-btn landing-btn-white landing-btn-lg" onClick={onGetStarted}>
-          Create Free Account <ArrowRight size={18} />
+          Create Your Free Account <ArrowRight size={18} />
         </button>
+        <div className="landing-cta-subtext">
+          No credit card required. Free plan includes 1 org, 1 workspace, and 5 members.
+        </div>
       </section>
 
       {/* ========== FOOTER ========== */}
       <footer className="landing-footer">
         <div className="landing-footer-inner">
-          <div className="landing-footer-logo">TetherTasks</div>
+          <a href="/" className="landing-footer-logo" onClick={(e) => { e.preventDefault(); navigate("/"); }}>
+            <div className="landing-logo-tile landing-logo-tile-sm">
+              <img src="/logo.png" alt="TetherTasks logo" className="landing-logo-img" />
+            </div>
+            TetherTasks
+          </a>
           <div className="landing-footer-links">
             <a href="#features" onClick={(e) => { e.preventDefault(); scrollTo("features"); }}>Features</a>
             <a href="#pricing" onClick={(e) => { e.preventDefault(); scrollTo("pricing"); }}>Pricing</a>
             <a href="#faq" onClick={(e) => { e.preventDefault(); scrollTo("faq"); }}>FAQ</a>
+            <a href="/contact" onClick={(e) => { e.preventDefault(); navigate("/contact"); }}>Contact</a>
           </div>
           <div className="landing-footer-copy">
             &copy; {new Date().getFullYear()} TetherTasks. All rights reserved.
