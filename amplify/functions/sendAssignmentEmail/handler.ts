@@ -84,7 +84,7 @@ export const handler: Schema["sendAssignmentEmail"]["functionHandler"] =
             const body = buildEmailBody(type, itemName);
 
             await ses.send(new SendEmailCommand({
-                Source: "no-reply@tethertasks.cloudling88.com",
+                Source: "no-reply@tethertasks.com",
                 Destination: { ToAddresses: [email] },
                 Message: {
                     Subject: { Data: subject },
@@ -134,7 +134,7 @@ function buildEmailBody(type: string, name: string) {
         <div style="background: white; border-radius: 14px; padding: 36px; box-shadow: 0 10px 40px rgba(0,0,0,0.08);">
             <h2 style="margin: 0 0 16px; font-size: 22px; color: #0f172a;">${title}</h2>
             <p style="color: #334155; font-size: 15px; line-height: 1.6; margin: 0 0 24px;">${message}. Log in to your account to get started.</p>
-            <a href="https://tethertasks.cloudling88.com"
+            <a href="https://tethertasks.com"
                style="display: inline-block; background: #4f46e5; color: white; padding: 12px 24px; border-radius: 10px; text-decoration: none; font-weight: 600; font-size: 14px;">
                 Open TetherTasks
             </a>

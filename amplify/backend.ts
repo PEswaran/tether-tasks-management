@@ -88,7 +88,7 @@ backend.submitContactRequestFn.addEnvironment(
 );
 backend.submitContactRequestFn.addEnvironment(
   "CONTACT_REQUEST_FROM_EMAIL",
-  "no-reply@tethertasks.cloudling88.com"
+  "no-reply@tethertasks.com"
 );
 
 backend.auth.resources.userPool.grant(

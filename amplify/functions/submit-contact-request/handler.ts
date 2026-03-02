@@ -25,7 +25,7 @@ export const handler: Schema["submitContactRequest"]["functionHandler"] =
         const { name, email, companyName, phone, teamSize, numberOfOrgs, businessType, message } = event.arguments;
         const userPoolId = process.env.USER_POOL_ID;
         const destinationEmail = process.env.CONTACT_REQUEST_TO_EMAIL || "parveeneswaran@outlook.com";
-        const sourceEmail = process.env.CONTACT_REQUEST_FROM_EMAIL || "no-reply@tethertasks.cloudling88.com";
+        const sourceEmail = process.env.CONTACT_REQUEST_FROM_EMAIL || "no-reply@tethertasks.com";
 
         if (!userPoolId) throw new Error("Missing USER_POOL_ID");
 
