@@ -270,7 +270,6 @@ export default function CreateOrganizationModal({ tenantId, onClose, onCreated }
         setMemberEmails(updated);
     }
 
-    const stepNumber = step === "setup" ? 1 : step === "invite" ? 2 : 3;
 
     // ─── Summary ───
     if (step === "summary") {
@@ -288,7 +287,7 @@ export default function CreateOrganizationModal({ tenantId, onClose, onCreated }
                         <div style={styles.createdSummary}>
                             <div style={styles.createdItem}>
                                 <div style={styles.createdIcon}>
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" /></svg>
                                 </div>
                                 <div>
                                     <div style={styles.createdLabel}>Organization</div>
@@ -298,7 +297,7 @@ export default function CreateOrganizationModal({ tenantId, onClose, onCreated }
                             {createdWorkspaceId && (
                                 <div style={styles.createdItem}>
                                     <div style={styles.createdIcon}>
-                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" /></svg>
                                     </div>
                                     <div>
                                         <div style={styles.createdLabel}>Workspace</div>
@@ -309,7 +308,7 @@ export default function CreateOrganizationModal({ tenantId, onClose, onCreated }
                             {createdBoardId && (
                                 <div style={styles.createdItem}>
                                     <div style={styles.createdIcon}>
-                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" /></svg>
                                     </div>
                                     <div>
                                         <div style={styles.createdLabel}>Board ({BOARD_TYPES.find(b => b.value === boardType)?.label})</div>

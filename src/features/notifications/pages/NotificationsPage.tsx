@@ -4,7 +4,7 @@ import { getCurrentUser } from "aws-amplify/auth";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useWorkspace } from "../../../shared-components/workspace-context";
 import { useTaskModal } from "../../../pages/shared/stores/taskModalStore";
-import { resolveDestination, getRolePrefix } from "../../../libs/notificationHelpers";
+import { resolveDestination } from "../../../libs/notificationHelpers";
 import { CheckCheck } from "lucide-react";
 
 type FilterTab = "all" | "unread" | "read";
@@ -19,7 +19,6 @@ export default function NotificationsPage() {
     const [notifications, setNotifications] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState<FilterTab>("all");
-    const [userSub, setUserSub] = useState<string>("");
 
     useEffect(() => {
         loadNotifications();
@@ -29,7 +28,6 @@ export default function NotificationsPage() {
         try {
             const user = await getCurrentUser();
             const sub = user.userId;
-            setUserSub(sub);
 
             const res = await client.models.Notification.listNotificationsByUser({
                 recipientId: sub,

@@ -1,4 +1,4 @@
-import { Bell, LayoutDashboard, Kanban, Users, UserCheck, Compass } from "lucide-react";
+import { Bell, Kanban, Users, UserCheck, Compass } from "lucide-react";
 
 export const generalMemberNav = [
     {

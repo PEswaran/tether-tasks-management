@@ -1,4 +1,4 @@
-import { Bell, LayoutDashboard, Users, Kanban, Building2, UserCheck, Compass } from "lucide-react";
+import { Bell, LayoutDashboard, Users, Kanban, UserCheck, Compass } from "lucide-react";
 
 export const ownerNav = [
     {
