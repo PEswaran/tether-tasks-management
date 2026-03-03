@@ -13,6 +13,7 @@ import EditTaskModal from "../../../components/shared/modals/edit-task-modal";
 import RequestTaskDeleteModal from "../../../components/shared/modals/request-task-delete";
 import { taskPermissions, type TaskRole } from "../../../config/tasksPermissions";
 import { useTasks } from "../../../hooks/useTasks";
+import { logAudit } from "../../../libs/audit";
 
 type View = "boards" | "tasks";
 
@@ -118,8 +119,19 @@ export default function TasksPage({ role, assignedToMe }: { role: TaskRole; assi
         return organizations.find((o: any) => o.id === id)?.name || "—";
     }
 
-    function profileEmail(userSub: string) {
-        return profiles.find((p: any) => p.userId === userSub)?.email || userSub;
+
+    function localTodayStr() {
+        const now = new Date();
+        return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    }
+
+    function profileFullName(userSub: string) {
+        const prof = profiles.find((p: any) => p.userId === userSub);
+        if (!prof) return displayName(userSub);
+        const first = prof.firstName?.trim() || "";
+        const last = prof.lastName?.trim() || "";
+        if (first || last) return `${first} ${last}`.trim();
+        return displayName(prof.email);
     }
 
     const myEmail = useMemo(() => {
@@ -149,6 +161,16 @@ export default function TasksPage({ role, assignedToMe }: { role: TaskRole; assi
 
         try {
             await client.models.Task.delete({ id: task.id });
+            logAudit({
+                tenantId,
+                organizationId,
+                workspaceId,
+                action: "DELETE",
+                resourceType: "Task",
+                resourceId: task.id,
+                userId: mySub || undefined,
+                metadata: { title: task.title },
+            });
             reload();
         } catch (err) {
             console.error(err);
@@ -175,6 +197,16 @@ export default function TasksPage({ role, assignedToMe }: { role: TaskRole; assi
 
         try {
             await client.models.TaskBoard.delete({ id: board.id });
+            logAudit({
+                tenantId,
+                organizationId,
+                workspaceId,
+                action: "DELETE",
+                resourceType: "TaskBoard",
+                resourceId: board.id,
+                userId: mySub || undefined,
+                metadata: { name: board.name },
+            });
             reload();
         } catch (err) {
             console.error(err);
@@ -260,10 +292,10 @@ export default function TasksPage({ role, assignedToMe }: { role: TaskRole; assi
 
     const urgency = useMemo(() => {
         if (!assignedToMe) return { overdue: 0, dueToday: 0, dueSoon: 0, open: 0 };
-        const today = new Date().toISOString().split("T")[0];
+        const today = localTodayStr();
         const soon = new Date();
         soon.setDate(soon.getDate() + 3);
-        const soonStr = soon.toISOString().split("T")[0];
+        const soonStr = `${soon.getFullYear()}-${String(soon.getMonth() + 1).padStart(2, '0')}-${String(soon.getDate()).padStart(2, '0')}`;
 
         let overdue = 0, dueToday = 0, dueSoon = 0;
         for (const t of myOpenTasks) {
@@ -468,7 +500,7 @@ export default function TasksPage({ role, assignedToMe }: { role: TaskRole; assi
                                     )
                                     : [];
                                 const assignedCount = myBoardTasks.length;
-                                const todayStr = new Date().toISOString().split("T")[0];
+                                const todayStr = localTodayStr();
                                 const boardOverdue = myBoardTasks.filter(
                                     (t: any) => t.dueDate && t.dueDate.split("T")[0] < todayStr
                                 ).length;
@@ -617,86 +649,86 @@ export default function TasksPage({ role, assignedToMe }: { role: TaskRole; assi
                                 const assignedToMe =
                                     Boolean(t.assignedTo) &&
                                     (t.assignedTo === assigneeId || (assigneeEmail && t.assignedTo === assigneeEmail));
-                                const todayStr = new Date().toISOString().split("T")[0];
+                                const todayStr = localTodayStr();
                                 const dueDateStr = t.dueDate ? t.dueDate.split("T")[0] : null;
                                 const isOpen = t.status !== "DONE" && t.status !== "ARCHIVED";
                                 const isOverdue = isOpen && dueDateStr && dueDateStr < todayStr;
                                 const isDueToday = isOpen && dueDateStr && dueDateStr === todayStr;
                                 return (
-                                <tr
-                                    key={t.id}
-                                    id={`task-row-${t.id}`}
-                                    className={focusTaskId === t.id ? "tasks-row-focus" : ""}
-                                >
-                                    <td>
-                                        {assignedToMe && (
-                                            <span className="tasks-assigned-me-pill" title="Assigned to me" aria-label="Assigned to me">
-                                                Assigned
-                                            </span>
-                                        )}
-                                        <button
-                                            style={{
-                                                background: "none",
-                                                border: "none",
-                                                color: "#2563eb",
-                                                cursor: "pointer",
-                                                fontWeight: 500,
-                                                padding: 0,
-                                                fontSize: 14
-                                            }}
-                                            onClick={() => setEditTask(t)}
-                                        >
-                                            {t.title}
-                                        </button>
-                                    </td>
-                                    <td>{t.status}</td>
-                                    <td>{t.priority}</td>
-                                    <td>
-                                        {t.assignedTo
-                                            ? displayName(profileEmail(t.assignedTo))
-                                            : "—"}
-                                    </td>
-                                    <td>
-                                        {t.dueDate
-                                            ? new Date(t.dueDate).toLocaleDateString()
-                                            : "—"}
-                                        {isOverdue && (
-                                            <span className="pill-badge red" style={{ marginLeft: 6 }}>
-                                                <AlertTriangle size={12} /> Overdue
-                                            </span>
-                                        )}
-                                        {isDueToday && (
-                                            <span className="pill-badge amber" style={{ marginLeft: 6 }}>
-                                                <CalendarClock size={12} /> Due Today
-                                            </span>
-                                        )}
-                                    </td>
-                                    <td>
-                                        <button
-                                            className="btn secondary"
-                                            style={{ marginRight: 8 }}
-                                            onClick={() => setEditTask(t)}
-                                        >
-                                            Edit
-                                        </button>
+                                    <tr
+                                        key={t.id}
+                                        id={`task-row-${t.id}`}
+                                        className={focusTaskId === t.id ? "tasks-row-focus" : ""}
+                                    >
+                                        <td>
+                                            {assignedToMe && (
+                                                <span className="tasks-assigned-me-pill" title="Assigned to me" aria-label="Assigned to me">
+                                                    Assigned
+                                                </span>
+                                            )}
+                                            <button
+                                                style={{
+                                                    background: "none",
+                                                    border: "none",
+                                                    color: "#2563eb",
+                                                    cursor: "pointer",
+                                                    fontWeight: 500,
+                                                    padding: 0,
+                                                    fontSize: 14
+                                                }}
+                                                onClick={() => setEditTask(t)}
+                                            >
+                                                {t.title}
+                                            </button>
+                                        </td>
+                                        <td>{t.status}</td>
+                                        <td>{t.priority}</td>
+                                        <td>
+                                            {t.assignedTo
+                                                ? profileFullName(t.assignedTo)
+                                                : "—"}
+                                        </td>
+                                        <td>
+                                            {t.dueDate
+                                                ? new Date(t.dueDate).toLocaleDateString("en-US", { timeZone: "UTC" })
+                                                : "—"}
+                                            {isOverdue && (
+                                                <span className="pill-badge red" style={{ marginLeft: 6 }}>
+                                                    <AlertTriangle size={12} /> Overdue
+                                                </span>
+                                            )}
+                                            {isDueToday && (
+                                                <span className="pill-badge amber" style={{ marginLeft: 6 }}>
+                                                    <CalendarClock size={12} /> Due Today
+                                                </span>
+                                            )}
+                                        </td>
+                                        <td>
+                                            <button
+                                                className="btn secondary"
+                                                style={{ marginRight: 8 }}
+                                                onClick={() => setEditTask(t)}
+                                            >
+                                                Edit
+                                            </button>
 
-                                        {canDeleteTask(t) ? (
-                                            <button
-                                                className="btn secondary"
-                                                onClick={() => deleteTask(t)}
-                                            >
-                                                Delete
-                                            </button>
-                                        ) : (
-                                            <button
-                                                className="btn secondary"
-                                                onClick={() => setRequestDeleteTask(t)}
-                                            >
-                                                Request Delete
-                                            </button>
-                                        )}
-                                    </td>
-                                </tr>
+                                            {canDeleteTask(t) ? (
+                                                <button
+                                                    className="btn secondary"
+                                                    onClick={() => deleteTask(t)}
+                                                >
+                                                    Delete
+                                                </button>
+                                            ) : (
+                                                <button
+                                                    className="btn secondary"
+                                                    onClick={() => setRequestDeleteTask(t)}
+                                                >
+                                                    Request Delete
+                                                </button>
+                                            )}
+                                        </td>
+                                    </tr>
                                 );
                             })}
 

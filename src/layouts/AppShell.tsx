@@ -8,6 +8,7 @@ import { dataClient } from "../libs/data-client";
 import { getCurrentUser } from "aws-amplify/auth";
 import DemoBanner from "../components/ui/demo-banner";
 import { clearDemoFlag } from "../config/demo";
+import { logAudit } from "../libs/audit";
 
 type NavItem = {
     label: string;
@@ -26,7 +27,6 @@ function resolveSectionName(item: NavItem) {
 export default function AppShell({
     companyName,
     navItems,
-    brandContent,
     hideWorkspaceContext,
 }: {
     companyName?: string;
@@ -156,6 +156,19 @@ export default function AppShell({
         }
     }
 
+    async function handleLogout() {
+        await logAudit({
+            tenantId,
+            action: "LOGOUT",
+            resourceType: "Session",
+            resourceId: userEmail || "unknown",
+            metadata: { email: userEmail },
+        });
+        clearDemoFlag();
+        await signOut();
+        navigate("/");
+    }
+
     /* ---------------- SIDEBAR COLLAPSE ---------------- */
     const [collapsed, setCollapsed] = useState(
         localStorage.getItem("sidebarCollapsed") === "true"
@@ -175,26 +188,13 @@ export default function AppShell({
 
                 {/* SIDEBAR */}
                 <aside className={`app-sidebar ${collapsed ? "collapsed" : ""}`}>
-                    <button className="collapse-btn" onClick={() => setCollapsed(!collapsed)}>
-                        {collapsed ? <PanelLeftOpen size={14} /> : <PanelLeftClose size={14} />}
-                    </button>
 
-                    {/* BRAND — logo + app name (or custom brandContent) */}
+                    {/* BRAND — logo centered with company name stacked below */}
                     <div className="app-brand">
-                        {brandContent && !collapsed ? (
-                            brandContent
-                        ) : (
-                            <>
-                                <div className="app-logo-tile" onClick={() => navigate("/")}>
-                                    <img src="/logo.png" className="app-logo" />
-                                </div>
-                                {!collapsed && (
-                                    <div className="brand-text">
-                                        <div className="app-company">{displayName}</div>
-                                    </div>
-                                )}
-                            </>
-                        )}
+                        <div className="app-logo-tile" onClick={() => navigate("/")}>
+                            <img src="/logo.png" className="app-logo" />
+                        </div>
+                        {!collapsed && <div className="app-company">{displayName}</div>}
                     </div>
 
                     {/* WORKSPACE CONTEXT — org label + workspace switcher */}
@@ -283,11 +283,7 @@ export default function AppShell({
                         )}
 
                         <button
-                            onClick={async () => {
-                                clearDemoFlag();
-                                await signOut();
-                                navigate("/");
-                            }}
+                            onClick={handleLogout}
                             className="app-signout"
                         >
                             <span className="nav-icon">
@@ -304,8 +300,11 @@ export default function AppShell({
                     {/* TOPBAR */}
                     <div className="app-topbar">
 
-                        {/* 🔥 ELITE COMPANY SWITCHER */}
                         <div className="top-left">
+                            <button className="sidebar-toggle" onClick={() => setCollapsed(!collapsed)}>
+                                {collapsed ? <PanelLeftOpen size={20} /> : <PanelLeftClose size={20} />}
+                            </button>
+
                             {tenants.length > 1 && (
                                 <div className="company-switch-wrap">
 
@@ -381,12 +380,30 @@ export default function AppShell({
                                         <div className="profile-role">{role}</div>
 
                                         <div
-                                            className="profile-item danger"
-                                            onClick={async () => {
-                                                clearDemoFlag();
-                                                await signOut();
-                                                navigate("/");
+                                            className="profile-item"
+                                            onClick={() => {
+                                                setProfileOpen(false);
+                                                navigate("/profile");
                                             }}
+                                        >
+                                            Edit Profile
+                                        </div>
+
+                                        {(role === "TENANT_ADMIN" || role === "OWNER") && (
+                                            <div
+                                                className="profile-item"
+                                                onClick={() => {
+                                                    setProfileOpen(false);
+                                                    navigate(role === "OWNER" ? "/super/audit" : "/tenant/audit");
+                                                }}
+                                            >
+                                                Audit Logs
+                                            </div>
+                                        )}
+
+                                        <div
+                                            className="profile-item danger"
+                                            onClick={handleLogout}
                                         >
                                             Sign out
                                         </div>

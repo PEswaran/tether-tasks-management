@@ -20,7 +20,17 @@ export default function GlobalTaskModal() {
             const res = await client.models.Task.get({ id });
             if (!res.data) return;
 
-            setTask({ ...res.data, fromNotification: true });
+            let _createdByEmail = res.data.createdBy;
+            if (res.data.createdBy) {
+                try {
+                    const profRes = await client.models.UserProfile.get({ userId: res.data.createdBy });
+                    if (profRes.data?.email) {
+                        _createdByEmail = profRes.data.email;
+                    }
+                } catch { /* profile lookup non-critical */ }
+            }
+
+            setTask({ ...res.data, _createdByEmail, fromNotification: true });
         } catch (err) {
             console.error("global modal load error", err);
         }

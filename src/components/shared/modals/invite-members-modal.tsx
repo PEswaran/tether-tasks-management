@@ -3,6 +3,7 @@ import { dataClient } from "../../../libs/data-client";
 import { displayName } from "../../../libs/displayName";
 import { useConfirm } from "../../../shared-components/confirm-context";
 import { isAuthed } from "../../../libs/isAuthed";
+import { logAudit } from "../../../libs/audit";
 
 type Organization = {
     id: string;
@@ -112,6 +113,15 @@ export default function InviteMemberModal({
                 setLoading(false);
                 return;
             }
+
+            logAudit({
+                tenantId,
+                organizationId,
+                action: "INVITE",
+                resourceType: "Membership",
+                resourceId: email.trim().toLowerCase(),
+                metadata: { email: email.trim().toLowerCase(), role },
+            });
 
             setLoading(false);
             setSuccess(true);

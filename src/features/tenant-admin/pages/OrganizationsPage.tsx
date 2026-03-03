@@ -5,6 +5,7 @@ import { useWorkspace } from "../../../shared-components/workspace-context";
 import CreateOrganizationModal from "./CreateOrganizationModal";
 import EditOrganizationModal from "./EditOrganizationModal";
 import { useConfirm } from "../../../shared-components/confirm-context";
+import { logAudit } from "../../../libs/audit";
 
 export default function OrganizationsPage() {
     const client = dataClient();
@@ -31,6 +32,15 @@ export default function OrganizationsPage() {
 
         try {
             const res = await client.mutations.removeOrganizationAndData({ organizationId: id });
+            if (res.data?.success) {
+                logAudit({
+                    tenantId,
+                    organizationId: id,
+                    action: "DELETE",
+                    resourceType: "Organization",
+                    resourceId: id,
+                });
+            }
             if (!res.data?.success) {
                 await alert({ title: "Error", message: res.data?.message || "Error removing organization", variant: "danger" });
                 return;

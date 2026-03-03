@@ -3,6 +3,7 @@ import { confirmSignIn, signIn } from "aws-amplify/auth";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Eye, EyeOff } from "lucide-react";
 import { DEMO_EMAIL, DEMO_PASSWORD, setDemoFlag } from "../../../config/demo";
+import { logAudit } from "../../../libs/audit";
 
 type LoginProps = {
     onSignedIn?: () => void;
@@ -50,6 +51,12 @@ export default function Login({ onSignedIn }: LoginProps) {
             });
 
             if (res.isSignedIn) {
+                logAudit({
+                    action: "LOGIN",
+                    resourceType: "Session",
+                    resourceId: email.toLowerCase(),
+                    metadata: { email: email.toLowerCase() },
+                });
                 onSignedIn?.();
                 clearPostLoginCache();
                 window.location.replace("/auth-redirect");
@@ -88,6 +95,12 @@ export default function Login({ onSignedIn }: LoginProps) {
         try {
             const res = await confirmSignIn({ challengeResponse: newPassword });
             if (res.isSignedIn) {
+                logAudit({
+                    action: "LOGIN",
+                    resourceType: "Session",
+                    resourceId: email.toLowerCase(),
+                    metadata: { email: email.toLowerCase(), newPasswordSet: true },
+                });
                 onSignedIn?.();
                 clearPostLoginCache();
                 window.location.replace("/auth-redirect");

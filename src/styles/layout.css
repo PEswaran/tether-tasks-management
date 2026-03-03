@@ -41,13 +41,14 @@
    BRAND
 ================================ */
 .app-brand {
-  position: relative;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
   padding-bottom: 16px;
   margin-bottom: 10px;
   border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+  text-align: center;
 }
 
 .app-logo-tile {
@@ -70,66 +71,46 @@
   object-fit: contain;
 }
 
-.brand-text {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-
 .app-company {
   font-weight: 600;
   font-size: 14px;
   letter-spacing: 0.1px;
   color: var(--text);
+  text-align: center;
+  width: 100%;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-/* collapse button — sits above brand as its own row */
-.collapse-btn {
-  position: absolute;
-  top: 22px;
-  right: -5px;
-  width: 24px;
-  height: 24px;
-  border-radius: 999px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: transparent;
-  color: #94a3b8;
-  border: none;
-  cursor: pointer;
-  transition: all 0.18s ease;
-  box-shadow: none;
-  z-index: 100;
-}
-
-.collapse-btn:hover {
-  transform: scale(1.05);
-  color: var(--primary);
-  background: rgba(79, 70, 229, 0.08);
-}
-
-.app-sidebar.collapsed .collapse-btn {
-  top: 22px;
-  right: -5px;
-}
-
-.app-sidebar.collapsed .collapse-btn:hover {
-  transform: scale(1.05);
-}
-
 /* collapsed sidebar */
-.app-sidebar.collapsed .brand-text {
-  display: none;
-}
 .app-sidebar.collapsed .app-logo-tile {
   margin: 0 auto;
 }
 .app-sidebar.collapsed .app-brand {
   justify-content: center;
+}
+
+/* ===============================
+   SIDEBAR TOGGLE (in topbar)
+================================ */
+.sidebar-toggle {
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: transparent;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.sidebar-toggle:hover {
+  background: rgba(79, 70, 229, 0.08);
+  color: var(--primary);
 }
 
 /* ===============================
@@ -463,6 +444,8 @@
   align-items: center;
   justify-content: space-between;
   padding: 0 26px;
+  position: relative;
+  z-index: 50;
 }
 
 .top-left {

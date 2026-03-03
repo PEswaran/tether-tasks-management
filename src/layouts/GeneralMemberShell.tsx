@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { LayoutDashboard } from "lucide-react";
 import AppShell from "./AppShell";
 import { useWorkspace } from "../shared-components/workspace-context";
 import { dataClient } from "../libs/data-client";
@@ -10,6 +11,7 @@ export default function GeneralMemberShell() {
     const {
         tenantName,
         tenantId,
+        role,
         organizationId,
         workspaceId,
         organizations,
@@ -203,10 +205,22 @@ export default function GeneralMemberShell() {
         </div>
     );
 
-    const navItems = generalMemberNav.map((item) => ({
+    const dashboardPath = role === "OWNER" ? "/owner" : "/member";
+
+    const myDashboardItem = {
+        label: "My Dashboard",
+        path: dashboardPath,
+        icon: <LayoutDashboard size={18} />,
+        section: "Overview",
+    };
+
+    const mapped = generalMemberNav.map((item) => ({
         ...item,
         badge: item.path === "/general" ? badge : undefined,
     }));
+
+    // Workspace Hub, My Dashboard, then the rest
+    const navItems = [mapped[0], myDashboardItem, ...mapped.slice(1)];
 
     return (
         <AppShell

@@ -266,7 +266,7 @@
   justify-content: center;
   font-weight: 700;
   color: #4338ca;
-  margin-right: 10px;
+  flex-shrink: 0;
 }
 
 .avatar-sm.amber {
@@ -277,6 +277,7 @@
 .user-cell {
   display: flex;
   align-items: center;
+  gap: 10px;
 }
 
 .user-name {

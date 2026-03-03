@@ -1,10 +1,15 @@
-import { BarChart3, Building2, LayoutDashboard, Shield, Users } from "lucide-react";
+import { BarChart3, Bell, Building2, LayoutDashboard, Shield, Users } from "lucide-react";
 
 export const platformNav = [
   {
-    label: "Dashboard",
+    label: "My Dashboard",
     path: "/super",
     icon: <LayoutDashboard size={18} />
+  },
+  {
+    label: "Notifications",
+    path: "/super/notifications",
+    icon: <Bell size={18} />
   },
   {
     label: "Companies",

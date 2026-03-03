@@ -21,33 +21,84 @@ function countUniqueActiveMembers(memberships: any[] = []) {
 
 export default function GeneralWorkspacesPage() {
     const client = dataClient();
-    const { workspaces, organizations, workspaceId } = useWorkspace();
+    const { organizations, tenantId, memberships, organizationId, workspaceId } = useWorkspace();
     const [loading, setLoading] = useState(true);
+    const [discoveredWorkspaces, setDiscoveredWorkspaces] = useState<any[]>([]);
     const [statsByWorkspace, setStatsByWorkspace] = useState<Record<string, WorkspaceStats>>({});
 
+    const membershipsDepsKey = memberships.map((m: any) => `${m.id}:${m.status}:${m.role}:${m.organizationId}:${m.workspaceId}`).join("|");
+
     useEffect(() => {
-        loadStats();
-    }, [workspaces.map((ws: any) => `${ws.id}:${ws.updatedAt || ""}`).join("|"), workspaceId]);
+        if (!tenantId || memberships.length === 0) return;
+        loadWorkspaces();
+    }, [tenantId, membershipsDepsKey, organizationId, workspaceId]);
 
-    async function loadStats() {
-        if (!workspaces.length) {
-            setStatsByWorkspace({});
-            setLoading(false);
-            return;
-        }
-
+    async function loadWorkspaces() {
         setLoading(true);
         try {
-            const scopedWorkspaces = workspaceId
-                ? workspaces.filter((ws: any) => ws.id === workspaceId)
-                : workspaces;
+            const activeMemberships = (memberships || []).filter(
+                (m: any) => m.status === "ACTIVE" && m.role !== "TENANT_ADMIN" && m.tenantId === tenantId
+            );
 
+            // Collect workspace IDs from memberships
+            const workspaceIdSet = new Set<string>();
+            const orgIdsToExpand = new Set<string>();
+
+            activeMemberships.forEach((m: any) => {
+                if (m.workspaceId) workspaceIdSet.add(m.workspaceId);
+                if (m.organizationId && !m.workspaceId) orgIdsToExpand.add(m.organizationId);
+            });
+
+            if (organizationId) orgIdsToExpand.add(organizationId);
+
+            // Expand org-level memberships to find workspaces
+            const orgWorkspaceResults = await Promise.all(
+                Array.from(orgIdsToExpand).map((orgId) =>
+                    client.models.Workspace.list({ filter: { organizationId: { eq: orgId } } })
+                )
+            );
+            orgWorkspaceResults.forEach((res: any) => {
+                (res.data || []).forEach((ws: any) => {
+                    if (ws?.id) workspaceIdSet.add(ws.id);
+                });
+            });
+
+            // Build full workspace objects
+            const workspaceMap = new Map<string, any>();
+            orgWorkspaceResults.forEach((res: any) => {
+                (res.data || []).forEach((ws: any) => {
+                    if (ws?.id) workspaceMap.set(ws.id, ws);
+                });
+            });
+
+            // Fetch any direct workspace-level memberships not yet loaded
+            const missingIds = Array.from(workspaceIdSet).filter((id) => !workspaceMap.has(id));
+            if (missingIds.length) {
+                const fetched = await Promise.all(missingIds.map((id) => client.models.Workspace.get({ id })));
+                fetched.forEach((res: any) => {
+                    if (res?.data?.id) workspaceMap.set(res.data.id, res.data);
+                });
+            }
+
+            let allWs = Array.from(workspaceMap.values()).filter((ws: any) => workspaceIdSet.has(ws.id));
+
+            // Apply workspace scope if a specific workspace is selected
+            if (workspaceId) {
+                allWs = allWs.filter((ws: any) => ws.id === workspaceId);
+            }
+
+            setDiscoveredWorkspaces(allWs);
+
+            // Load stats
             const entries = await Promise.all(
-                scopedWorkspaces.map(async (ws: any) => {
+                allWs.map(async (ws: any) => {
+                    const orgId = ws.organizationId;
                     const [boardRes, taskRes, memRes] = await Promise.all([
                         client.models.TaskBoard.list({ filter: { workspaceId: { eq: ws.id } } }),
                         client.models.Task.listTasksByWorkspace({ workspaceId: ws.id }),
-                        client.models.Membership.listMembershipsByWorkspace({ workspaceId: ws.id }),
+                        orgId
+                            ? client.models.Membership.listMembershipsByOrganization({ organizationId: orgId })
+                            : client.models.Membership.listMembershipsByWorkspace({ workspaceId: ws.id }),
                     ]);
                     return [
                         ws.id,
@@ -60,14 +111,12 @@ export default function GeneralWorkspacesPage() {
                 })
             );
             setStatsByWorkspace(Object.fromEntries(entries));
+        } catch (err) {
+            console.error("GeneralWorkspacesPage load error:", err);
         } finally {
             setLoading(false);
         }
     }
-
-    const scopedWorkspaces = workspaceId
-        ? workspaces.filter((ws: any) => ws.id === workspaceId)
-        : workspaces;
 
     return (
         <div>
@@ -77,17 +126,17 @@ export default function GeneralWorkspacesPage() {
                         <Building2 size={22} />
                         Workspaces
                     </h1>
-                    <p className="page-sub">Read-only workspace directory for your current scope.</p>
+                    <p className="page-sub">Workspace directory for your current scope.</p>
                 </div>
             </div>
 
             {loading ? (
                 <div className="workspace-directory-empty">Loading workspaces...</div>
-            ) : scopedWorkspaces.length === 0 ? (
+            ) : discoveredWorkspaces.length === 0 ? (
                 <div className="workspace-directory-empty">No workspaces available in this scope.</div>
             ) : (
                 <div className="ws-grid">
-                    {scopedWorkspaces.map((ws: any) => {
+                    {discoveredWorkspaces.map((ws: any) => {
                         const stats = statsByWorkspace[ws.id] || { boards: 0, tasks: 0, members: 0 };
                         const orgName = organizations.find((o: any) => o.id === ws.organizationId)?.name || "Organization";
                         return (

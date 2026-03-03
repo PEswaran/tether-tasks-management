@@ -31,6 +31,8 @@ import { useWorkspace } from "./shared-components/workspace-context";
 import GeneralDashboard from "./features/general/pages/GeneralDashboard";
 import GeneralWorkspacesPage from "./features/general/pages/GeneralWorkspacesPage";
 import AdminUserDirectoryPage from "./features/admin/pages/AdminUserDirectoryPage";
+import ProfilePage from "./features/profile/pages/ProfilePage";
+import NotificationsPage from "./features/notifications/pages/NotificationsPage";
 
 function GeneralTasksRoute({ assignedToMe }: { assignedToMe?: boolean } = {}) {
   const { role, memberships, workspaceId, organizationId, workspaces, tenantId } = useWorkspace();
@@ -89,6 +91,9 @@ export default function App() {
           <Route path="/accept-invitation" element={<AcceptInvitationPage />} />
           <Route path="/accept-org-invitation" element={<AcceptOrgInvitationPage />} />
 
+          {/* PROFILE */}
+          <Route path="/profile" element={<ProfilePage />} />
+
           {/* ================= PLATFORM ADMIN ================= */}
           <Route path="/super" element={<PlatformShell />}>
             <Route index element={<Dashboard />} />
@@ -96,6 +101,7 @@ export default function App() {
             <Route path="tenant/:tenantId" element={<TenantDetail />} />
             <Route path="user-directory" element={<AdminUserDirectoryPage mode="platform" />} />
             <Route path="audit" element={<AuditLogsPage />} />
+            <Route path="notifications" element={<NotificationsPage />} />
           </Route>
 
           {/* ================= TENANT ADMIN ================= */}
@@ -107,6 +113,7 @@ export default function App() {
             <Route path="members" element={<MembersPage />} />
             <Route path="tasks" element={<TasksPage role="TENANT_ADMIN" />} />
             <Route path="audit" element={<AuditLogsPage />} />
+            <Route path="notifications" element={<NotificationsPage />} />
           </Route>
 
           {/* ================= OWNER ================= */}
@@ -117,6 +124,7 @@ export default function App() {
             <Route path="members" element={<MembersPage />} />
             <Route path="tasks" element={<TasksPage role="OWNER" />} />
             <Route path="boards" element={<TasksPage role="OWNER" />} />
+            <Route path="notifications" element={<NotificationsPage />} />
           </Route>
 
           {/* ================= MEMBER ================= */}
@@ -125,6 +133,7 @@ export default function App() {
             <Route path="my-tasks" element={<TasksPage role="MEMBER" assignedToMe />} />
             <Route path="members" element={<MembersPage />} />
             <Route path="tasks" element={<TasksPage role="MEMBER" />} />
+            <Route path="notifications" element={<NotificationsPage />} />
           </Route>
 
           {/* ================= GENERAL MEMBER ================= */}
@@ -134,6 +143,7 @@ export default function App() {
             <Route path="workspaces" element={<GeneralWorkspacesPage />} />
             <Route path="members" element={<MembersPage />} />
             <Route path="tasks" element={<GeneralTasksRoute />} />
+            <Route path="notifications" element={<NotificationsPage />} />
           </Route>
 
         </Routes>

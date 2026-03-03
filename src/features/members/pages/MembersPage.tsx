@@ -6,6 +6,7 @@ import { Search } from "lucide-react";
 import { useConfirm } from "../../../shared-components/confirm-context";
 import InviteMemberModal from "../../../components/shared/modals/invite-members-modal";
 import { isAuthed } from "../../../libs/isAuthed";
+import { logAudit } from "../../../libs/audit";
 
 export default function MembersPage() {
     const client = dataClient();
@@ -73,14 +74,29 @@ export default function MembersPage() {
         return profiles.find((p: any) => p.userId === userSub);
     }
 
+    function fullName(prof: any): string {
+        const first = prof?.firstName?.trim() || "";
+        const last = prof?.lastName?.trim() || "";
+        if (first || last) return `${first} ${last}`.trim();
+        return displayName(prof?.email);
+    }
+
+    function nameInitial(prof: any): string {
+        if (prof?.firstName) return prof.firstName[0].toUpperCase();
+        if (prof?.email) return prof.email[0].toUpperCase();
+        return "U";
+    }
+
     /* ============================= ACTIONS ============================= */
 
     async function removeMember(member: any) {
         console.log("CLICK REMOVE", member);
 
+        const prof = profileFor(member.userSub);
+        const memberName = fullName(prof);
         const ok = await confirm({
             title: "Remove Member",
-            message: `Remove ${member.userSub} from organization?`,
+            message: `Remove ${memberName} from organization?`,
             confirmLabel: "Remove",
             variant: "danger"
         });
@@ -93,6 +109,15 @@ export default function MembersPage() {
             await client.models.Membership.update({
                 id: member.id,
                 status: "REMOVED"
+            });
+
+            logAudit({
+                tenantId,
+                organizationId: activeOrgId,
+                action: "REMOVE",
+                resourceType: "Membership",
+                resourceId: member.id,
+                metadata: { userSub: member.userSub },
             });
 
             await alert({
@@ -163,6 +188,15 @@ export default function MembersPage() {
             role: newRole as any,
         });
 
+        logAudit({
+            tenantId,
+            organizationId: activeOrgId,
+            action: "UPDATE",
+            resourceType: "Membership",
+            resourceId: member.id,
+            metadata: { userSub: member.userSub, newRole },
+        });
+
         loadMembers();
     }
 
@@ -182,7 +216,7 @@ export default function MembersPage() {
             if (!q) return true;
             const prof = profileFor(m.userSub);
             const email = (prof?.email || "").toLowerCase();
-            const name = displayName(prof?.email).toLowerCase();
+            const name = fullName(prof).toLowerCase();
             return email.includes(q) || name.includes(q);
         });
 
@@ -287,16 +321,18 @@ export default function MembersPage() {
 
                             return (
                                 <tr key={m.id}>
-                                    <td className="user-cell">
-                                        <div className="avatar-sm">
-                                            {displayName(prof?.email || "U")[0].toUpperCase()}
-                                        </div>
-                                        <div>
-                                            <div className="user-name">
-                                                {displayName(prof?.email || m.userSub)}
+                                    <td>
+                                        <div className="user-cell">
+                                            <div className="avatar-sm">
+                                                {nameInitial(prof)}
                                             </div>
-                                            <div className="user-sub">
-                                                <span className="badge green">Active</span>
+                                            <div>
+                                                <div className="user-name">
+                                                    {fullName(prof)}
+                                                </div>
+                                                <div className="user-sub">
+                                                    <span className="badge green">Active</span>
+                                                </div>
                                             </div>
                                         </div>
                                     </td>

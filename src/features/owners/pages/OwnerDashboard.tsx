@@ -374,7 +374,7 @@ export default function OwnerDashboard() {
                                     <div className="general-assignment-meta">
                                         <span>{task._boardName}</span>
                                         <span>{task.status}</span>
-                                        <span>{task.dueDate ? new Date(task.dueDate).toLocaleDateString() : "No due date"}</span>
+                                        <span>{task.dueDate ? new Date(task.dueDate).toLocaleDateString("en-US", { timeZone: "UTC" }) : "No due date"}</span>
                                     </div>
                                 </button>
                             ))}

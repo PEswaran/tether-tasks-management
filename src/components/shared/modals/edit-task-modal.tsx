@@ -4,6 +4,7 @@ import { useWorkspace } from "../../../shared-components/workspace-context";
 import type { Schema } from "../../../../amplify/data/resource";
 import { displayName } from "../../../libs/displayName";
 import { useConfirm } from "../../../shared-components/confirm-context";
+import { logAudit } from "../../../libs/audit";
 
 
 export default function EditTaskModal({ task, onClose, onUpdated }: any) {
@@ -94,6 +95,16 @@ export default function EditTaskModal({ task, onClose, onUpdated }: any) {
             }
 
             await client.models.Task.update(updatePayload);
+
+            logAudit({
+                tenantId: task.tenantId || tenantId,
+                organizationId: task.organizationId,
+                workspaceId: task.workspaceId,
+                action: "UPDATE",
+                resourceType: "Task",
+                resourceId: task.id,
+                metadata: { title, status, priority, assignedTo: assignedTo || undefined },
+            });
 
             onUpdated();
         } catch (err) {

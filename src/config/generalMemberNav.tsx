@@ -1,10 +1,16 @@
-import { LayoutDashboard, Kanban, Users, UserCheck } from "lucide-react";
+import { Bell, LayoutDashboard, Kanban, Users, UserCheck, Compass } from "lucide-react";
 
 export const generalMemberNav = [
     {
-        label: "Control Center",
+        label: "Workspace Hub",
         path: "/general",
-        icon: <LayoutDashboard size={18} />,
+        icon: <Compass size={18} />,
+        section: "Overview",
+    },
+    {
+        label: "Notifications",
+        path: "/general/notifications",
+        icon: <Bell size={18} />,
         section: "Overview",
     },
     {

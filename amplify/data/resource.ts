@@ -345,7 +345,8 @@ const schema = a.schema({
 
         .authorization(allow => [
             allow.group('PLATFORM_SUPER_ADMIN'),
-            allow.ownerDefinedIn('recipientId')
+            allow.ownerDefinedIn('recipientId').to(['read', 'update', 'delete']),
+            allow.authenticated().to(['create', 'read'])
         ]),
 
     /* =========================================================
@@ -409,7 +410,8 @@ const schema = a.schema({
         ])
         .authorization(allow => [
             allow.group('PLATFORM_SUPER_ADMIN'),
-            allow.authenticated().to(['read'])
+            allow.authenticated().to(['read']),
+            allow.ownerDefinedIn('userId').to(['create', 'update'])
         ]),
 
     /* =========================================================

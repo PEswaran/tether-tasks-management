@@ -4,6 +4,7 @@ import { dataClient } from "../../../libs/data-client";
 import { useWorkspace } from "../../../shared-components/workspace-context";
 import { useConfirm } from "../../../shared-components/confirm-context";
 import { getPlanLimits, formatPlanLimitMessage } from "../../../libs/planLimits";
+import { logAudit } from "../../../libs/audit";
 
 function ensureString(value: string | null | undefined, label: string): string {
     if (!value) {
@@ -91,6 +92,15 @@ function CreateWorkspaceModal({ organizationId, tenantId, onClose, onCreated }: 
                 setLoading(false);
                 return;
             }
+
+            logAudit({
+                tenantId: tenantIdForApi,
+                organizationId: organizationIdForApi,
+                action: "CREATE",
+                resourceType: "Workspace",
+                resourceId: res.data.id,
+                metadata: { name: name.trim() },
+            });
 
             onCreated();
         } catch (err) {
@@ -218,6 +228,13 @@ export default function WorkspacesPage() {
 
         try {
             await client.models.Workspace.delete({ id });
+            logAudit({
+                tenantId,
+                organizationId,
+                action: "DELETE",
+                resourceType: "Workspace",
+                resourceId: id,
+            });
             load();
             refreshWorkspaces();
         } catch (err) {

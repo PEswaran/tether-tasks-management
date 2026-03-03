@@ -152,19 +152,27 @@ export default function AuthRedirect() {
 
                 const isMultiWorkspaceUser = role !== "TENANT_ADMIN" && accessibleWorkspaceIds.size > 1;
 
+                // Compute target path based on role
+                let targetPath: string;
                 if (isMultiWorkspaceUser) {
-                    navigate("/general");
+                    targetPath = "/general";
+                } else if (role === "TENANT_ADMIN") {
+                    await acceptTenantAdminInviteIfNeeded(activeMem.tenantId, activeMem.organizationId);
+                    targetPath = "/tenant";
+                } else if (role === "OWNER") {
+                    targetPath = "/owner";
+                } else {
+                    targetPath = "/member";
+                }
+
+                // Check if user profile has firstName set
+                const profileRes = await client.models.UserProfile.get({ userId: sub });
+                if (!profileRes.data?.firstName) {
+                    navigate(`/profile?redirect=${encodeURIComponent(targetPath)}`);
                     return;
                 }
 
-                if (role === "TENANT_ADMIN") {
-                    await acceptTenantAdminInviteIfNeeded(activeMem.tenantId, activeMem.organizationId);
-                    navigate("/tenant");
-                } else if (role === "OWNER") {
-                    navigate("/owner");
-                } else {
-                    navigate("/member");
-                }
+                navigate(targetPath);
 
             } catch (err: any) {
                 console.error("redirect error", err);

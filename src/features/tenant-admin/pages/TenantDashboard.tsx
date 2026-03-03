@@ -857,22 +857,18 @@ export default function TenantDashboard() {
                                     ) : (
                                         <div className="board-grid">
                                             {filteredBoards.map((board) => (
-                                                <div key={board.id} className="board-card board-directory-card">
+                                                <div
+                                                    key={board.id}
+                                                    className="board-card board-directory-card"
+                                                    style={{ cursor: "pointer" }}
+                                                    onClick={() => navigate(`/tenant/tasks?board=${board.id}`)}
+                                                >
                                                     <div className="board-card-name">{board.name || board.id}</div>
                                                     <div className="board-card-stats">
                                                         <span>{board.workspaceName}</span>
                                                         <span>{board.taskCount} task{board.taskCount !== 1 ? "s" : ""}</span>
                                                         <span>{board.isActive === false ? "Inactive" : "Active"}</span>
                                                     </div>
-                                                    {board.workspaceId && (
-                                                        <button
-                                                            className="btn secondary"
-                                                            style={{ marginTop: 10 }}
-                                                            onClick={() => setWorkspaceId(board.workspaceId || null)}
-                                                        >
-                                                            Open Workspace Details
-                                                        </button>
-                                                    )}
                                                 </div>
                                             ))}
                                         </div>
@@ -1162,7 +1158,12 @@ export default function TenantDashboard() {
                         {boards.map((b: any) => {
                             const c = b._counts;
                             return (
-                                <div key={b.id} className="board-card">
+                                <div
+                                    key={b.id}
+                                    className="board-card"
+                                    style={{ cursor: "pointer" }}
+                                    onClick={() => navigate(`/tenant/tasks?board=${b.id}`)}
+                                >
                                     <div className="board-card-name">{b.name}</div>
                                     <div className="board-card-bar">
                                         {c.total > 0 && (

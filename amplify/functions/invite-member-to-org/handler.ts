@@ -209,7 +209,7 @@ export const handler: Schema["inviteMemberToOrg"]["functionHandler"] =
                 type: "INVITED_TO_WORKSPACE",
                 title: "You've been invited to an organization",
                 message: `You've been invited as ${role}`,
-                link: "/app",
+                resourceId: organizationId,
                 isRead: false,
                 emailSent: false,
                 createdAt: new Date().toISOString(),

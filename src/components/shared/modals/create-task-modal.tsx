@@ -5,6 +5,7 @@ import { useWorkspace } from "../../../shared-components/workspace-context";
 import { displayName } from "../../../libs/displayName";
 import type { Schema } from "../../../../amplify/data/resource";
 import { useConfirm } from "../../../shared-components/confirm-context";
+import { logAudit } from "../../../libs/audit";
 
 interface CreateTaskModalProps {
     board: any;
@@ -140,6 +141,17 @@ export default function CreateTaskModal({
                 setLoading(false);
                 return;
             }
+
+            logAudit({
+                tenantId,
+                organizationId: board.organizationId,
+                workspaceId: board.workspaceId,
+                action: "CREATE",
+                resourceType: "Task",
+                resourceId: newTask.data.id,
+                userId: sub,
+                metadata: { title, status, priority },
+            });
 
             /* ===============================
                NOTIFICATIONS

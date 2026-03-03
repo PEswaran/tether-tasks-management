@@ -4,6 +4,7 @@ import { dataClient } from "../../../libs/data-client";
 import { getMyTenantId } from "../../../libs/isOwner";
 import { useConfirm } from "../../../shared-components/confirm-context";
 import { displayName } from "../../../libs/displayName";
+import { logAudit } from "../../../libs/audit";
 
 type Member = {
     email?: string | null;
@@ -130,6 +131,19 @@ export default function CreateTaskBoardModal({
                 isActive: true,
                 createdAt: new Date().toISOString(),
             });
+
+            if (created?.data?.id) {
+                logAudit({
+                    tenantId,
+                    organizationId: resolvedOrganizationId,
+                    workspaceId,
+                    action: "CREATE",
+                    resourceType: "TaskBoard",
+                    resourceId: created.data.id,
+                    userId: sub,
+                    metadata: { name },
+                });
+            }
 
             if (!templateMode && desiredOwnerEmail && desiredOwnerEmail !== myEmail && ownerUserSub !== sub && created?.data?.id) {
                 try {

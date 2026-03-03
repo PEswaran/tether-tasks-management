@@ -421,7 +421,7 @@ export default function GeneralDashboard() {
                                     <span>{task.workspaceName}</span>
                                     <span>{task.boardName}</span>
                                     <span>{task.status}</span>
-                                    <span>{task.dueDate ? new Date(task.dueDate).toLocaleDateString() : "No due date"}</span>
+                                    <span>{task.dueDate ? new Date(task.dueDate).toLocaleDateString("en-US", { timeZone: "UTC" }) : "No due date"}</span>
                                 </div>
                             </button>
                         ))}
