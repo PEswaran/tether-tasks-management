@@ -8,6 +8,7 @@ import { sendAssignmentEmail } from './functions/sendAssignmentEmail/resource';
 import { replaceTenantAdminFn } from './functions/replace-tenant-admin/resource';
 import { submitContactRequestFn } from './functions/submit-contact-request/resource';
 import { deleteOrganizationFn } from './functions/delete-organization/resource';
+import { getPlatformAnalyticsFn } from './functions/get-platform-analytics/resource';
 import { data } from './data/resource';
 
 
@@ -21,6 +22,7 @@ const backend = defineBackend({
   replaceTenantAdminFn,
   submitContactRequestFn,
   deleteOrganizationFn,
+  getPlatformAnalyticsFn,
 });
 
 // Configure createTenantAdmin function
@@ -111,4 +113,18 @@ backend.sendAssignmentEmail.resources.lambda.addToRolePolicy(
     actions: ["ses:SendEmail", "ses:SendRawEmail"],
     resources: ["*"],
   })
+);
+
+// Configure GA4 analytics function
+backend.getPlatformAnalyticsFn.addEnvironment(
+  "GA4_PROPERTY_ID",
+  process.env.GA4_PROPERTY_ID ?? ""
+);
+backend.getPlatformAnalyticsFn.addEnvironment(
+  "GA_CLIENT_EMAIL",
+  process.env.GA_CLIENT_EMAIL ?? ""
+);
+backend.getPlatformAnalyticsFn.addEnvironment(
+  "GA_PRIVATE_KEY",
+  process.env.GA_PRIVATE_KEY ?? ""
 );

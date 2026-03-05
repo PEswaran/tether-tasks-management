@@ -33,6 +33,7 @@ import GeneralWorkspacesPage from "./features/general/pages/GeneralWorkspacesPag
 import AdminUserDirectoryPage from "./features/admin/pages/AdminUserDirectoryPage";
 import ProfilePage from "./features/profile/pages/ProfilePage";
 import NotificationsPage from "./features/notifications/pages/NotificationsPage";
+import AnalyticsPage from "./features/platform-admin/pages/AnalyticsPage";
 
 function GeneralTasksRoute({ assignedToMe }: { assignedToMe?: boolean } = {}) {
   const { role, memberships, workspaceId, organizationId, workspaces, tenantId } = useWorkspace();
@@ -101,6 +102,7 @@ export default function App() {
             <Route path="tenant/:tenantId" element={<TenantDetail />} />
             <Route path="user-directory" element={<AdminUserDirectoryPage mode="platform" />} />
             <Route path="audit" element={<AuditLogsPage />} />
+            <Route path="analytics" element={<AnalyticsPage />} />
             <Route path="notifications" element={<NotificationsPage />} />
           </Route>
 

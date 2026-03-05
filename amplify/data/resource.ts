@@ -7,6 +7,7 @@ import { notifyTaskAssignment } from '../functions/notifyOnTaskAssignment/resour
 import { replaceTenantAdminFn } from '../functions/replace-tenant-admin/resource';
 import { submitContactRequestFn } from '../functions/submit-contact-request/resource';
 import { deleteOrganizationFn } from '../functions/delete-organization/resource';
+import { getPlatformAnalyticsFn } from '../functions/get-platform-analytics/resource';
 
 const schema = a.schema({
 
@@ -522,6 +523,15 @@ const schema = a.schema({
         .authorization(allow => [allow.publicApiKey()])
         .handler(a.handler.function(submitContactRequestFn)),
 
+    getPlatformAnalytics: a.mutation()
+        .arguments({
+            startDate: a.string(),
+            endDate: a.string(),
+        })
+        .returns(a.json())
+        .authorization(allow => [allow.group("PLATFORM_SUPER_ADMIN")])
+        .handler(a.handler.function(getPlatformAnalyticsFn)),
+
 })
     .authorization(allow => [
         allow.resource(createTenantAdminFn),
@@ -531,7 +541,8 @@ const schema = a.schema({
         allow.resource(notifyTaskAssignment),
         allow.resource(replaceTenantAdminFn),
         allow.resource(submitContactRequestFn),
-        allow.resource(deleteOrganizationFn)
+        allow.resource(deleteOrganizationFn),
+        allow.resource(getPlatformAnalyticsFn)
     ]);
 
 export type Schema = ClientSchema<typeof schema>;
