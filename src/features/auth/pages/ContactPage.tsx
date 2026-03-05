@@ -1,6 +1,12 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ArrowLeft, Send, CheckCircle } from "lucide-react";
 import { dataClient } from "../../../libs/data-client";
+import {
+  trackSignupPageView,
+  trackSignupSubmitAttempt,
+  trackSignupSubmitError,
+  trackSignupSubmitSuccess,
+} from "../../../libs/analytics/signupFunnel";
 
 interface ContactPageProps {
   onBack: () => void;
@@ -23,6 +29,11 @@ export default function ContactPage({ onBack }: ContactPageProps) {
 
   const client = dataClient();
 
+  useEffect(() => {
+    // Feature: Signup Funnel Analytics - track signup/contact page view.
+    trackSignupPageView();
+  }, []);
+
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => {
@@ -33,6 +44,13 @@ export default function ContactPage({ onBack }: ContactPageProps) {
     e.preventDefault();
     setError("");
     setSubmitting(true);
+
+    // Feature: Signup Funnel Analytics - track submit attempts with non-PII config.
+    trackSignupSubmitAttempt({
+      teamSize: form.teamSize,
+      numberOfOrgs: form.numberOfOrgs,
+      businessType: form.businessType,
+    });
 
     try {
       const res = await client.mutations.submitContactRequest(
@@ -51,13 +69,25 @@ export default function ContactPage({ onBack }: ContactPageProps) {
 
       if (res.errors?.length) {
         setError(res.errors[0].message);
+        // Feature: Signup Funnel Analytics - track mutation-level error.
+        trackSignupSubmitError("graphql_error");
       } else if (res.data?.success) {
         setSubmitted(true);
+        // Feature: Signup Funnel Analytics - track successful signup request.
+        trackSignupSubmitSuccess({
+          teamSize: form.teamSize,
+          numberOfOrgs: form.numberOfOrgs,
+          businessType: form.businessType,
+        });
       } else {
         setError(res.data?.message || "Something went wrong. Please try again.");
+        // Feature: Signup Funnel Analytics - track business-level failure response.
+        trackSignupSubmitError("submission_rejected");
       }
     } catch (err: any) {
       setError(err.message || "Something went wrong. Please try again.");
+      // Feature: Signup Funnel Analytics - track runtime/network errors.
+      trackSignupSubmitError("request_exception");
     } finally {
       setSubmitting(false);
     }

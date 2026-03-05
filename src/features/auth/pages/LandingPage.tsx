@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   LayoutGrid,
@@ -20,6 +20,7 @@ import {
   Play,
 } from "lucide-react";
 import { setDemoFlag } from "../../../config/demo";
+import { trackLandingEngagement, trackLandingView, trackSignupStart } from "../../../libs/analytics/signupFunnel";
 
 interface LandingPageProps {
   onSignIn: () => void;
@@ -31,12 +32,42 @@ export default function LandingPage({ onSignIn, onGetStarted }: LandingPageProps
   const navigate = useNavigate();
   const [scrolled, setScrolled] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const [showLogoIntro, setShowLogoIntro] = useState(false);
+  const landingStartRef = useRef(Date.now());
+  const demoVideoUrl = import.meta.env.VITE_DEMO_VIDEO_URL as string | undefined;
 
   useEffect(() => {
+    // Skip intro for users with reduced-motion preference.
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      setShowLogoIntro(false);
+      return;
+    }
+
+    setShowLogoIntro(true);
+    const timer = window.setTimeout(() => setShowLogoIntro(false), 2600);
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    // Feature: Signup Funnel Analytics - record landing page view.
+    trackLandingView();
+    landingStartRef.current = Date.now();
+
     const onScroll = () => setScrolled(window.scrollY > 10);
     window.addEventListener("scroll", onScroll);
-    return () => window.removeEventListener("scroll", onScroll);
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      // Feature: Signup Funnel Analytics - estimate landing time spent.
+      const secondsOnPage = (Date.now() - landingStartRef.current) / 1000;
+      trackLandingEngagement(secondsOnPage);
+    };
   }, []);
+
+  const handleGetStartedClick = (source: string) => {
+    // Feature: Signup Funnel Analytics - capture signup intent source.
+    trackSignupStart(source);
+    onGetStarted();
+  };
 
   const scrollTo = (id: string) => {
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
@@ -44,11 +75,27 @@ export default function LandingPage({ onSignIn, onGetStarted }: LandingPageProps
 
   return (
     <div className="landing-page">
+      {showLogoIntro && (
+        <div className="landing-logo-intro-overlay" aria-hidden="true">
+          <div className="landing-logo-intro-tile">
+            <img src="/logo.png" alt="" className="landing-logo-intro-img" />
+          </div>
+        </div>
+      )}
+
       {/* ========== NAVBAR ========== */}
       <nav className={`landing-nav${scrolled ? " scrolled" : ""}`}>
-        <a href="/" className="landing-nav-logo" onClick={(e) => { e.preventDefault(); navigate("/"); }}>
+        <a
+          href="/"
+          className={`landing-nav-logo${showLogoIntro ? " intro-hidden" : ""}`}
+          onClick={(e) => { e.preventDefault(); navigate("/"); }}
+        >
           <div className="landing-logo-tile">
-            <img src="/logo.png" alt="TetherTasks logo" className="landing-logo-img" />
+            <img
+              src="/logo.png"
+              alt="TetherTasks logo"
+              className="landing-logo-img"
+            />
           </div>
           TetherTasks
         </a>
@@ -62,7 +109,7 @@ export default function LandingPage({ onSignIn, onGetStarted }: LandingPageProps
           <button className="landing-btn landing-btn-outline" onClick={onSignIn}>
             Sign In
           </button>
-          <button className="landing-btn landing-btn-primary" onClick={onGetStarted}>
+          <button className="landing-btn landing-btn-primary" onClick={() => handleGetStartedClick("nav_start_free")}>
             Start Free
           </button>
         </div>
@@ -87,7 +134,7 @@ export default function LandingPage({ onSignIn, onGetStarted }: LandingPageProps
             &mdash; with complete data isolation between them.
           </p>
           <div className="landing-hero-buttons">
-            <button className="landing-btn landing-btn-primary landing-btn-lg" onClick={onGetStarted}>
+            <button className="landing-btn landing-btn-primary landing-btn-lg" onClick={() => handleGetStartedClick("hero_create_free_account")}>
               Create Free Account <ArrowRight size={18} />
             </button>
             <button
@@ -100,6 +147,22 @@ export default function LandingPage({ onSignIn, onGetStarted }: LandingPageProps
               Try Demo <Play size={16} />
             </button>
           </div>
+          {demoVideoUrl && (
+            <div className="landing-video-indicator">
+              <a
+                className="landing-video-link"
+                href={demoVideoUrl}
+                target="_blank"
+                rel="noreferrer"
+                aria-label="See TetherTasks in action video"
+              >
+                <span className="landing-video-pill">
+                  <Play size={12} />
+                </span>
+                <span>See it in action</span>
+              </a>
+            </div>
+          )}
           <div className="landing-hero-proof">
             <span><Check size={14} /> Free forever plan</span>
             <span><Check size={14} /> No credit card required</span>
@@ -325,7 +388,7 @@ export default function LandingPage({ onSignIn, onGetStarted }: LandingPageProps
               <li><Check size={16} /> Kanban boards + task assignments</li>
               <li><Check size={16} /> Email notifications</li>
             </ul>
-            <button className="landing-btn landing-btn-outline" onClick={onGetStarted}>
+            <button className="landing-btn landing-btn-outline" onClick={() => handleGetStartedClick("pricing_starter_get_started")}>
               Get Started Free
             </button>
           </div>
@@ -346,7 +409,7 @@ export default function LandingPage({ onSignIn, onGetStarted }: LandingPageProps
               <li><Check size={16} /> Full audit trail</li>
               <li><Check size={16} /> Priority support</li>
             </ul>
-            <button className="landing-btn landing-btn-primary" onClick={onGetStarted}>
+            <button className="landing-btn landing-btn-primary" onClick={() => handleGetStartedClick("pricing_pro_trial")}>
               Start 14-Day Free Trial
             </button>
           </div>
@@ -368,7 +431,11 @@ export default function LandingPage({ onSignIn, onGetStarted }: LandingPageProps
             </ul>
             <button
               className="landing-btn landing-btn-outline"
-              onClick={() => navigate("/contact")}
+              onClick={() => {
+                // Feature: Signup Funnel Analytics - track contact-sales intent.
+                trackSignupStart("pricing_enterprise_contact_sales");
+                navigate("/contact");
+              }}
             >
               Contact Sales
             </button>
@@ -441,7 +508,7 @@ export default function LandingPage({ onSignIn, onGetStarted }: LandingPageProps
           Join operators who manage every organization, workspace, and team
           from a single control center. Free to start, scales as you grow.
         </p>
-        <button className="landing-btn landing-btn-white landing-btn-lg" onClick={onGetStarted}>
+        <button className="landing-btn landing-btn-white landing-btn-lg" onClick={() => handleGetStartedClick("cta_banner_create_free_account")}>
           Create Your Free Account <ArrowRight size={18} />
         </button>
         <div className="landing-cta-subtext">
@@ -462,7 +529,12 @@ export default function LandingPage({ onSignIn, onGetStarted }: LandingPageProps
             <a href="#features" onClick={(e) => { e.preventDefault(); scrollTo("features"); }}>Features</a>
             <a href="#pricing" onClick={(e) => { e.preventDefault(); scrollTo("pricing"); }}>Pricing</a>
             <a href="#faq" onClick={(e) => { e.preventDefault(); scrollTo("faq"); }}>FAQ</a>
-            <a href="/contact" onClick={(e) => { e.preventDefault(); navigate("/contact"); }}>Contact</a>
+            <a href="/contact" onClick={(e) => {
+              e.preventDefault();
+              // Feature: Signup Funnel Analytics - track footer contact intent.
+              trackSignupStart("footer_contact_link");
+              navigate("/contact");
+            }}>Contact</a>
           </div>
           <div className="landing-footer-copy">
             &copy; {new Date().getFullYear()} TetherTasks. All rights reserved.
