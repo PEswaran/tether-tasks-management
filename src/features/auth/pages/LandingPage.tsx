@@ -30,6 +30,8 @@ export default function LandingPage({ onSignIn, onGetStarted }: LandingPageProps
   const navigate = useNavigate();
   const [scrolled, setScrolled] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const demoVideoUrl = import.meta.env.VITE_DEMO_VIDEO_URL as string | undefined;
+
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 10);
@@ -91,9 +93,13 @@ export default function LandingPage({ onSignIn, onGetStarted }: LandingPageProps
             </button>
             <button
               className="landing-btn landing-btn-outline landing-btn-lg"
-              onClick={() => navigate("/contact")}
+              onClick={() => {
+                if (demoVideoUrl) {
+                  window.open(demoVideoUrl, "_blank", "noopener,noreferrer");
+                }
+              }}
             >
-              Contact for a Demo <Play size={16} />
+              See TetherTasks in Action <Play size={16} />
             </button>
           </div>
           <div className="landing-hero-proof">
