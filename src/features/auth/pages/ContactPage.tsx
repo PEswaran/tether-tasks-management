@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ArrowLeft, Send, CheckCircle } from "lucide-react";
 import { dataClient } from "../../../libs/data-client";
+import { trackEvent } from "../../../libs/analytics";
 
 interface ContactPageProps {
   onBack: () => void;
@@ -23,6 +24,10 @@ export default function ContactPage({ onBack }: ContactPageProps) {
 
   const client = dataClient();
 
+  useEffect(() => {
+    trackEvent("sign_up_page_view", { page: "contact" });
+  }, []);
+
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => {
@@ -33,6 +38,7 @@ export default function ContactPage({ onBack }: ContactPageProps) {
     e.preventDefault();
     setError("");
     setSubmitting(true);
+    trackEvent("sign_up_submit_attempt", { page: "contact" });
 
     try {
       const res = await client.mutations.submitContactRequest(
@@ -50,13 +56,27 @@ export default function ContactPage({ onBack }: ContactPageProps) {
       );
 
       if (res.errors?.length) {
+        trackEvent("sign_up_submit_error", {
+          page: "contact",
+          error_type: "graphql_error",
+        });
         setError(res.errors[0].message);
       } else if (res.data?.success) {
+        trackEvent("sign_up", { method: "contact_form" });
+        trackEvent("generate_lead", { source: "contact_form" });
         setSubmitted(true);
       } else {
+        trackEvent("sign_up_submit_error", {
+          page: "contact",
+          error_type: "unknown_response",
+        });
         setError(res.data?.message || "Something went wrong. Please try again.");
       }
     } catch (err: any) {
+      trackEvent("sign_up_submit_error", {
+        page: "contact",
+        error_type: "exception",
+      });
       setError(err.message || "Something went wrong. Please try again.");
     } finally {
       setSubmitting(false);

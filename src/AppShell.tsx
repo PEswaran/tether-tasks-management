@@ -6,6 +6,7 @@ import App from "./App";
 import LandingPage from "./features/auth/pages/LandingPage";
 import ContactPage from "./features/auth/pages/ContactPage";
 import Login from "./features/auth/pages/Login";
+import { trackEvent } from "./libs/analytics";
 
 function PublicLanding() {
   const navigate = useNavigate();
@@ -13,7 +14,10 @@ function PublicLanding() {
   return (
     <LandingPage
       onSignIn={() => navigate("/login")}
-      onGetStarted={() => navigate("/contact")}
+      onGetStarted={() => {
+        trackEvent("sign_up_start", { source: "landing_cta" });
+        navigate("/contact");
+      }}
     />
   );
 }

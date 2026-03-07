@@ -23,6 +23,9 @@ export default function AnalyticsPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     const [data, setData] = useState<AnalyticsResponse | null>(null);
+    const visibleLocations = (data?.locations || []).filter(
+        (item) => item.country && item.country.trim().toLowerCase() !== "(not set)"
+    );
 
     const load = async () => {
         setLoading(true);
@@ -32,7 +35,11 @@ export default function AnalyticsPage() {
                 startDate: "30daysAgo",
                 endDate: "today",
             });
-            const payload = (res.data || null) as AnalyticsResponse | null;
+            const raw = (res as any)?.data?.getPlatformAnalytics ?? (res as any)?.data ?? null;
+            const payload: AnalyticsResponse | null =
+                typeof raw === "string"
+                    ? (JSON.parse(raw) as AnalyticsResponse)
+                    : ((raw as AnalyticsResponse | null) ?? null);
             if (!payload?.success) {
                 setError(payload?.message || "Failed to load analytics.");
                 setData(payload);
@@ -114,11 +121,11 @@ export default function AnalyticsPage() {
                 <h3 className="panel-title">Top Locations</h3>
                 {loading ? (
                     <div className="empty-chart">Loading analytics...</div>
-                ) : (data?.locations?.length || 0) === 0 ? (
+                ) : visibleLocations.length === 0 ? (
                     <div className="empty-chart">No location data returned</div>
                 ) : (
                     <div className="status-list">
-                        {(data?.locations || []).map((item) => (
+                        {visibleLocations.map((item) => (
                             <div key={item.country} className="status-row">
                                 <div className="status-left">
                                     <Globe2 size={16} color="#64748b" />
