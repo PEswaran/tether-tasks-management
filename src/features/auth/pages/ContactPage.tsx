@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { useEffect, useState } from "react";
 import { ArrowLeft, Send, CheckCircle } from "lucide-react";
 import { dataClient } from "../../../libs/data-client";
 import { trackEvent } from "../../../libs/analytics";

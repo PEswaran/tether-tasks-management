@@ -47,15 +47,13 @@ export default function AnalyticsPage() {
     const [error, setError] = useState("");
     const [errorDetails, setErrorDetails] = useState("");
     const [data, setData] = useState<AnalyticsResponse | null>(null);
-<<<<<<< HEAD
-    const visibleLocations = (data?.locations || []).filter(
-        (item) => item.country && item.country.trim().toLowerCase() !== "(not set)"
-    );
-=======
     const [startDate, setStartDate] = useState<(typeof RANGE_OPTIONS)[number]["value"]>("30daysAgo");
     const endDate = "today";
     const [lastUpdated, setLastUpdated] = useState<string | null>(null);
->>>>>>> 4c280a19eccddf35eb2e23c54841656df8a0353a
+
+    const visibleLocations = (data?.locations || []).filter(
+        (item) => item.country && item.country.trim().toLowerCase() !== "(not set)"
+    );
 
     const load = async () => {
         setLoading(true);
@@ -66,18 +64,12 @@ export default function AnalyticsPage() {
                 startDate,
                 endDate,
             });
-<<<<<<< HEAD
             const raw = (res as any)?.data?.getPlatformAnalytics ?? (res as any)?.data ?? null;
-            const payload: AnalyticsResponse | null =
-                typeof raw === "string"
-                    ? (JSON.parse(raw) as AnalyticsResponse)
-                    : ((raw as AnalyticsResponse | null) ?? null);
-=======
-            const payload = normalizeAnalyticsPayload(res.data);
->>>>>>> 4c280a19eccddf35eb2e23c54841656df8a0353a
+            const payload = normalizeAnalyticsPayload(raw);
+
             if (!payload?.success) {
                 setError(payload?.message || "Failed to load analytics.");
-                setErrorDetails(typeof res.data === "string" ? res.data : JSON.stringify(res.data || {}, null, 2));
+                setErrorDetails(typeof raw === "string" ? raw : JSON.stringify(raw || {}, null, 2));
                 setData(payload);
             } else {
                 setData(payload);
