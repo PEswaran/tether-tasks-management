@@ -1,7 +1,14 @@
 import { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { ArrowLeft, Send, CheckCircle } from "lucide-react";
 import { dataClient } from "../../../libs/data-client";
 import { trackEvent } from "../../../libs/analytics";
+import {
+  trackSignupPageView,
+  trackSignupSubmitAttempt,
+  trackSignupSubmitError,
+  trackSignupSubmitSuccess,
+} from "../../../libs/analytics/signupFunnel";
 
 interface ContactPageProps {
   onBack: () => void;
@@ -28,6 +35,11 @@ export default function ContactPage({ onBack }: ContactPageProps) {
     trackEvent("sign_up_page_view", { page: "contact" });
   }, []);
 
+  useEffect(() => {
+    // Feature: Signup Funnel Analytics - track signup/contact page view.
+    trackSignupPageView();
+  }, []);
+
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => {
@@ -39,6 +51,13 @@ export default function ContactPage({ onBack }: ContactPageProps) {
     setError("");
     setSubmitting(true);
     trackEvent("sign_up_submit_attempt", { page: "contact" });
+
+    // Feature: Signup Funnel Analytics - track submit attempts with non-PII config.
+    trackSignupSubmitAttempt({
+      teamSize: form.teamSize,
+      numberOfOrgs: form.numberOfOrgs,
+      businessType: form.businessType,
+    });
 
     try {
       const res = await client.mutations.submitContactRequest(
@@ -61,16 +80,26 @@ export default function ContactPage({ onBack }: ContactPageProps) {
           error_type: "graphql_error",
         });
         setError(res.errors[0].message);
+        // Feature: Signup Funnel Analytics - track mutation-level error.
+        trackSignupSubmitError("graphql_error");
       } else if (res.data?.success) {
         trackEvent("sign_up", { method: "contact_form" });
         trackEvent("generate_lead", { source: "contact_form" });
         setSubmitted(true);
+        // Feature: Signup Funnel Analytics - track successful signup request.
+        trackSignupSubmitSuccess({
+          teamSize: form.teamSize,
+          numberOfOrgs: form.numberOfOrgs,
+          businessType: form.businessType,
+        });
       } else {
         trackEvent("sign_up_submit_error", {
           page: "contact",
           error_type: "unknown_response",
         });
         setError(res.data?.message || "Something went wrong. Please try again.");
+        // Feature: Signup Funnel Analytics - track business-level failure response.
+        trackSignupSubmitError("submission_rejected");
       }
     } catch (err: any) {
       trackEvent("sign_up_submit_error", {
@@ -78,6 +107,8 @@ export default function ContactPage({ onBack }: ContactPageProps) {
         error_type: "exception",
       });
       setError(err.message || "Something went wrong. Please try again.");
+      // Feature: Signup Funnel Analytics - track runtime/network errors.
+      trackSignupSubmitError("request_exception");
     } finally {
       setSubmitting(false);
     }

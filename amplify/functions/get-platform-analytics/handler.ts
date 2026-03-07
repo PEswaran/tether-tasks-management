@@ -22,6 +22,23 @@ type RunReportArgs = {
     limit?: number;
 };
 
+type AnalyticsPayload = {
+    success: boolean;
+    message: string | null;
+    range: { startDate: string; endDate: string } | null;
+    metrics: {
+        activeUsers: number;
+        newUsers: number;
+        sessions: number;
+    } | null;
+    locations: LocationRow[];
+    fetchedAt?: string;
+    cached?: boolean;
+};
+
+const CACHE_TTL_MS = 5 * 60 * 1000;
+const analyticsCache = new Map<string, { expiresAt: number; value: AnalyticsPayload }>();
+
 export const handler: Schema["getPlatformAnalytics"]["functionHandler"] = async (event) => {
     const propertyId = process.env.GA4_PROPERTY_ID;
     const clientEmail = process.env.GA_CLIENT_EMAIL;
@@ -39,6 +56,15 @@ export const handler: Schema["getPlatformAnalytics"]["functionHandler"] = async 
 
     const startDate = event.arguments.startDate || "30daysAgo";
     const endDate = event.arguments.endDate || "today";
+    const cacheKey = `${startDate}:${endDate}`;
+    const cachedEntry = analyticsCache.get(cacheKey);
+
+    if (cachedEntry && cachedEntry.expiresAt > Date.now()) {
+        return {
+            ...cachedEntry.value,
+            cached: true,
+        };
+    }
 
     try {
         const token = await getGoogleAccessToken(clientEmail, privateKey);
@@ -72,13 +98,20 @@ export const handler: Schema["getPlatformAnalytics"]["functionHandler"] = async 
             visitors: Number(row.metricValues?.[0]?.value || 0),
         }));
 
-        return {
+        const response: AnalyticsPayload = {
             success: true,
             message: null,
             range: { startDate, endDate },
             metrics,
             locations,
+            fetchedAt: new Date().toISOString(),
+            cached: false,
         };
+        analyticsCache.set(cacheKey, {
+            expiresAt: Date.now() + CACHE_TTL_MS,
+            value: response,
+        });
+        return response;
     } catch (error: any) {
         console.error("getPlatformAnalytics error:", error);
         return {

@@ -3,6 +3,12 @@ import CountUp from "react-countup";
 import { BarChart3, Globe2, RefreshCw, Users } from "lucide-react";
 import { dataClient } from "../../../libs/data-client";
 
+const RANGE_OPTIONS = [
+    { label: "Last 7 days", value: "7daysAgo" },
+    { label: "Last 30 days", value: "30daysAgo" },
+    { label: "Last 90 days", value: "90daysAgo" },
+] as const;
+
 type AnalyticsResponse = {
     success: boolean;
     message: string | null;
@@ -16,38 +22,70 @@ type AnalyticsResponse = {
         country: string;
         visitors: number;
     }>;
+    fetchedAt?: string;
+    cached?: boolean;
 };
+
+function normalizeAnalyticsPayload(value: unknown): AnalyticsResponse | null {
+    if (!value) return null;
+    if (typeof value === "string") {
+        try {
+            return JSON.parse(value) as AnalyticsResponse;
+        } catch {
+            return null;
+        }
+    }
+    if (typeof value === "object") {
+        return value as AnalyticsResponse;
+    }
+    return null;
+}
 
 export default function AnalyticsPage() {
     const client = dataClient();
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
+    const [errorDetails, setErrorDetails] = useState("");
     const [data, setData] = useState<AnalyticsResponse | null>(null);
+<<<<<<< HEAD
     const visibleLocations = (data?.locations || []).filter(
         (item) => item.country && item.country.trim().toLowerCase() !== "(not set)"
     );
+=======
+    const [startDate, setStartDate] = useState<(typeof RANGE_OPTIONS)[number]["value"]>("30daysAgo");
+    const endDate = "today";
+    const [lastUpdated, setLastUpdated] = useState<string | null>(null);
+>>>>>>> 4c280a19eccddf35eb2e23c54841656df8a0353a
 
     const load = async () => {
         setLoading(true);
         setError("");
+        setErrorDetails("");
         try {
             const res = await client.mutations.getPlatformAnalytics({
-                startDate: "30daysAgo",
-                endDate: "today",
+                startDate,
+                endDate,
             });
+<<<<<<< HEAD
             const raw = (res as any)?.data?.getPlatformAnalytics ?? (res as any)?.data ?? null;
             const payload: AnalyticsResponse | null =
                 typeof raw === "string"
                     ? (JSON.parse(raw) as AnalyticsResponse)
                     : ((raw as AnalyticsResponse | null) ?? null);
+=======
+            const payload = normalizeAnalyticsPayload(res.data);
+>>>>>>> 4c280a19eccddf35eb2e23c54841656df8a0353a
             if (!payload?.success) {
                 setError(payload?.message || "Failed to load analytics.");
+                setErrorDetails(typeof res.data === "string" ? res.data : JSON.stringify(res.data || {}, null, 2));
                 setData(payload);
             } else {
                 setData(payload);
+                setLastUpdated(payload.fetchedAt || new Date().toISOString());
             }
         } catch (err: any) {
             setError(err?.message || "Failed to load analytics.");
+            setErrorDetails(JSON.stringify(err, null, 2));
         } finally {
             setLoading(false);
         }
@@ -55,7 +93,7 @@ export default function AnalyticsPage() {
 
     useEffect(() => {
         load();
-    }, []);
+    }, [startDate, endDate]);
 
     return (
         <div className="dash">
@@ -66,18 +104,47 @@ export default function AnalyticsPage() {
                         Website Analytics
                     </h1>
                     <p className="dash-sub">
-                        Google Analytics 4 data for the last 30 days
+                        Google Analytics 4 traffic and geographic audience metrics
                     </p>
                 </div>
-                <button className="btn-ghost" onClick={load} disabled={loading} style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
-                    <RefreshCw size={16} />
-                    Refresh
-                </button>
+                <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+                    <select
+                        className="workspace-page-org-select"
+                        value={startDate}
+                        onChange={(e) => setStartDate(e.target.value as (typeof RANGE_OPTIONS)[number]["value"])}
+                        disabled={loading}
+                    >
+                        {RANGE_OPTIONS.map((option) => (
+                            <option key={option.value} value={option.value}>{option.label}</option>
+                        ))}
+                    </select>
+                    <button className="btn-ghost" onClick={load} disabled={loading} style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+                        <RefreshCw size={16} />
+                        Refresh
+                    </button>
+                </div>
+            </div>
+
+            <div className="dash-panel" style={{ marginBottom: 12 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+                    <span style={{ color: "#475569", fontSize: 13 }}>
+                        Last updated: {lastUpdated ? new Date(lastUpdated).toLocaleString() : "Not loaded yet"}
+                    </span>
+                    <span style={{ color: "#64748b", fontSize: 13 }}>
+                        Source: GA4 ({startDate} to {endDate}) {data?.cached ? "• cached" : ""}
+                    </span>
+                </div>
             </div>
 
             {error ? (
-                <div className="dash-panel" style={{ color: "#b91c1c", borderColor: "#fecaca", background: "#fff7f7" }}>
-                    {error}
+                <div className="dash-panel" style={{ color: "#b91c1c", borderColor: "#fecaca", background: "#fff7f7", marginBottom: 12 }}>
+                    <div style={{ marginBottom: 8, fontWeight: 600 }}>{error}</div>
+                    {errorDetails ? (
+                        <details>
+                            <summary style={{ cursor: "pointer", color: "#7f1d1d" }}>Show error details</summary>
+                            <pre style={{ whiteSpace: "pre-wrap", marginTop: 8, fontSize: 12, color: "#7f1d1d" }}>{errorDetails}</pre>
+                        </details>
+                    ) : null}
                 </div>
             ) : null}
 
