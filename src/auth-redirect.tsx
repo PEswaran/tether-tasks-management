@@ -172,6 +172,12 @@ export default function AuthRedirect() {
                     return;
                 }
 
+                // Welcome page for first-time tenant admins
+                if (role === "TENANT_ADMIN" && !profileRes.data?.hasSeenWelcome) {
+                    navigate(`/welcome?redirect=${encodeURIComponent(targetPath)}`);
+                    return;
+                }
+
                 navigate(targetPath);
 
             } catch (err: any) {

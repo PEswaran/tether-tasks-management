@@ -15,10 +15,10 @@ function ensureString(value: string | null | undefined, label: string): string {
 type InviteResult = { email: string; role: string; success: boolean; message: string };
 
 const BOARD_TYPES = [
-    { value: "KANBAN", label: "Kanban Board", desc: "Visual columns for workflow stages (To Do, In Progress, Done)" },
-    { value: "TIMELINE", label: "Timeline", desc: "Schedule tasks with due dates and milestones" },
-    { value: "PROCESS", label: "Process Tracker", desc: "Step-by-step workflow for repeatable processes" },
-    { value: "LIST", label: "Simple List", desc: "Flat task list for straightforward tracking" },
+    { value: "KANBAN", label: "Kanban Board", desc: "Visual columns for campaign workflow stages (Planning -> Active -> Completed)" },
+    { value: "TIMELINE", label: "Timeline", desc: "Plan campaigns with launch dates, deadlines, and milestones" },
+    { value: "PROCESS", label: "Process Tracker", desc: "Track repeatable marketing processes like campaign launches or ad approvals" },
+    { value: "LIST", label: "Simple List", desc: "A straightforward list for quick campaign tasks and to-dos" },
 ];
 
 export default function CreateOrganizationModal({ tenantId, onClose, onCreated }: { tenantId: string | null; onClose: () => void; onCreated: () => void }) {
@@ -373,77 +373,84 @@ export default function CreateOrganizationModal({ tenantId, onClose, onCreated }
                 <div className="modal modern">
                     <div className="modal-header">
                         <div style={styles.stepIndicator}>Step 1 of 3</div>
-                        <h2>Set Up Organization</h2>
-                        <div className="modal-sub">Configure your organization, workspace, and board type</div>
+                        <h2>Create Organization</h2>
+                        <div className="modal-sub">A few quick details to get your team started</div>
                     </div>
 
                     <div className="modal-body">
-                        {/* ORG NAME */}
-                        <label htmlFor="org-name">Organization Name <span style={{ color: "#ef4444" }}>*</span></label>
-                        <input
-                            id="org-name"
-                            name="org_name"
-                            placeholder="e.g. Acme Corp, Q1 Strategy"
-                            value={name}
-                            onChange={(e) => setName(e.target.value)}
-                            autoFocus
-                        />
+                        <div style={styles.sectionCard}>
+                            <div style={styles.sectionTitle}>Organization Details</div>
 
-                        {/* DESCRIPTION */}
-                        <label htmlFor="org-description">What will this organization work on?</label>
-                        <input
-                            id="org-description"
-                            name="org_description"
-                            placeholder="e.g. Marketing campaigns, Product launch, Client onboarding"
-                            value={description}
-                            onChange={(e) => setDescription(e.target.value)}
-                        />
+                            <label htmlFor="org-name">Organization Name <span style={{ color: "#ef4444" }}>*</span></label>
+                            <div style={styles.fieldHint}>Client or Account Name</div>
+                            <input
+                                id="org-name"
+                                name="org_name"
+                                placeholder="UrbanThread, CloudBridge, FreshFork Kitchens"
+                                value={name}
+                                onChange={(e) => setName(e.target.value)}
+                                autoFocus
+                            />
 
-                        {/* BOARD TYPE */}
-                        <label>How do you want to manage work?</label>
-                        <div style={styles.boardTypeGrid}>
-                            {BOARD_TYPES.map((bt) => (
-                                <div
-                                    key={bt.value}
-                                    style={{
-                                        ...styles.boardTypeCard,
-                                        ...(boardType === bt.value ? styles.boardTypeCardActive : {}),
-                                    }}
-                                    onClick={() => setBoardType(bt.value)}
-                                >
-                                    <div style={styles.boardTypeHeader}>
-                                        <div style={{
-                                            ...styles.boardTypeRadio,
-                                            ...(boardType === bt.value ? styles.boardTypeRadioActive : {}),
-                                        }}>
-                                            {boardType === bt.value && <div style={styles.boardTypeRadioDot} />}
-                                        </div>
-                                        <div style={styles.boardTypeLabel}>{bt.label}</div>
-                                    </div>
-                                    <div style={styles.boardTypeDesc}>{bt.desc}</div>
-                                </div>
-                            ))}
+                            <label htmlFor="org-description">Description</label>
+                            <div style={styles.fieldHint}>Brief description of the client or account you manage.</div>
+                            <input
+                                id="org-description"
+                                name="org_description"
+                                placeholder="Digital advertising and campaign management for UrbanThread's e-commerce growth."
+                                value={description}
+                                onChange={(e) => setDescription(e.target.value)}
+                            />
                         </div>
 
-                        {/* WORKSPACE NAME */}
-                        <label htmlFor="org-workspace-name">Workspace Name</label>
-                        <input
-                            id="org-workspace-name"
-                            name="org_workspace_name"
-                            placeholder={name.trim() ? `${name.trim()} Workspace` : "Auto-generated from org name"}
-                            value={workspaceName}
-                            onChange={(e) => setWorkspaceName(e.target.value)}
-                        />
+                        <div style={styles.sectionCard}>
+                            <div style={styles.sectionTitle}>Workspace Setup</div>
 
-                        {/* BOARD NAME */}
-                        <label htmlFor="org-board-name">Board Name</label>
-                        <input
-                            id="org-board-name"
-                            name="org_board_name"
-                            placeholder={name.trim() ? `${name.trim()} Board` : "Auto-generated from org name"}
-                            value={boardName}
-                            onChange={(e) => setBoardName(e.target.value)}
-                        />
+                            <label>Choose a board type for your first task board</label>
+                            <div style={styles.boardTypeGrid}>
+                                {BOARD_TYPES.map((bt) => (
+                                    <div
+                                        key={bt.value}
+                                        style={{
+                                            ...styles.boardTypeCard,
+                                            ...(boardType === bt.value ? styles.boardTypeCardActive : {}),
+                                        }}
+                                        onClick={() => setBoardType(bt.value)}
+                                    >
+                                        <div style={styles.boardTypeHeader}>
+                                            <div style={{
+                                                ...styles.boardTypeRadio,
+                                                ...(boardType === bt.value ? styles.boardTypeRadioActive : {}),
+                                            }}>
+                                                {boardType === bt.value && <div style={styles.boardTypeRadioDot} />}
+                                            </div>
+                                            <div style={styles.boardTypeLabel}>{bt.label}</div>
+                                        </div>
+                                        <div style={styles.boardTypeDesc}>{bt.desc}</div>
+                                    </div>
+                                ))}
+                            </div>
+
+                            <label htmlFor="org-workspace-name">Workspace Name</label>
+                            <div style={styles.fieldHint}>Team managing this client</div>
+                            <input
+                                id="org-workspace-name"
+                                name="org_workspace_name"
+                                placeholder={name.trim() ? `${name.trim()} Workspace` : "Creative Studio Workspace, Campaign Analytics Workspace, Social Advertising Workspace"}
+                                value={workspaceName}
+                                onChange={(e) => setWorkspaceName(e.target.value)}
+                            />
+
+                            <label htmlFor="org-board-name">Board Name</label>
+                            <div style={styles.fieldHint}>Project or campaign board</div>
+                            <input
+                                id="org-board-name"
+                                name="org_board_name"
+                                placeholder={name.trim() ? `${name.trim()} Board` : "Q2 Paid Media Tasks, Creative Requests, Client Deliverables"}
+                                value={boardName}
+                                onChange={(e) => setBoardName(e.target.value)}
+                            />
+                        </div>
                     </div>
 
                     <div className="modal-footer">
@@ -467,66 +474,60 @@ export default function CreateOrganizationModal({ tenantId, onClose, onCreated }
                     <div style={styles.stepIndicator}>Step 2 of 3</div>
                     <h2>Invite Your Team</h2>
                     <div className="modal-sub">
-                        Add people to <strong>{name}</strong> — you can skip this and invite later
+                        Add people to <strong>{name}</strong> now, or skip and invite later
                     </div>
                 </div>
 
                 <div className="modal-body">
+                    <div style={styles.sectionCard}>
+                        <div style={styles.sectionTitle}>Team Members</div>
 
-                    {/* OWNER */}
-                    <label htmlFor="org-owner-email">Owner (optional, 1 max)</label>
-                    <input
-                        id="org-owner-email"
-                        name="org_owner_email"
-                        type="email"
-                        placeholder="owner@company.com"
-                        value={ownerEmail}
-                        onChange={(e) => setOwnerEmail(e.target.value)}
-                    />
+                        {/* OWNER */}
+                        <label htmlFor="org-owner-email">Owner (optional, 1 max)</label>
+                        <input
+                            id="org-owner-email"
+                            name="org_owner_email"
+                            type="email"
+                            placeholder="owner@company.com"
+                            value={ownerEmail}
+                            onChange={(e) => setOwnerEmail(e.target.value)}
+                        />
 
-                    {/* MEMBERS */}
-                    <label htmlFor="org-member-email-0" style={{ marginTop: 8 }}>Members (optional)</label>
-                    {memberEmails.map((email, i) => (
-                        <div key={i} style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                            <input
-                                id={`org-member-email-${i}`}
-                                name={`org_member_email_${i}`}
-                                type="email"
-                                placeholder="member@company.com"
-                                value={email}
-                                onChange={(e) => updateMemberEmail(i, e.target.value)}
-                                style={{ flex: 1 }}
-                            />
-                            {memberEmails.length > 1 && (
-                                <button
-                                    className="btn ghost"
-                                    style={{ padding: "6px 10px", minWidth: "auto" }}
-                                    onClick={() => removeMemberEmail(i)}
-                                >
-                                    &times;
-                                </button>
-                            )}
+                        {/* MEMBERS */}
+                        <label htmlFor="org-member-email-0">Members (optional)</label>
+                        {memberEmails.map((email, i) => (
+                            <div key={i} style={styles.memberEmailRow}>
+                                <input
+                                    id={`org-member-email-${i}`}
+                                    name={`org_member_email_${i}`}
+                                    type="email"
+                                    placeholder="member@company.com"
+                                    value={email}
+                                    onChange={(e) => updateMemberEmail(i, e.target.value)}
+                                    style={{ flex: 1 }}
+                                />
+                                {memberEmails.length > 1 && (
+                                    <button
+                                        className="btn ghost"
+                                        style={{ padding: "6px 10px", minWidth: "auto" }}
+                                        onClick={() => removeMemberEmail(i)}
+                                    >
+                                        &times;
+                                    </button>
+                                )}
+                            </div>
+                        ))}
+
+                        <button
+                            onClick={() => setMemberEmails([...memberEmails, ""])}
+                            style={styles.addMemberBtn}
+                        >
+                            + Add another member
+                        </button>
+
+                        <div style={styles.inviteNote}>
+                            Invited members will be asked to complete their profile (name) when they first sign in.
                         </div>
-                    ))}
-
-                    <button
-                        onClick={() => setMemberEmails([...memberEmails, ""])}
-                        style={{
-                            background: "none",
-                            border: "none",
-                            color: "#4f46e5",
-                            cursor: "pointer",
-                            fontSize: 13,
-                            padding: 0,
-                            fontWeight: 600,
-                            marginTop: 4,
-                        }}
-                    >
-                        + Add another member
-                    </button>
-
-                    <div style={styles.inviteNote}>
-                        Invited members will be asked to complete their profile (name) when they first sign in.
                     </div>
                 </div>
 
@@ -555,9 +556,9 @@ const styles: Record<string, React.CSSProperties> = {
     boardTypeGrid: {
         display: "grid",
         gridTemplateColumns: "1fr 1fr",
-        gap: 10,
+        gap: 8,
         marginTop: 4,
-        marginBottom: 8,
+        marginBottom: 4,
     },
     boardTypeCard: {
         border: "1.5px solid #e2e8f0",
@@ -605,6 +606,44 @@ const styles: Record<string, React.CSSProperties> = {
         color: "#64748b",
         lineHeight: 1.4,
         marginLeft: 24,
+    },
+    fieldHint: {
+        fontSize: 12,
+        color: "#64748b",
+        marginTop: -2,
+        marginBottom: 2,
+        lineHeight: 1.5,
+    },
+    sectionCard: {
+        border: "1px solid #e2e8f0",
+        borderRadius: 12,
+        padding: "8px 10px",
+        marginBottom: 4,
+        background: "#ffffff",
+    },
+    sectionTitle: {
+        fontSize: 12,
+        fontWeight: 700,
+        color: "#334155",
+        marginBottom: 2,
+        textTransform: "uppercase" as const,
+        letterSpacing: 0.4,
+    },
+    memberEmailRow: {
+        display: "flex",
+        alignItems: "center",
+        gap: 8,
+    },
+    addMemberBtn: {
+        background: "none",
+        border: "none",
+        color: "#4f46e5",
+        cursor: "pointer",
+        fontSize: 13,
+        padding: 0,
+        fontWeight: 600,
+        marginTop: 4,
+        width: "fit-content",
     },
     createdSummary: {
         display: "flex",

@@ -33,12 +33,17 @@ export default function LandingPage({ onSignIn, onGetStarted }: LandingPageProps
   const [scrolled, setScrolled] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [showLogoIntro, setShowLogoIntro] = useState(false);
+  const [animationOff, setAnimationOff] = useState(
+    () => localStorage.getItem("landing_animation_off") === "1"
+  );
   const landingStartRef = useRef(Date.now());
   const demoVideoUrl = import.meta.env.VITE_DEMO_VIDEO_URL as string | undefined;
 
   useEffect(() => {
-    // Skip intro for users with reduced-motion preference.
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    if (
+      animationOff ||
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    ) {
       setShowLogoIntro(false);
       return;
     }
@@ -47,6 +52,17 @@ export default function LandingPage({ onSignIn, onGetStarted }: LandingPageProps
     const timer = window.setTimeout(() => setShowLogoIntro(false), 2600);
     return () => window.clearTimeout(timer);
   }, []);
+
+  function toggleAnimation() {
+    if (animationOff) {
+      localStorage.removeItem("landing_animation_off");
+      setAnimationOff(false);
+    } else {
+      localStorage.setItem("landing_animation_off", "1");
+      setAnimationOff(true);
+      setShowLogoIntro(false);
+    }
+  }
 
   useEffect(() => {
     // Feature: Signup Funnel Analytics - record landing page view.
@@ -106,6 +122,14 @@ export default function LandingPage({ onSignIn, onGetStarted }: LandingPageProps
           <a href="#faq" onClick={(e) => { e.preventDefault(); scrollTo("faq"); }}>FAQ</a>
         </div>
         <div className="landing-nav-actions">
+          <button
+            className="landing-animation-toggle"
+            onClick={toggleAnimation}
+            title={animationOff ? "Turn on intro animation" : "Turn off intro animation"}
+            aria-label={animationOff ? "Turn on intro animation" : "Turn off intro animation"}
+          >
+            {animationOff ? "Animation Off" : "Animation On"}
+          </button>
           <button className="landing-btn landing-btn-outline" onClick={onSignIn}>
             Sign In
           </button>

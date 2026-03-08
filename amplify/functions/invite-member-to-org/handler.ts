@@ -149,10 +149,13 @@ export const handler: Schema["inviteMemberToOrg"]["functionHandler"] =
                 if (err.name === "UserNotFoundException") {
                     isNewUser = true;
 
+                    const tempPassword = `Tether${crypto.randomUUID().slice(0, 6)}!`;
+
                     const createUser = await cognito.send(
                         new AdminCreateUserCommand({
                             UserPoolId: userPoolId,
                             Username: email,
+                            TemporaryPassword: tempPassword,
                             UserAttributes: [
                                 { Name: "email", Value: email },
                                 { Name: "email_verified", Value: "true" },

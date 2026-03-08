@@ -22,7 +22,11 @@ const cognito = new CognitoIdentityProviderClient({});
 export const handler: Schema["createTenantAdmin"]["functionHandler"] =
     async (event) => {
 
-        const { companyName, adminEmail } = event.arguments;
+        const {
+            companyName, adminEmail,
+            adminFirstName, adminLastName,
+            plan, trialStartDate, agreementNotes,
+        } = event.arguments;
         const userPoolId = process.env.USER_POOL_ID;
 
         if (!userPoolId) throw new Error("Missing USER_POOL_ID");
@@ -59,46 +63,58 @@ export const handler: Schema["createTenantAdmin"]["functionHandler"] =
             /* =========================================================
                CREATE TENANT
             ========================================================= */
+            // Build tenant data with optional trial fields
+            const selectedPlan = plan || "STARTER";
+
+            let trialStart: string | undefined;
+            let trialEnd: string | undefined;
+            if (selectedPlan === "TRIAL" && trialStartDate) {
+                trialStart = new Date(trialStartDate).toISOString();
+                const endDate = new Date(trialStartDate);
+                endDate.setDate(endDate.getDate() + 14);
+                trialEnd = endDate.toISOString();
+            }
+
             const tenantRes = await client.models.Tenant.create({
                 companyName,
                 status: "ACTIVE",
                 isActive: true,
-                createdAt: new Date().toISOString()
+                plan: selectedPlan,
+                subscriptionStatus: selectedPlan === "TRIAL" ? "TRIAL" : "ACTIVE",
+                adminName: adminFirstName && adminLastName
+                    ? `${adminFirstName} ${adminLastName}` : undefined,
+                agreementNotes: agreementNotes || undefined,
+                trialStartDate: trialStart,
+                trialEndDate: trialEnd,
+                createdAt: new Date().toISOString(),
             });
 
             const tenantId = tenantRes.data?.id;
             if (!tenantId) throw new Error("Tenant creation failed");
 
-            /* =========================================================
-               CREATE DEFAULT WORKSPACE
-            ========================================================= */
-            const workspaceRes = await client.models.Workspace.create({
-                tenantId,
-                name: "General",
-                description: "Default workspace",
-                ownerUserSub: "pending",
-                createdBy: "system",
-                isActive: true,
-                isDeleted: false,
-                createdAt: new Date().toISOString(),
-            });
-
-            const workspaceId = workspaceRes.data?.id;
-            if (!workspaceId) throw new Error("Workspace failed");
-
             if (!isExistingUser) {
                 /* =========================================================
                    CREATE COGNITO USER (new user only)
                 ========================================================= */
+                const userAttributes = [
+                    { Name: "email", Value: adminEmail },
+                    { Name: "email_verified", Value: "true" },
+                    { Name: "custom:tenantId", Value: tenantId },
+                ];
+                if (adminFirstName && adminLastName) {
+                    userAttributes.push({ Name: "name", Value: `${adminFirstName} ${adminLastName}` });
+                }
+
+                // Explicit readable temp password — avoids copy-paste issues
+                // with Cognito's auto-generated passwords
+                const tempPassword = `Tether${crypto.randomUUID().slice(0, 6)}!`;
+
                 const createUser = await cognito.send(
                     new AdminCreateUserCommand({
                         UserPoolId: userPoolId,
                         Username: adminEmail,
-                        UserAttributes: [
-                            { Name: "email", Value: adminEmail },
-                            { Name: "email_verified", Value: "true" },
-                            { Name: "custom:tenantId", Value: tenantId }
-                        ],
+                        TemporaryPassword: tempPassword,
+                        UserAttributes: userAttributes,
                         DesiredDeliveryMediums: ["EMAIL"],
                     })
                 );
@@ -128,8 +144,8 @@ export const handler: Schema["createTenantAdmin"]["functionHandler"] =
                     tenantId,
                     email: adminEmail,
                     role: "TENANT_ADMIN",
-                    firstName: "",
-                    lastName: "",
+                    firstName: adminFirstName || "",
+                    lastName: adminLastName || "",
                     createdAt: new Date().toISOString(),
                 });
             }
@@ -139,7 +155,6 @@ export const handler: Schema["createTenantAdmin"]["functionHandler"] =
             ========================================================= */
             await client.models.Membership.create({
                 tenantId,
-                workspaceId,
                 userSub,
                 role: "TENANT_ADMIN",
                 status: "ACTIVE",
@@ -159,7 +174,6 @@ export const handler: Schema["createTenantAdmin"]["functionHandler"] =
 
             await client.models.Invitation.create({
                 tenantId,
-                workspaceId,
                 email: adminEmail,
                 role: "TENANT_ADMIN",
                 status: "PENDING",
@@ -174,7 +188,6 @@ export const handler: Schema["createTenantAdmin"]["functionHandler"] =
             ========================================================= */
             await client.models.AuditLog.create({
                 tenantId,
-                workspaceId,
                 userId: "platform_admin",
                 action: "CREATE",
                 resourceType: "TENANT",

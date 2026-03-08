@@ -10,6 +10,7 @@ import {
 import {
     LayoutDashboard, Users, CheckCircle2, ListTodo,
     Clock, TrendingUp, Kanban, Layers, ArrowUpRight,
+    ChevronDown, ChevronUp, Rocket,
 } from "lucide-react";
 import { displayName } from "../../../libs/displayName";
 import { getPlanLimits } from "../../../libs/planLimits";
@@ -118,6 +119,9 @@ export default function TenantDashboard() {
     const [memberSort, setMemberSort] = useState<"name" | "role" | "organization">("name");
     const [memberStatus, setMemberStatus] = useState<"ALL" | "ACTIVE" | "REMOVED">("ACTIVE");
     const [activeTab, setActiveTab] = useState<"workspaces" | "boards" | "members">("workspaces");
+    const [showGuide, setShowGuide] = useState(() => {
+        return localStorage.getItem("hideGettingStarted") !== "true";
+    });
     const [usageMetrics, setUsageMetrics] = useState({
         plan: "STARTER",
         orgUsed: 0,
@@ -540,6 +544,99 @@ export default function TenantDashboard() {
                         </h1>
                         <p className="dash-sub">Select an organization first, then a workspace · {organizationLabel} · {workspaceLabel}</p>
                     </div>
+                </div>
+
+                {/* Getting Started Guide */}
+                <div className="workspace-directory" style={{ background: showGuide ? "#fafbff" : undefined }}>
+                    <div
+                        className="workspace-directory-head"
+                        style={{ cursor: "pointer", userSelect: "none" }}
+                        onClick={() => {
+                            const next = !showGuide;
+                            setShowGuide(next);
+                            if (!next) localStorage.setItem("hideGettingStarted", "true");
+                            else localStorage.removeItem("hideGettingStarted");
+                        }}
+                    >
+                        <h3 style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                            <Rocket size={16} color="#6366f1" />
+                            Getting Started
+                        </h3>
+                        <div className="workspace-directory-head-right">
+                            {showGuide
+                                ? <ChevronUp size={18} color="#64748b" />
+                                : <ChevronDown size={18} color="#64748b" />
+                            }
+                        </div>
+                    </div>
+
+                    {showGuide && (
+                        <div style={{ padding: "4px 0 12px" }}>
+                            <p style={{ fontSize: 13, color: "#64748b", margin: "0 0 16px" }}>
+                                Follow these steps to set up your workspace
+                            </p>
+
+                            <div style={{ display: "flex", flexDirection: "column" }}>
+                                {/* Step 1 */}
+                                <div style={guideStyles.step}>
+                                    <div style={guideStyles.stepLeft}>
+                                        <div style={guideStyles.stepNumber}>1</div>
+                                        <div style={guideStyles.stepConnector} />
+                                    </div>
+                                    <div style={guideStyles.stepContent}>
+                                        <div style={guideStyles.stepTitle}>Create Your Organizations</div>
+                                        <div style={guideStyles.stepDesc}>
+                                            Set up the organizations you manage (up to {usageMetrics.orgLimit}). From this interface you can create one workspace and a task board and invite members.
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Step 2 */}
+                                <div style={guideStyles.step}>
+                                    <div style={guideStyles.stepLeft}>
+                                        <div style={guideStyles.stepNumber}>2</div>
+                                        <div style={guideStyles.stepConnector} />
+                                    </div>
+                                    <div style={guideStyles.stepContent}>
+                                        <div style={guideStyles.stepTitle}>Add Workspaces</div>
+                                        <div style={guideStyles.stepDesc}>
+                                            For additional workspaces under an organization (up to {getPlanLimits(usageMetrics.plan).workspaces} per org) you can use the Add Workspaces interface.
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Step 3 */}
+                                <div style={guideStyles.step}>
+                                    <div style={guideStyles.stepLeft}>
+                                        <div style={guideStyles.stepNumber}>3</div>
+                                        <div style={guideStyles.stepConnector} />
+                                    </div>
+                                    <div style={guideStyles.stepContent}>
+                                        <div style={guideStyles.stepTitle}>Create Task Boards & Tasks</div>
+                                        <div style={guideStyles.stepDesc}>
+                                            Add task boards to your workspaces, then create and organize tasks within those boards.
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Step 4 */}
+                                <div style={guideStyles.step}>
+                                    <div style={guideStyles.stepLeft}>
+                                        <div style={{ ...guideStyles.stepNumber, background: "#f0fdf4", color: "#16a34a", borderColor: "#bbf7d0" }}>4</div>
+                                    </div>
+                                    <div style={guideStyles.stepContent}>
+                                        <div style={guideStyles.stepTitle}>Invite Members & Assign Tasks</div>
+                                        <div style={guideStyles.stepDesc}>
+                                            Invite team members to your organization. Once they accept their invitation, you can assign tasks to them.
+                                        </div>
+                                        <div style={guideStyles.stepTip}>
+                                            Members must accept their invitation before they can be assigned tasks.
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 <div className="workspace-directory">
@@ -1325,3 +1422,62 @@ export default function TenantDashboard() {
         </div>
     );
 }
+
+const guideStyles: Record<string, React.CSSProperties> = {
+    step: {
+        display: "flex",
+        gap: 14,
+    },
+    stepLeft: {
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        flexShrink: 0,
+    },
+    stepNumber: {
+        width: 28,
+        height: 28,
+        borderRadius: "50%",
+        background: "#eef2ff",
+        border: "2px solid #c7d2fe",
+        color: "#4f46e5",
+        fontSize: 13,
+        fontWeight: 700,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        flexShrink: 0,
+    },
+    stepConnector: {
+        width: 2,
+        flex: 1,
+        background: "#e2e8f0",
+        margin: "4px 0",
+        minHeight: 16,
+    },
+    stepContent: {
+        paddingBottom: 18,
+        flex: 1,
+    },
+    stepTitle: {
+        fontSize: 14,
+        fontWeight: 650,
+        color: "#0f172a",
+        marginBottom: 3,
+    },
+    stepDesc: {
+        fontSize: 13,
+        color: "#475569",
+        lineHeight: 1.5,
+    },
+    stepTip: {
+        marginTop: 6,
+        fontSize: 12,
+        color: "#d97706",
+        fontWeight: 600,
+        background: "#fffbeb",
+        border: "1px solid #fde68a",
+        borderRadius: 6,
+        padding: "6px 10px",
+    },
+};

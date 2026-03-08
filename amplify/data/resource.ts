@@ -43,6 +43,11 @@ const schema = a.schema({
         stripeCustomerId: a.string(),
         stripeSubscriptionId: a.string(),
 
+        trialStartDate: a.datetime(),
+        trialEndDate: a.datetime(),
+        agreementNotes: a.string(),
+        adminName: a.string(),
+
         createdAt: a.datetime(),
         updatedAt: a.datetime(),
 
@@ -402,6 +407,7 @@ const schema = a.schema({
         firstName: a.string(),
         lastName: a.string(),
         role: a.string(),
+        hasSeenWelcome: a.boolean(),
 
         createdAt: a.datetime(),
     })
@@ -423,6 +429,11 @@ const schema = a.schema({
         .arguments({
             companyName: a.string().required(),
             adminEmail: a.string().required(),
+            adminFirstName: a.string(),
+            adminLastName: a.string(),
+            plan: a.string(),
+            trialStartDate: a.string(),
+            agreementNotes: a.string(),
         })
         .returns(a.customType({
             success: a.boolean(),

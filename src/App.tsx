@@ -32,6 +32,7 @@ import GeneralDashboard from "./features/general/pages/GeneralDashboard";
 import GeneralWorkspacesPage from "./features/general/pages/GeneralWorkspacesPage";
 import AdminUserDirectoryPage from "./features/admin/pages/AdminUserDirectoryPage";
 import ProfilePage from "./features/profile/pages/ProfilePage";
+import WelcomePage from "./features/tenant-admin/pages/WelcomePage";
 import NotificationsPage from "./features/notifications/pages/NotificationsPage";
 import AnalyticsPage from "./features/platform-admin/pages/AnalyticsPage";
 
@@ -94,6 +95,7 @@ export default function App() {
 
           {/* PROFILE */}
           <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/welcome" element={<WelcomePage />} />
 
           {/* ================= PLATFORM ADMIN ================= */}
           <Route path="/super" element={<PlatformShell />}>
