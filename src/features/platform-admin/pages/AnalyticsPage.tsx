@@ -153,7 +153,7 @@ export default function AnalyticsPage() {
                     </div>
                 </div>
                 <div className="kpi-card">
-                    <div className="kpi-icon" style={{ background: "#eff6ff", color: "#2563eb" }}>
+                    <div className="kpi-icon" style={{ background: "#e8f0fa", color: "#1e3a5f" }}>
                         <BarChart3 size={20} />
                     </div>
                     <div className="kpi-body">

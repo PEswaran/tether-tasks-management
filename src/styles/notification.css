@@ -58,7 +58,7 @@
 }
 
 .notif-item.unread {
-  background: #eef2ff;
+  background: #e8f0fa;
 }
 
 .notif-title {
@@ -92,7 +92,7 @@
 .notif-clear {
   background: none;
   border: none;
-  color: #6366f1;
+  color: #1e3a5f;
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
@@ -101,5 +101,5 @@
 }
 
 .notif-clear:hover {
-  background: #eef2ff;
+  background: #e8f0fa;
 }

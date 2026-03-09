@@ -135,7 +135,7 @@ function buildEmailBody(type: string, name: string) {
             <h2 style="margin: 0 0 16px; font-size: 22px; color: #0f172a;">${title}</h2>
             <p style="color: #334155; font-size: 15px; line-height: 1.6; margin: 0 0 24px;">${message}. Log in to your account to get started.</p>
             <a href="https://tethertasks.com"
-               style="display: inline-block; background: #4f46e5; color: white; padding: 12px 24px; border-radius: 10px; text-decoration: none; font-weight: 600; font-size: 14px;">
+               style="display: inline-block; background: #1e3a5f; color: white; padding: 12px 24px; border-radius: 10px; text-decoration: none; font-weight: 600; font-size: 14px;">
                 Open TetherTasks
             </a>
             <p style="color: #94a3b8; font-size: 12px; margin-top: 28px;">

@@ -192,7 +192,7 @@ export default function AppShell({
                     {/* BRAND — logo centered with company name stacked below */}
                     <div className="app-brand">
                         <div className="app-logo-tile" onClick={() => navigate("/")}>
-                            <img src="/logo.png" className="app-logo" />
+                            <img src="https://tethertasks-assets.s3.us-east-1.amazonaws.com/tetherTasksv2.PNG" className="app-logo" />
                         </div>
                         {!collapsed && <div className="app-company">{displayName}</div>}
                     </div>

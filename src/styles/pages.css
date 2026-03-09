@@ -81,7 +81,7 @@
 }
 
 .kpi-card:hover {
-  box-shadow: 0 8px 30px rgba(79, 70, 229, 0.08);
+  box-shadow: 0 8px 30px rgba(30, 58, 95, 0.08);
   border-color: var(--primary);
   transform: translateY(-2px);
 }
@@ -170,7 +170,7 @@
   background: #94a3b8;
 }
 .progress-segment.active {
-  background: #3b82f6;
+  background: #1e3a5f;
 }
 .progress-segment.done {
   background: #10b981;
@@ -197,7 +197,7 @@
   background: #94a3b8;
 }
 .dot.active {
-  background: #3b82f6;
+  background: #1e3a5f;
 }
 .dot.done {
   background: #10b981;
@@ -220,7 +220,7 @@
 }
 
 .dash-panel:hover {
-  box-shadow: 0 8px 30px rgba(79, 70, 229, 0.08);
+  box-shadow: 0 8px 30px rgba(30, 58, 95, 0.08);
   border-color: var(--primary);
   transform: translateY(-2px);
 }
@@ -332,7 +332,7 @@
   color: var(--muted);
 }
 .member-role.tenant_admin {
-  color: #3b82f6;
+  color: #1e3a5f;
 }
 
 /* SKELETON LOADING */
@@ -380,7 +380,7 @@
 }
 
 .board-card:hover {
-  box-shadow: 0 8px 30px rgba(79, 70, 229, 0.08);
+  box-shadow: 0 8px 30px rgba(30, 58, 95, 0.08);
   border-color: var(--primary);
   transform: translateY(-2px);
 }
@@ -465,7 +465,7 @@
   border-color: #94a3b8;
 }
 .kanban-col-header.in-progress {
-  border-color: #3b82f6;
+  border-color: #1e3a5f;
 }
 .kanban-col-header.done {
   border-color: #10b981;
@@ -501,7 +501,7 @@
   transition: 0.18s;
 }
 .task-card:hover {
-  box-shadow: 0 8px 30px rgba(79, 70, 229, 0.08);
+  box-shadow: 0 8px 30px rgba(30, 58, 95, 0.08);
   transform: translateY(-2px);
   border-color: var(--primary);
 }
@@ -534,8 +534,8 @@
   border: 2px solid white;
 }
 .task-card-avatar.owner {
-  background: #eef2ff;
-  color: #4f46e5;
+  background: #e8f0fa;
+  color: #1e3a5f;
 }
 .task-card-avatar.assignee {
   background: #ecfdf5;
@@ -785,7 +785,7 @@
 
 .directory-usage-fill {
   height: 100%;
-  background: linear-gradient(90deg, #4f46e5, #6366f1);
+  background: linear-gradient(90deg, #1e3a5f, #1e3a5f);
   border-radius: 999px;
   transition: width 0.2s ease;
 }
@@ -854,8 +854,8 @@
 
 .workspace-pill.active {
   background: var(--primary-soft);
-  color: #3730a3;
-  border-color: #c7d2fe;
+  color: #0f2135;
+  border-color: #b8d0e8;
 }
 
 .workspace-pill.static {
@@ -927,7 +927,7 @@
 
 .ws-card.selected {
   border-color: var(--primary);
-  box-shadow: 0 10px 30px rgba(79, 70, 229, 0.12);
+  box-shadow: 0 10px 30px rgba(30, 58, 95, 0.12);
 }
 
 .workspace-drawer {
@@ -1031,7 +1031,7 @@
 
 .workspace-plan-fill {
   height: 100%;
-  background: linear-gradient(90deg, #4f46e5, #6366f1);
+  background: linear-gradient(90deg, #1e3a5f, #1e3a5f);
   border-radius: 999px;
   transition: width 0.2s ease;
 }
@@ -1143,7 +1143,7 @@
 
 .general-assignment-item-btn:hover {
   border-color: var(--primary);
-  box-shadow: 0 6px 18px rgba(79, 70, 229, 0.1);
+  box-shadow: 0 6px 18px rgba(30, 58, 95, 0.1);
 }
 
 .general-assignment-title {
@@ -1169,7 +1169,7 @@
 }
 
 .tasks-row-focus {
-  background: #eef2ff;
+  background: #e8f0fa;
 }
 
 .tasks-assigned-me-pill {
@@ -1180,7 +1180,7 @@
   padding: 2px 8px;
   border-radius: 999px;
   border: 1px solid #bfdbfe;
-  background: #eff6ff;
+  background: #e8f0fa;
   color: #1d4ed8;
   font-size: 11px;
   font-weight: 700;
@@ -1213,7 +1213,7 @@
 }
 
 .ws-card:hover {
-  box-shadow: 0 8px 30px rgba(79, 70, 229, 0.08);
+  box-shadow: 0 8px 30px rgba(30, 58, 95, 0.08);
   transform: translateY(-2px);
   border-color: var(--primary);
 }
@@ -1229,9 +1229,9 @@
   width: 30px;
   height: 30px;
   border-radius: 50%;
-  border: 1px solid #c7d2fe;
-  background: #eef2ff;
-  color: #3730a3;
+  border: 1px solid #b8d0e8;
+  background: #e8f0fa;
+  color: #0f2135;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1439,7 +1439,7 @@
 
 /* Buttons */
 .btn {
-  background: #2563eb;
+  background: #1e3a5f;
   color: white;
   border: none;
   padding: 10px 16px;
@@ -1535,7 +1535,7 @@
 }
 
 .role-badge.member {
-  background: #dbeafe;
+  background: #d0e2f2;
   color: #1e40af;
 }
 
@@ -1580,7 +1580,7 @@
 }
 
 .status-badge.in_progress {
-  background: #dbeafe;
+  background: #d0e2f2;
   color: #1e40af;
 }
 
@@ -1601,7 +1601,7 @@
 }
 
 .role-badge.medium {
-  background: #dbeafe;
+  background: #d0e2f2;
   color: #1e40af;
 }
 
@@ -1707,11 +1707,11 @@ input {
 }
 
 .plan-card:hover {
-  border-color: #2563eb;
+  border-color: #1e3a5f;
 }
 
 .plan-card.active {
-  border: 2px solid #2563eb;
+  border: 2px solid #1e3a5f;
   background: #f5f8ff;
 }
 
@@ -1768,7 +1768,7 @@ input {
   width: 38px;
   height: 38px;
   border-radius: 10px;
-  background: linear-gradient(135deg, #3b82f6, #6366f1);
+  background: linear-gradient(135deg, #1e3a5f, #1e3a5f);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1876,7 +1876,7 @@ input {
 
 /* invite */
 .sv-invite {
-  background: #2563eb;
+  background: #1e3a5f;
   color: white;
   border: none;
   padding: 8px 14px;
@@ -1926,7 +1926,7 @@ input {
   gap: 10px;
   padding: 10px 22px;
   background: #eef4ff;
-  border-bottom: 1px solid #dbeafe;
+  border-bottom: 1px solid #d0e2f2;
   font-size: 13px;
 }
 
@@ -1938,7 +1938,7 @@ input {
   margin-left: auto;
   background: none;
   border: none;
-  color: #2563eb;
+  color: #1e3a5f;
   font-weight: 600;
   cursor: pointer;
 }
@@ -1990,7 +1990,7 @@ input {
 .workspace-metric-fill {
   height: 100%;
   border-radius: 999px;
-  background: linear-gradient(90deg, #4f46e5, #6366f1);
+  background: linear-gradient(90deg, #1e3a5f, #1e3a5f);
 }
 
 .workspace-metric-fill.over {
@@ -2025,8 +2025,8 @@ input {
 }
 
 .workspace-page-org-select:focus {
-  border-color: #4f46e5;
-  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12);
+  border-color: #1e3a5f;
+  box-shadow: 0 0 0 3px rgba(30, 58, 95, 0.12);
 }
 
 .workspace-page-btn {
@@ -2042,14 +2042,14 @@ input {
 }
 
 .workspace-page-btn-primary {
-  background: linear-gradient(135deg, #4f46e5, #4338ca);
+  background: linear-gradient(135deg, #1e3a5f, #152d4a);
   color: #fff;
-  box-shadow: 0 8px 20px rgba(79, 70, 229, 0.22);
+  box-shadow: 0 8px 20px rgba(30, 58, 95, 0.22);
 }
 
 .workspace-page-btn-primary:hover {
   transform: translateY(-1px);
-  box-shadow: 0 10px 22px rgba(79, 70, 229, 0.26);
+  box-shadow: 0 10px 22px rgba(30, 58, 95, 0.26);
 }
 
 .workspace-page-btn-primary:disabled {
@@ -2066,8 +2066,8 @@ input {
 }
 
 .workspace-page-btn-secondary:hover {
-  border-color: #4f46e5;
-  color: #4f46e5;
+  border-color: #1e3a5f;
+  color: #1e3a5f;
 }
 
 .tasks-page-controls {
@@ -2098,8 +2098,8 @@ input {
 }
 
 .tasks-page-org-select:focus {
-  border-color: #4f46e5;
-  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12);
+  border-color: #1e3a5f;
+  box-shadow: 0 0 0 3px rgba(30, 58, 95, 0.12);
 }
 
 .tasks-page-btn {
@@ -2115,14 +2115,14 @@ input {
 }
 
 .tasks-page-btn-primary {
-  background: linear-gradient(135deg, #4f46e5, #4338ca);
+  background: linear-gradient(135deg, #1e3a5f, #152d4a);
   color: #fff;
-  box-shadow: 0 8px 20px rgba(79, 70, 229, 0.22);
+  box-shadow: 0 8px 20px rgba(30, 58, 95, 0.22);
 }
 
 .tasks-page-btn-primary:hover {
   transform: translateY(-1px);
-  box-shadow: 0 10px 22px rgba(79, 70, 229, 0.26);
+  box-shadow: 0 10px 22px rgba(30, 58, 95, 0.26);
 }
 
 .tasks-page-btn-secondary {
@@ -2132,8 +2132,8 @@ input {
 }
 
 .tasks-page-btn-secondary:hover {
-  border-color: #4f46e5;
-  color: #4f46e5;
+  border-color: #1e3a5f;
+  color: #1e3a5f;
 }
 
 .tasks-metrics-grid {
@@ -2314,7 +2314,7 @@ input {
 }
 
 .sv-invite {
-  background: linear-gradient(135deg, #3b82f6, #6366f1);
+  background: linear-gradient(135deg, #1e3a5f, #1e3a5f);
   border: none;
   color: white;
   padding: 9px 16px;

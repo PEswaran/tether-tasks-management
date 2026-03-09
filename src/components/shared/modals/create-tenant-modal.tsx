@@ -20,14 +20,14 @@ const PLANS = [
         name: "Professional",
         price: "$29/mo",
         features: ["3 organizations", "5 workspaces", "25 members", "Unlimited tasks"],
-        color: "#3b82f6",
+        color: "#1e3a5f",
     },
     {
         id: "ENTERPRISE",
         name: "Enterprise",
         price: "$99/mo",
         features: ["Unlimited organizations", "Unlimited workspaces", "Unlimited members", "Priority support"],
-        color: "#7c3aed",
+        color: "#0ea5b8",
     },
     {
         id: "TRIAL",

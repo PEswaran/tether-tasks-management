@@ -108,7 +108,7 @@ export default function OrganizationsPage() {
                         <tr key={org.id}>
                             <td>
                                 <button
-                                    style={{ background: "none", border: "none", color: "#2563eb", cursor: "pointer", fontWeight: 500, fontSize: 14, padding: 0 }}
+                                    style={{ background: "none", border: "none", color: "#1e3a5f", cursor: "pointer", fontWeight: 500, fontSize: 14, padding: 0 }}
                                     onClick={() => {
                                         setOrganizationId(org.id);
                                         navigate(`/tenant/workspaces`);

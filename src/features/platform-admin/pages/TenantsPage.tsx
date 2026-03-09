@@ -15,8 +15,8 @@ function getPlanLabel(plan: string | null | undefined) {
 
 function getPlanColor(plan: string | null | undefined) {
     switch (plan) {
-        case "PROFESSIONAL": return { bg: "#eff6ff", color: "#3b82f6" };
-        case "ENTERPRISE": return { bg: "#f5f3ff", color: "#7c3aed" };
+        case "PROFESSIONAL": return { bg: "#e8f0fa", color: "#1e3a5f" };
+        case "ENTERPRISE": return { bg: "#e4f7fa", color: "#0ea5b8" };
         case "TRIAL": return { bg: "#fffbeb", color: "#f59e0b" };
         default: return { bg: "#f1f5f9", color: "#64748b" };
     }

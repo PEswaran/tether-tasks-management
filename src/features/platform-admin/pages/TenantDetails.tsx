@@ -188,8 +188,8 @@ export default function TenantDetail() {
 
     function getPlanColor(plan: string | null | undefined) {
         switch (plan) {
-            case "PROFESSIONAL": return { bg: "#eff6ff", color: "#3b82f6" };
-            case "ENTERPRISE": return { bg: "#f5f3ff", color: "#7c3aed" };
+            case "PROFESSIONAL": return { bg: "#e8f0fa", color: "#1e3a5f" };
+            case "ENTERPRISE": return { bg: "#e4f7fa", color: "#0ea5b8" };
             case "TRIAL": return { bg: "#fffbeb", color: "#f59e0b" };
             default: return { bg: "#f1f5f9", color: "#64748b" };
         }
@@ -370,7 +370,7 @@ export default function TenantDetail() {
 
                 {/* WORKSPACES */}
                 <div className="kpi-card" style={{ cursor: "default" }}>
-                    <div className="kpi-icon" style={{ background: "#eff6ff", color: "#3b82f6" }}>
+                    <div className="kpi-icon" style={{ background: "#e8f0fa", color: "#1e3a5f" }}>
                         <Kanban size={20} />
                     </div>
                     <div className="kpi-body">
@@ -383,7 +383,7 @@ export default function TenantDetail() {
 
                 {/* TASKS */}
                 <div className="kpi-card" style={{ cursor: "default" }}>
-                    <div className="kpi-icon" style={{ background: "#eef2ff", color: "#4f46e5" }}>
+                    <div className="kpi-icon" style={{ background: "#e8f0fa", color: "#1e3a5f" }}>
                         <ListTodo size={20} />
                     </div>
                     <div className="kpi-body">
@@ -480,8 +480,8 @@ export default function TenantDetail() {
                                     <span
                                         className="role-badge"
                                         style={{
-                                            background: m.role === "TENANT_ADMIN" ? "#fef3c7" : m.role === "OWNER" ? "#eff6ff" : "#f1f5f9",
-                                            color: m.role === "TENANT_ADMIN" ? "#d97706" : m.role === "OWNER" ? "#3b82f6" : "#64748b",
+                                            background: m.role === "TENANT_ADMIN" ? "#fef3c7" : m.role === "OWNER" ? "#e8f0fa" : "#f1f5f9",
+                                            color: m.role === "TENANT_ADMIN" ? "#d97706" : m.role === "OWNER" ? "#1e3a5f" : "#64748b",
                                         }}
                                     >
                                         {m.role}
@@ -623,8 +623,8 @@ export default function TenantDetail() {
                             <div style={{ display: "flex", gap: 12 }}>
                                 {[
                                     { id: "STARTER", name: "Starter", price: "Free", color: "#64748b" },
-                                    { id: "PROFESSIONAL", name: "Professional", price: "$29/mo", color: "#3b82f6" },
-                                    { id: "ENTERPRISE", name: "Enterprise", price: "$99/mo", color: "#7c3aed" },
+                                    { id: "PROFESSIONAL", name: "Professional", price: "$29/mo", color: "#1e3a5f" },
+                                    { id: "ENTERPRISE", name: "Enterprise", price: "$99/mo", color: "#0ea5b8" },
                                 ].map(p => {
                                     const isActive = convertPlan === p.id;
                                     return (

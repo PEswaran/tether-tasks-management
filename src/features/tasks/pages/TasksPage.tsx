@@ -381,7 +381,7 @@ export default function TasksPage({ role, assignedToMe }: { role: TaskRole; assi
             {assignedToMe ? (
                 <div className="tasks-metrics-grid">
                     <div className="tasks-metric-card">
-                        <div className="tasks-metric-icon" style={{ background: "#eff6ff", color: "#3b82f6" }}>
+                        <div className="tasks-metric-icon" style={{ background: "#e8f0fa", color: "#1e3a5f" }}>
                             <ListTodo size={18} />
                         </div>
                         <div className="tasks-metric-label">Open</div>
@@ -670,7 +670,7 @@ export default function TasksPage({ role, assignedToMe }: { role: TaskRole; assi
                                                 style={{
                                                     background: "none",
                                                     border: "none",
-                                                    color: "#2563eb",
+                                                    color: "#1e3a5f",
                                                     cursor: "pointer",
                                                     fontWeight: 500,
                                                     padding: 0,

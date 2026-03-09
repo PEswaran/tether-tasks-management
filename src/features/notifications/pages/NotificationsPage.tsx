@@ -176,9 +176,9 @@ export default function NotificationsPage() {
                         style={{
                             padding: "6px 16px",
                             borderRadius: 8,
-                            border: filter === tab ? "1px solid #6366f1" : "1px solid #e2e8f0",
-                            background: filter === tab ? "#eef2ff" : "#fff",
-                            color: filter === tab ? "#6366f1" : "#64748b",
+                            border: filter === tab ? "1px solid #1e3a5f" : "1px solid #e2e8f0",
+                            background: filter === tab ? "#e8f0fa" : "#fff",
+                            color: filter === tab ? "#1e3a5f" : "#64748b",
                             fontWeight: 600,
                             fontSize: 13,
                             cursor: "pointer",
@@ -190,7 +190,7 @@ export default function NotificationsPage() {
                             <span
                                 style={{
                                     marginLeft: 6,
-                                    background: "#6366f1",
+                                    background: "#1e3a5f",
                                     color: "#fff",
                                     borderRadius: 10,
                                     padding: "1px 7px",
@@ -226,7 +226,7 @@ export default function NotificationsPage() {
                                 padding: "16px 20px",
                                 gap: 16,
                                 cursor: "pointer",
-                                borderLeft: !n.isRead ? "3px solid #6366f1" : "3px solid transparent",
+                                borderLeft: !n.isRead ? "3px solid #1e3a5f" : "3px solid transparent",
                                 background: !n.isRead ? "#fafaff" : "#fff",
                                 transition: "background 0.15s",
                             }}
@@ -271,7 +271,7 @@ export default function NotificationsPage() {
                                         borderRadius: 6,
                                         padding: "4px 10px",
                                         fontSize: 12,
-                                        color: "#6366f1",
+                                        color: "#1e3a5f",
                                         fontWeight: 600,
                                         cursor: "pointer",
                                     }}

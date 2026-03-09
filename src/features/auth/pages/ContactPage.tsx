@@ -119,7 +119,7 @@ export default function ContactPage({ onBack }: ContactPageProps) {
       <nav className="landing-nav">
         <a href="/" className="landing-nav-logo" onClick={(e) => { e.preventDefault(); onBack(); }}>
           <div className="landing-logo-tile">
-            <img src="/logo.png" alt="TetherTasks logo" className="landing-logo-img" />
+            <img src="https://tethertasks-assets.s3.us-east-1.amazonaws.com/tetherTasksv2.PNG" alt="TetherTasks logo" className="landing-logo-img" />
           </div>
           TetherTasks
         </a>

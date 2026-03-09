@@ -90,7 +90,7 @@ export default function ProfilePage() {
         <div style={styles.wrapper}>
             <div style={styles.card}>
                 <div style={styles.iconCircle}>
-                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#6366f1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#1e3a5f" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
                         <circle cx="12" cy="7" r="4" />
                     </svg>
@@ -170,7 +170,7 @@ const styles: Record<string, React.CSSProperties> = {
         width: 56,
         height: 56,
         borderRadius: "50%",
-        background: "#eef2ff",
+        background: "#e8f0fa",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",

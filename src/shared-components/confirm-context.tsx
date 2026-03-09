@@ -77,7 +77,7 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
     }
 
     const variantStyles: Record<Variant, { bg: string; color: string; iconBg: string; btnBg: string; btnHover: string }> = {
-        info: { bg: "#eff6ff", color: "#3b82f6", iconBg: "#dbeafe", btnBg: "linear-gradient(135deg, #6366f1, #06b6d4)", btnHover: "rgba(99,102,241,0.25)" },
+        info: { bg: "#e8f0fa", color: "#1e3a5f", iconBg: "#d0e2f2", btnBg: "linear-gradient(135deg, #1e3a5f, #0ea5b8)", btnHover: "rgba(30,58,95,0.25)" },
         danger: { bg: "#fef2f2", color: "#dc2626", iconBg: "#fee2e2", btnBg: "#dc2626", btnHover: "rgba(220,38,38,0.25)" },
         warning: { bg: "#fffbeb", color: "#d97706", iconBg: "#fef3c7", btnBg: "#d97706", btnHover: "rgba(217,119,6,0.25)" },
         success: { bg: "#ecfdf5", color: "#059669", iconBg: "#d1fae5", btnBg: "#059669", btnHover: "rgba(5,150,105,0.25)" },

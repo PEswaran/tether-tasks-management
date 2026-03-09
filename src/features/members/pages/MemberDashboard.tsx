@@ -176,7 +176,7 @@ export default function MemberDashboard() {
                     </div>
                 </div>
                 <div className="kpi-card" onClick={() => navigate("/member/my-tasks")} style={{ cursor: "pointer" }}>
-                    <div className="kpi-icon" style={{ background: "#eff6ff", color: "#3b82f6" }}>
+                    <div className="kpi-icon" style={{ background: "#e8f0fa", color: "#1e3a5f" }}>
                         <UserCheck size={18} />
                     </div>
                     <div className="kpi-body">
@@ -185,7 +185,7 @@ export default function MemberDashboard() {
                     </div>
                 </div>
                 <div className="kpi-card" onClick={() => navigate("/member/tasks")} style={{ cursor: "pointer" }}>
-                    <div className="kpi-icon" style={{ background: "#eef2ff", color: "#4f46e5" }}>
+                    <div className="kpi-icon" style={{ background: "#e8f0fa", color: "#1e3a5f" }}>
                         <ListTodo size={18} />
                     </div>
                     <div className="kpi-body">
@@ -240,7 +240,7 @@ export default function MemberDashboard() {
                             marginBottom: 8,
                             borderRadius: 8,
                             background: "white",
-                            borderLeft: n.isRead ? "4px solid #e2e8f0" : "4px solid #2563eb",
+                            borderLeft: n.isRead ? "4px solid #e2e8f0" : "4px solid #1e3a5f",
                             boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
                         }}
                     >

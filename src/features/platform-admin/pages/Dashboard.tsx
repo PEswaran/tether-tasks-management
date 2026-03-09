@@ -87,7 +87,7 @@ export default function Dashboard() {
 
     const barData = [
         { name: "Todo", value: stats.todo, fill: "#94a3b8" },
-        { name: "In Progress", value: stats.inProgress, fill: "#3b82f6" },
+        { name: "In Progress", value: stats.inProgress, fill: "#1e3a5f" },
         { name: "Done", value: stats.done, fill: "#10b981" },
     ];
 
@@ -97,7 +97,7 @@ export default function Dashboard() {
         { name: "Done", value: stats.done },
     ].filter(d => d.value > 0);
 
-    const PIE_COLORS = ["#94a3b8", "#3b82f6", "#10b981"];
+    const PIE_COLORS = ["#94a3b8", "#1e3a5f", "#10b981"];
 
     return (
         <div className="dash">
@@ -144,7 +144,7 @@ export default function Dashboard() {
                 </div>
 
                 <div className="kpi-card">
-                    <div className="kpi-icon" style={{ background: "#eff6ff", color: "#3b82f6" }}>
+                    <div className="kpi-icon" style={{ background: "#e8f0fa", color: "#1e3a5f" }}>
                         <ListTodo size={20} />
                     </div>
                     <div className="kpi-body">
@@ -156,7 +156,7 @@ export default function Dashboard() {
                 </div>
 
                 <div className="kpi-card">
-                    <div className="kpi-icon" style={{ background: "#eef2ff", color: "#4f46e5" }}>
+                    <div className="kpi-icon" style={{ background: "#e8f0fa", color: "#1e3a5f" }}>
                         <Kanban size={20} />
                     </div>
                     <div className="kpi-body">
@@ -273,7 +273,7 @@ export default function Dashboard() {
                         </div>
                         <div className="status-row">
                             <div className="status-left">
-                                <TrendingUp size={16} color="#3b82f6" />
+                                <TrendingUp size={16} color="#1e3a5f" />
                                 <span>In Progress</span>
                             </div>
                             <span className="status-count">{stats.inProgress}</span>

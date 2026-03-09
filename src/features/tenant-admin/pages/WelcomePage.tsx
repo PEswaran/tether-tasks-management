@@ -160,8 +160,8 @@ export default function WelcomePage() {
     const planColors: Record<string, { bg: string; color: string }> = {
         STARTER: { bg: "#f1f5f9", color: "#475569" },
         FREE: { bg: "#f1f5f9", color: "#475569" },
-        PROFESSIONAL: { bg: "#eff6ff", color: "#2563eb" },
-        PREMIUM: { bg: "#eff6ff", color: "#2563eb" },
+        PROFESSIONAL: { bg: "#e8f0fa", color: "#1e3a5f" },
+        PREMIUM: { bg: "#e8f0fa", color: "#1e3a5f" },
         TRIAL: { bg: "#fffbeb", color: "#d97706" },
         ENTERPRISE: { bg: "#f0fdf4", color: "#16a34a" },
         UNLIMITED: { bg: "#f0fdf4", color: "#16a34a" },
@@ -174,7 +174,7 @@ export default function WelcomePage() {
             <div style={styles.container}>
                 {/* Header */}
                 <div style={styles.iconCircle}>
-                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#6366f1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#1e3a5f" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
                         <circle cx="12" cy="7" r="4" />
                     </svg>
@@ -291,7 +291,7 @@ const styles: Record<string, React.CSSProperties> = {
         width: 64,
         height: 64,
         borderRadius: "50%",
-        background: "#eef2ff",
+        background: "#e8f0fa",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",

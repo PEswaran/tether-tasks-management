@@ -126,7 +126,7 @@ export default function Login({ onSignedIn }: LoginProps) {
                         onClick={() => navigate("/")}
                         aria-label="Back to landing page"
                     >
-                        <img src="/logo.png" alt="TetherTasks logo" className="auth-logo" />
+                        <img src="https://tethertasks-assets.s3.us-east-1.amazonaws.com/tetherTasksv2.PNG" alt="TetherTasks logo" className="auth-logo" />
                     </button>
                 </div>
                 <h2>Welcome to TetherTasks</h2>

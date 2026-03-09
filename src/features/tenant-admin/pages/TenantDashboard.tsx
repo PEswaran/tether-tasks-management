@@ -559,7 +559,7 @@ export default function TenantDashboard() {
                         }}
                     >
                         <h3 style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                            <Rocket size={16} color="#6366f1" />
+                            <Rocket size={16} color="#1e3a5f" />
                             Getting Started
                         </h3>
                         <div className="workspace-directory-head-right">
@@ -1093,7 +1093,7 @@ export default function TenantDashboard() {
 
     const barData = [
         { name: "Todo", value: stats.todo, fill: "#94a3b8" },
-        { name: "In Progress", value: stats.inProgress, fill: "#3b82f6" },
+        { name: "In Progress", value: stats.inProgress, fill: "#1e3a5f" },
         { name: "Done", value: stats.done, fill: "#10b981" },
     ];
 
@@ -1103,7 +1103,7 @@ export default function TenantDashboard() {
         { name: "Done", value: stats.done },
     ].filter(d => d.value > 0);
 
-    const PIE_COLORS = ["#94a3b8", "#3b82f6", "#10b981"];
+    const PIE_COLORS = ["#94a3b8", "#1e3a5f", "#10b981"];
 
     return (
         <div className="dash">
@@ -1210,7 +1210,7 @@ export default function TenantDashboard() {
             <div className="kpi-grid">
 
                 <div className="kpi-card">
-                    <div className="kpi-icon" style={{ background: "#eff6ff", color: "#3b82f6" }}>
+                    <div className="kpi-icon" style={{ background: "#e8f0fa", color: "#1e3a5f" }}>
                         <TrendingUp size={20} />
                     </div>
                     <div className="kpi-body">
@@ -1222,7 +1222,7 @@ export default function TenantDashboard() {
                 </div>
 
                 <div className="kpi-card">
-                    <div className="kpi-icon" style={{ background: "#eff6ff", color: "#3b82f6" }}>
+                    <div className="kpi-icon" style={{ background: "#e8f0fa", color: "#1e3a5f" }}>
                         <ListTodo size={20} />
                     </div>
                     <div className="kpi-body">
@@ -1375,7 +1375,7 @@ export default function TenantDashboard() {
                         </div>
                         <div className="status-row">
                             <div className="status-left">
-                                <TrendingUp size={16} color="#3b82f6" />
+                                <TrendingUp size={16} color="#1e3a5f" />
                                 <span>In Progress</span>
                             </div>
                             <span className="status-count">{stats.inProgress}</span>
@@ -1438,9 +1438,9 @@ const guideStyles: Record<string, React.CSSProperties> = {
         width: 28,
         height: 28,
         borderRadius: "50%",
-        background: "#eef2ff",
-        border: "2px solid #c7d2fe",
-        color: "#4f46e5",
+        background: "#e8f0fa",
+        border: "2px solid #b8d0e8",
+        color: "#1e3a5f",
         fontSize: 13,
         fontWeight: 700,
         display: "flex",

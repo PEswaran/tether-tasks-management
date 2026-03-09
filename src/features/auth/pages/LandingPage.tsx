@@ -94,7 +94,7 @@ export default function LandingPage({ onSignIn, onGetStarted }: LandingPageProps
       {showLogoIntro && (
         <div className="landing-logo-intro-overlay" aria-hidden="true">
           <div className="landing-logo-intro-tile">
-            <img src="/logo.png" alt="" className="landing-logo-intro-img" />
+            <img src="https://tethertasks-assets.s3.us-east-1.amazonaws.com/tetherTasksv2.PNG" alt="" className="landing-logo-intro-img" />
           </div>
         </div>
       )}
@@ -108,12 +108,17 @@ export default function LandingPage({ onSignIn, onGetStarted }: LandingPageProps
         >
           <div className="landing-logo-tile">
             <img
-              src="/logo.png"
+              src="https://tethertasks-assets.s3.us-east-1.amazonaws.com/tetherTasksv2.PNG"
               alt="TetherTasks logo"
               className="landing-logo-img"
             />
           </div>
-          TetherTasks
+          <div className="landing-nav-brand">
+            <span className="landing-nav-brand-name">
+              Tether<span className="landing-nav-brand-accent">Tasks</span>
+            </span>
+            <span className="landing-nav-brand-tagline">Multi-Company Task Management</span>
+          </div>
         </a>
         <div className="landing-nav-links">
           <a href="#features" onClick={(e) => { e.preventDefault(); scrollTo("features"); }}>Features</a>
@@ -545,9 +550,11 @@ export default function LandingPage({ onSignIn, onGetStarted }: LandingPageProps
         <div className="landing-footer-inner">
           <a href="/" className="landing-footer-logo" onClick={(e) => { e.preventDefault(); navigate("/"); }}>
             <div className="landing-logo-tile landing-logo-tile-sm">
-              <img src="/logo.png" alt="TetherTasks logo" className="landing-logo-img" />
+              <img src="https://tethertasks-assets.s3.us-east-1.amazonaws.com/tetherTasksv2.PNG" alt="TetherTasks logo" className="landing-logo-img" />
             </div>
-            TetherTasks
+            <span className="landing-footer-brand">
+              Tether<span className="landing-nav-brand-accent">Tasks</span>
+            </span>
           </a>
           <div className="landing-footer-links">
             <a href="#features" onClick={(e) => { e.preventDefault(); scrollTo("features"); }}>Features</a>

@@ -275,9 +275,8 @@ export default function CreateOrganizationModal({ tenantId, onClose, onCreated }
     if (step === "summary") {
         return (
             <div className="modal-backdrop">
-                <div className="modal modern">
+                <div className="modal modern" style={{ width: 680 }}>
                     <div className="modal-header">
-                        <div style={styles.stepIndicator}>Step 3 of 3</div>
                         <h2>All Set!</h2>
                         <div className="modal-sub">Your organization is ready to use</div>
                     </div>
@@ -370,86 +369,82 @@ export default function CreateOrganizationModal({ tenantId, onClose, onCreated }
     if (step === "setup") {
         return (
             <div className="modal-backdrop">
-                <div className="modal modern">
+                <div className="modal modern" style={{ width: 680 }}>
                     <div className="modal-header">
-                        <div style={styles.stepIndicator}>Step 1 of 3</div>
+                        <div style={styles.stepIndicator}>Step 1 of 2</div>
                         <h2>Create Organization</h2>
-                        <div className="modal-sub">A few quick details to get your team started</div>
                     </div>
 
                     <div className="modal-body">
-                        <div style={styles.sectionCard}>
-                            <div style={styles.sectionTitle}>Organization Details</div>
+                        <label htmlFor="org-name">Organization Name <span style={{ color: "#ef4444" }}>*</span></label>
+                        <div style={styles.fieldHint}>Client or Account Name</div>
+                        <input
+                            id="org-name"
+                            name="org_name"
+                            placeholder="UrbanThread, CloudBridge, FreshFork Kitchens"
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
+                            autoFocus
+                        />
 
-                            <label htmlFor="org-name">Organization Name <span style={{ color: "#ef4444" }}>*</span></label>
-                            <div style={styles.fieldHint}>Client or Account Name</div>
-                            <input
-                                id="org-name"
-                                name="org_name"
-                                placeholder="UrbanThread, CloudBridge, FreshFork Kitchens"
-                                value={name}
-                                onChange={(e) => setName(e.target.value)}
-                                autoFocus
-                            />
+                        <label htmlFor="org-description">Description</label>
+                        <div style={styles.fieldHint}>Brief description of the client or account you manage.</div>
+                        <input
+                            id="org-description"
+                            name="org_description"
+                            placeholder="Digital advertising and campaign management for UrbanThread's e-commerce growth."
+                            value={description}
+                            onChange={(e) => setDescription(e.target.value)}
+                        />
 
-                            <label htmlFor="org-description">Description</label>
-                            <div style={styles.fieldHint}>Brief description of the client or account you manage.</div>
-                            <input
-                                id="org-description"
-                                name="org_description"
-                                placeholder="Digital advertising and campaign management for UrbanThread's e-commerce growth."
-                                value={description}
-                                onChange={(e) => setDescription(e.target.value)}
-                            />
+                        <label>Board Type</label>
+                        <div style={styles.boardTypeGrid}>
+                            {BOARD_TYPES.map((bt) => (
+                                <div
+                                    key={bt.value}
+                                    style={{
+                                        ...styles.boardTypeCard,
+                                        ...(boardType === bt.value ? styles.boardTypeCardActive : {}),
+                                    }}
+                                    onClick={() => setBoardType(bt.value)}
+                                >
+                                    <div style={styles.boardTypeHeader}>
+                                        <div style={{
+                                            ...styles.boardTypeRadio,
+                                            ...(boardType === bt.value ? styles.boardTypeRadioActive : {}),
+                                        }}>
+                                            {boardType === bt.value && <div style={styles.boardTypeRadioDot} />}
+                                        </div>
+                                        <div style={styles.boardTypeLabel}>{bt.label}</div>
+                                    </div>
+                                    <div style={styles.boardTypeDesc}>{bt.desc}</div>
+                                </div>
+                            ))}
                         </div>
 
-                        <div style={styles.sectionCard}>
-                            <div style={styles.sectionTitle}>Workspace Setup</div>
-
-                            <label>Choose a board type for your first task board</label>
-                            <div style={styles.boardTypeGrid}>
-                                {BOARD_TYPES.map((bt) => (
-                                    <div
-                                        key={bt.value}
-                                        style={{
-                                            ...styles.boardTypeCard,
-                                            ...(boardType === bt.value ? styles.boardTypeCardActive : {}),
-                                        }}
-                                        onClick={() => setBoardType(bt.value)}
-                                    >
-                                        <div style={styles.boardTypeHeader}>
-                                            <div style={{
-                                                ...styles.boardTypeRadio,
-                                                ...(boardType === bt.value ? styles.boardTypeRadioActive : {}),
-                                            }}>
-                                                {boardType === bt.value && <div style={styles.boardTypeRadioDot} />}
-                                            </div>
-                                            <div style={styles.boardTypeLabel}>{bt.label}</div>
-                                        </div>
-                                        <div style={styles.boardTypeDesc}>{bt.desc}</div>
-                                    </div>
-                                ))}
+                        <div style={styles.nameRow}>
+                            <div>
+                                <label htmlFor="org-workspace-name">Workspace Name</label>
+                                <div style={styles.fieldHint}>Team managing this client</div>
+                                <input
+                                    id="org-workspace-name"
+                                    name="org_workspace_name"
+                                    placeholder={name.trim() ? `${name.trim()} Workspace` : "Paid Media Team"}
+                                    value={workspaceName}
+                                    onChange={(e) => setWorkspaceName(e.target.value)}
+                                />
                             </div>
-
-                            <label htmlFor="org-workspace-name">Workspace Name</label>
-                            <div style={styles.fieldHint}>Team managing this client</div>
-                            <input
-                                id="org-workspace-name"
-                                name="org_workspace_name"
-                                placeholder={name.trim() ? `${name.trim()} Workspace` : "Creative Studio Workspace, Campaign Analytics Workspace, Social Advertising Workspace"}
-                                value={workspaceName}
-                                onChange={(e) => setWorkspaceName(e.target.value)}
-                            />
-
-                            <label htmlFor="org-board-name">Board Name</label>
-                            <div style={styles.fieldHint}>Project or campaign board</div>
-                            <input
-                                id="org-board-name"
-                                name="org_board_name"
-                                placeholder={name.trim() ? `${name.trim()} Board` : "Q2 Paid Media Tasks, Creative Requests, Client Deliverables"}
-                                value={boardName}
-                                onChange={(e) => setBoardName(e.target.value)}
-                            />
+                            <div>
+                                <label htmlFor="org-board-name">Board Name</label>
+                                <div style={styles.fieldHint}>Initial project or campaign</div>
+                                <input
+                                    id="org-board-name"
+                                    name="org_board_name"
+                                    placeholder={name.trim() ? `${name.trim()} Board` : "Q2 Paid Media Tasks"}
+                                    value={boardName}
+                                    onChange={(e) => setBoardName(e.target.value)}
+                                />
+                            </div>
                         </div>
                     </div>
 
@@ -469,9 +464,9 @@ export default function CreateOrganizationModal({ tenantId, onClose, onCreated }
     // ─── Step 2: Invite Team (optional) ───
     return (
         <div className="modal-backdrop">
-            <div className="modal modern">
+            <div className="modal modern" style={{ width: 680 }}>
                 <div className="modal-header">
-                    <div style={styles.stepIndicator}>Step 2 of 3</div>
+                    <div style={styles.stepIndicator}>Step 2 of 2</div>
                     <h2>Invite Your Team</h2>
                     <div className="modal-sub">
                         Add people to <strong>{name}</strong> now, or skip and invite later
@@ -479,8 +474,7 @@ export default function CreateOrganizationModal({ tenantId, onClose, onCreated }
                 </div>
 
                 <div className="modal-body">
-                    <div style={styles.sectionCard}>
-                        <div style={styles.sectionTitle}>Team Members</div>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: "#334155", textTransform: "uppercase" as any, letterSpacing: 0.5, marginBottom: 4 }}>Team Members</div>
 
                         {/* OWNER */}
                         <label htmlFor="org-owner-email">Owner (optional, 1 max)</label>
@@ -528,7 +522,6 @@ export default function CreateOrganizationModal({ tenantId, onClose, onCreated }
                         <div style={styles.inviteNote}>
                             Invited members will be asked to complete their profile (name) when they first sign in.
                         </div>
-                    </div>
                 </div>
 
                 <div className="modal-footer">
@@ -548,7 +541,7 @@ const styles: Record<string, React.CSSProperties> = {
     stepIndicator: {
         fontSize: 11,
         fontWeight: 700,
-        color: "#6366f1",
+        color: "#1e3a5f",
         textTransform: "uppercase" as const,
         letterSpacing: 1,
         marginBottom: 6,
@@ -557,25 +550,25 @@ const styles: Record<string, React.CSSProperties> = {
         display: "grid",
         gridTemplateColumns: "1fr 1fr",
         gap: 8,
-        marginTop: 4,
+        marginTop: 6,
         marginBottom: 4,
     },
     boardTypeCard: {
         border: "1.5px solid #e2e8f0",
-        borderRadius: 10,
-        padding: "12px 14px",
+        borderRadius: 8,
+        padding: "8px 12px",
         cursor: "pointer",
         transition: "border-color 0.15s, background 0.15s",
     },
     boardTypeCardActive: {
-        borderColor: "#6366f1",
-        background: "#f5f3ff",
+        borderColor: "#1e3a5f",
+        background: "#e8f0fa",
     },
     boardTypeHeader: {
         display: "flex",
         alignItems: "center",
-        gap: 8,
-        marginBottom: 4,
+        gap: 6,
+        marginBottom: 2,
     },
     boardTypeRadio: {
         width: 16,
@@ -588,13 +581,13 @@ const styles: Record<string, React.CSSProperties> = {
         flexShrink: 0,
     },
     boardTypeRadioActive: {
-        borderColor: "#6366f1",
+        borderColor: "#1e3a5f",
     },
     boardTypeRadioDot: {
         width: 8,
         height: 8,
         borderRadius: "50%",
-        background: "#6366f1",
+        background: "#1e3a5f",
     },
     boardTypeLabel: {
         fontSize: 13,
@@ -604,30 +597,20 @@ const styles: Record<string, React.CSSProperties> = {
     boardTypeDesc: {
         fontSize: 11,
         color: "#64748b",
-        lineHeight: 1.4,
-        marginLeft: 24,
+        lineHeight: 1.3,
+        marginLeft: 22,
     },
     fieldHint: {
         fontSize: 12,
-        color: "#64748b",
-        marginTop: -2,
-        marginBottom: 2,
+        color: "#94a3b8",
+        marginTop: 0,
+        marginBottom: 6,
         lineHeight: 1.5,
     },
-    sectionCard: {
-        border: "1px solid #e2e8f0",
-        borderRadius: 12,
-        padding: "8px 10px",
-        marginBottom: 4,
-        background: "#ffffff",
-    },
-    sectionTitle: {
-        fontSize: 12,
-        fontWeight: 700,
-        color: "#334155",
-        marginBottom: 2,
-        textTransform: "uppercase" as const,
-        letterSpacing: 0.4,
+    nameRow: {
+        display: "grid",
+        gridTemplateColumns: "1fr 1fr",
+        gap: 16,
     },
     memberEmailRow: {
         display: "flex",
@@ -637,7 +620,7 @@ const styles: Record<string, React.CSSProperties> = {
     addMemberBtn: {
         background: "none",
         border: "none",
-        color: "#4f46e5",
+        color: "#1e3a5f",
         cursor: "pointer",
         fontSize: 13,
         padding: 0,

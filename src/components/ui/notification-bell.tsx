@@ -235,7 +235,7 @@ export default function NotificationBell() {
                                 navigate(`${prefix}/notifications`);
                             }}
                             style={{
-                                color: "#6366f1",
+                                color: "#1e3a5f",
                                 fontSize: 13,
                                 fontWeight: 600,
                                 cursor: "pointer",
