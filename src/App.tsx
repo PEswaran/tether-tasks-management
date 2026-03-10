@@ -32,9 +32,12 @@ import GeneralDashboard from "./features/general/pages/GeneralDashboard";
 import GeneralWorkspacesPage from "./features/general/pages/GeneralWorkspacesPage";
 import AdminUserDirectoryPage from "./features/admin/pages/AdminUserDirectoryPage";
 import ProfilePage from "./features/profile/pages/ProfilePage";
+import SettingsPage from "./features/profile/pages/SettingsPage";
 import WelcomePage from "./features/tenant-admin/pages/WelcomePage";
 import NotificationsPage from "./features/notifications/pages/NotificationsPage";
 import AnalyticsPage from "./features/platform-admin/pages/AnalyticsPage";
+import PilotsPage from "./features/platform-admin/pages/PilotsPage";
+import PilotDetail from "./features/platform-admin/pages/PilotDetail";
 
 function GeneralTasksRoute({ assignedToMe }: { assignedToMe?: boolean } = {}) {
   const { role, memberships, workspaceId, organizationId, workspaces, tenantId } = useWorkspace();
@@ -95,6 +98,7 @@ export default function App() {
 
           {/* PROFILE */}
           <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/settings" element={<SettingsPage />} />
           <Route path="/welcome" element={<WelcomePage />} />
 
           {/* ================= PLATFORM ADMIN ================= */}
@@ -102,6 +106,8 @@ export default function App() {
             <Route index element={<Dashboard />} />
             <Route path="tenants" element={<Tenants />} />
             <Route path="tenant/:tenantId" element={<TenantDetail />} />
+            <Route path="pilots" element={<PilotsPage />} />
+            <Route path="pilot/:tenantId" element={<PilotDetail />} />
             <Route path="user-directory" element={<AdminUserDirectoryPage mode="platform" />} />
             <Route path="audit" element={<AuditLogsPage />} />
             <Route path="analytics" element={<AnalyticsPage />} />

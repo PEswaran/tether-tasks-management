@@ -8,6 +8,7 @@ import { replaceTenantAdminFn } from '../functions/replace-tenant-admin/resource
 import { submitContactRequestFn } from '../functions/submit-contact-request/resource';
 import { deleteOrganizationFn } from '../functions/delete-organization/resource';
 import { getPlatformAnalyticsFn } from '../functions/get-platform-analytics/resource';
+import { createPilotFn } from '../functions/create-pilot/resource';
 
 const schema = a.schema({
 
@@ -47,6 +48,18 @@ const schema = a.schema({
         trialEndDate: a.datetime(),
         agreementNotes: a.string(),
         adminName: a.string(),
+
+        pilotStatus: a.string(),
+        pilotStartDate: a.datetime(),
+        pilotEndDate: a.datetime(),
+        pilotDurationDays: a.integer(),
+        pilotAgreementS3Key: a.string(),
+        pilotNotes: a.string(),
+        pilotContactName: a.string(),
+        pilotContactEmail: a.string(),
+        pilotConfirmationSentAt: a.datetime(),
+
+        agreementS3Key: a.string(),
 
         createdAt: a.datetime(),
         updatedAt: a.datetime(),
@@ -408,6 +421,7 @@ const schema = a.schema({
         lastName: a.string(),
         role: a.string(),
         hasSeenWelcome: a.boolean(),
+        termsAcceptedAt: a.datetime(),
 
         createdAt: a.datetime(),
     })
@@ -420,6 +434,33 @@ const schema = a.schema({
             allow.authenticated().to(['read']),
             allow.ownerDefinedIn('userId').to(['create', 'update'])
         ]),
+
+    /* =========================================================
+     PILOT AGREEMENT
+    ========================================================= */
+
+    PilotAgreement: a.model({
+        tenantId: a.id().required(),
+        s3Key: a.string().required(),
+        fileName: a.string(),
+        generatedAt: a.datetime(),
+        generatedBy: a.string(),
+        version: a.integer(),
+        companyName: a.string(),
+        adminName: a.string(),
+        adminEmail: a.string(),
+        pilotDurationDays: a.integer(),
+        pilotStartDate: a.datetime(),
+        pilotEndDate: a.datetime(),
+        agreementNotes: a.string(),
+        createdAt: a.datetime(),
+    })
+        .secondaryIndexes(index => [
+            index("tenantId")
+                .sortKeys(["createdAt"])
+                .queryField("listAgreementsByTenant"),
+        ])
+        .authorization(allow => [allow.group('PLATFORM_SUPER_ADMIN')]),
 
     /* =========================================================
      MUTATIONS
@@ -543,6 +584,29 @@ const schema = a.schema({
         .authorization(allow => [allow.group("PLATFORM_SUPER_ADMIN")])
         .handler(a.handler.function(getPlatformAnalyticsFn)),
 
+    createPilot: a.mutation()
+        .arguments({
+            companyName: a.string().required(),
+            adminEmail: a.string().required(),
+            adminFirstName: a.string(),
+            adminLastName: a.string(),
+            pilotDurationDays: a.integer(),
+            pilotStartDate: a.string(),
+            pilotNotes: a.string(),
+            agreementNotes: a.string(),
+            orgName: a.string(),
+            workspaceName: a.string(),
+            boardName: a.string(),
+        })
+        .returns(a.customType({
+            success: a.boolean(),
+            message: a.string(),
+            tenantId: a.string(),
+            agreementS3Key: a.string(),
+        }))
+        .authorization(allow => [allow.group("PLATFORM_SUPER_ADMIN")])
+        .handler(a.handler.function(createPilotFn)),
+
 })
     .authorization(allow => [
         allow.resource(createTenantAdminFn),
@@ -553,7 +617,8 @@ const schema = a.schema({
         allow.resource(replaceTenantAdminFn),
         allow.resource(submitContactRequestFn),
         allow.resource(deleteOrganizationFn),
-        allow.resource(getPlatformAnalyticsFn)
+        allow.resource(getPlatformAnalyticsFn),
+        allow.resource(createPilotFn)
     ]);
 
 export type Schema = ClientSchema<typeof schema>;

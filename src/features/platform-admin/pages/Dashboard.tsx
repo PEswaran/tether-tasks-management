@@ -8,7 +8,7 @@ import {
 } from "recharts";
 import {
     LayoutDashboard, Users, CheckCircle2, ListTodo,
-    Clock, TrendingUp, Kanban, ArrowUpRight, Building2,
+    Clock, TrendingUp, Kanban, ArrowUpRight, Building2, FlaskConical,
 } from "lucide-react";
 
 type Stats = {
@@ -18,6 +18,7 @@ type Stats = {
     inProgress: number;
     done: number;
     total: number;
+    activePilots: number;
 };
 
 export default function Dashboard() {
@@ -27,6 +28,7 @@ export default function Dashboard() {
     const [stats, setStats] = useState<Stats>({
         tenants: 0, users: 0, todo: 0,
         inProgress: 0, done: 0, total: 0,
+        activePilots: 0,
     });
     const [recentTenants, setRecentTenants] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
@@ -44,6 +46,10 @@ export default function Dashboard() {
 
             const tasks = taskRes.data;
 
+            const activePilots = tenantRes.data.filter(
+                (t: any) => t.plan === "PILOT" && t.pilotStatus === "ACTIVE"
+            ).length;
+
             setStats({
                 tenants: tenantRes.data.length,
                 users: memberRes.data.length,
@@ -51,6 +57,7 @@ export default function Dashboard() {
                 inProgress: tasks.filter(t => t.status === "IN_PROGRESS").length,
                 done: tasks.filter(t => t.status === "DONE").length,
                 total: tasks.length,
+                activePilots,
             });
 
             const sorted = [...tenantRes.data].sort(
@@ -126,6 +133,19 @@ export default function Dashboard() {
                         <span className="kpi-label">Companies</span>
                         <span className="kpi-value">
                             <CountUp end={stats.tenants} duration={0.8} />
+                        </span>
+                    </div>
+                    <ArrowUpRight size={16} className="kpi-arrow" />
+                </div>
+
+                <div className="kpi-card" onClick={() => navigate("/super/pilots")}>
+                    <div className="kpi-icon" style={{ background: "#dbeafe", color: "#1d4ed8" }}>
+                        <FlaskConical size={20} />
+                    </div>
+                    <div className="kpi-body">
+                        <span className="kpi-label">Active Pilots</span>
+                        <span className="kpi-value">
+                            <CountUp end={stats.activePilots} duration={0.8} />
                         </span>
                     </div>
                     <ArrowUpRight size={16} className="kpi-arrow" />

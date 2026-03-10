@@ -1,7 +1,7 @@
 import { defineFunction } from "@aws-amplify/backend";
 
-export const createTenantAdminFn = defineFunction({
-    name: "createTenantAdmin",
+export const createPilotFn = defineFunction({
+    name: "createPilot",
     entry: "./handler.ts",
     timeoutSeconds: 30,
 });

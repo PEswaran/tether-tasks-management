@@ -182,6 +182,7 @@ export default function TenantDetail() {
             case "PROFESSIONAL": return "Professional";
             case "ENTERPRISE": return "Enterprise";
             case "TRIAL": return "Trial";
+            case "PILOT": return "Pilot";
             default: return "Starter";
         }
     }
@@ -191,6 +192,7 @@ export default function TenantDetail() {
             case "PROFESSIONAL": return { bg: "#e8f0fa", color: "#1e3a5f" };
             case "ENTERPRISE": return { bg: "#e4f7fa", color: "#0ea5b8" };
             case "TRIAL": return { bg: "#fffbeb", color: "#f59e0b" };
+            case "PILOT": return { bg: "#dbeafe", color: "#1d4ed8" };
             default: return { bg: "#f1f5f9", color: "#64748b" };
         }
     }

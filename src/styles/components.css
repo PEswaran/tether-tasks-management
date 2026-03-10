@@ -350,7 +350,7 @@
   right: 0;
   top: 48px;
   width: 200px;
-  background: var(--card);
+  background: linear-gradient(135deg, #e8f0fa, #e9edff);
   border-radius: 12px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
   padding: 8px;
@@ -378,6 +378,18 @@
 .profile-item.danger:hover {
   background: rgba(239, 68, 68, 0.1);
   color: #ef4444;
+}
+
+.profile-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 4px 0;
+}
+
+.profile-item-icon {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 /* DEMO BANNER */

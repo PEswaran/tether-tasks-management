@@ -19,7 +19,6 @@ import {
   Lock,
   Play,
 } from "lucide-react";
-import { setDemoFlag } from "../../../config/demo";
 import { trackLandingEngagement, trackLandingView, trackSignupStart } from "../../../libs/analytics/signupFunnel";
 
 interface LandingPageProps {
@@ -166,32 +165,22 @@ export default function LandingPage({ onSignIn, onGetStarted }: LandingPageProps
             <button className="landing-btn landing-btn-primary landing-btn-lg" onClick={() => handleGetStartedClick("hero_create_free_account")}>
               Create Free Account <ArrowRight size={18} />
             </button>
-            <button
-              className="landing-btn landing-btn-outline landing-btn-lg"
-              onClick={() => {
-                setDemoFlag();
-                navigate("/login?demo=true");
-              }}
-            >
-              Try Demo <Play size={16} />
-            </button>
-          </div>
-          {demoVideoUrl && (
-            <div className="landing-video-indicator">
-              <a
-                className="landing-video-link"
-                href={demoVideoUrl}
-                target="_blank"
-                rel="noreferrer"
-                aria-label="See TetherTasks in action video"
+            {demoVideoUrl && (
+              <button
+                className="landing-btn landing-btn-outline landing-btn-lg"
+                onClick={() => {
+                  // Feature: Signup Funnel Analytics - track demo video engagement.
+                  trackLandingEngagement(30); // Estimate 30 seconds of engagement for watching the video.
+                  window.open(demoVideoUrl, "_blank");
+                }}
               >
-                <span className="landing-video-pill">
-                  <Play size={12} />
-                </span>
-                <span>See it in action</span>
-              </a>
-            </div>
-          )}
+                <Play size={18} style={{ marginRight: 8 }} />
+                Watch Demo Video
+              </button>
+            )}
+          </div>
+
+
           <div className="landing-hero-proof">
             <span><Check size={14} /> Free forever plan</span>
             <span><Check size={14} /> No credit card required</span>

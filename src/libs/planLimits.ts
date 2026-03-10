@@ -9,6 +9,7 @@ const PLAN_LIMITS: Record<string, PlanLimits> = {
     PROFESSIONAL: { orgs: 3, workspaces: 5 },
     PREMIUM: { orgs: 3, workspaces: 5 },
     TRIAL: { orgs: 3, workspaces: 5 },
+    PILOT: { orgs: 3, workspaces: 5 },
     ENTERPRISE: { orgs: 100, workspaces: 100 },
     UNLIMITED: { orgs: 100, workspaces: 100 },
 };
@@ -31,6 +32,8 @@ export function formatPlanLimitMessage(plan?: string): string {
             return "Professional plan limits: 3 organizations and 5 workspaces.";
         case "TRIAL":
             return "Trial plan limits: 3 organizations and 5 workspaces (14-day trial).";
+        case "PILOT":
+            return "Pilot plan limits: 3 organizations and 5 workspaces.";
         case "ENTERPRISE":
         case "UNLIMITED":
             return "Enterprise plan limits (capped at 100 organizations/workspaces).";

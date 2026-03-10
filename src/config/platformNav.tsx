@@ -1,4 +1,4 @@
-import { BarChart3, Bell, Building2, LayoutDashboard, Shield, Users } from "lucide-react";
+import { BarChart3, Bell, Building2, FlaskConical, LayoutDashboard, Shield, Users } from "lucide-react";
 
 export const platformNav = [
   {
@@ -15,6 +15,11 @@ export const platformNav = [
     label: "Companies",
     path: "/super/tenants",
     icon: <Building2 size={18} />
+  },
+  {
+    label: "Pilots",
+    path: "/super/pilots",
+    icon: <FlaskConical size={18} />
   },
   {
     label: "User Directory",

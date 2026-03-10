@@ -1,6 +1,6 @@
 import { Link, Outlet, useNavigate, useLocation } from "react-router-dom";
 import { signOut } from "aws-amplify/auth";
-import { LogOut, PanelLeftClose, PanelLeftOpen, ChevronDown } from "lucide-react";
+import { LogOut, PanelLeftClose, PanelLeftOpen, ChevronDown, Settings, Shield } from "lucide-react";
 import NotificationBell from "../components/ui/notification-bell";
 import { useWorkspace } from "../shared-components/workspace-context";
 import { useEffect, useRef, useState } from "react";
@@ -377,35 +377,48 @@ export default function AppShell({
                                 {profileOpen && (
                                     <div className="profile-menu">
                                         <div className="profile-email">{userName || userEmail}</div>
-                                        <div className="profile-role">{role}</div>
+                                        <div className="profile-role">{role?.replaceAll("_", " ")}</div>
+
+                                        <div className="profile-divider" />
 
                                         <div
                                             className="profile-item"
                                             onClick={() => {
                                                 setProfileOpen(false);
-                                                navigate("/profile");
+                                                navigate("/settings");
                                             }}
                                         >
-                                            Edit Profile
+                                            <span className="profile-item-icon">
+                                                <Settings size={14} />
+                                                Account Settings
+                                            </span>
                                         </div>
 
-                                        {(role === "TENANT_ADMIN" || role === "OWNER") && (
+                                        {role === "TENANT_ADMIN" && (
                                             <div
                                                 className="profile-item"
                                                 onClick={() => {
                                                     setProfileOpen(false);
-                                                    navigate(role === "OWNER" ? "/super/audit" : "/tenant/audit");
+                                                    navigate("/tenant/audit");
                                                 }}
                                             >
-                                                Audit Logs
+                                                <span className="profile-item-icon">
+                                                    <Shield size={14} />
+                                                    Audit Logs
+                                                </span>
                                             </div>
                                         )}
+
+                                        <div className="profile-divider" />
 
                                         <div
                                             className="profile-item danger"
                                             onClick={handleLogout}
                                         >
-                                            Sign out
+                                            <span className="profile-item-icon">
+                                                <LogOut size={14} />
+                                                Sign out
+                                            </span>
                                         </div>
                                     </div>
                                 )}

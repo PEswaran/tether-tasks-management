@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { getCurrentUser } from "aws-amplify/auth";
+import { getUrl } from "aws-amplify/storage";
 import { dataClient } from "../../../libs/data-client";
 import { getPlanLimits } from "../../../libs/planLimits";
 
@@ -11,6 +12,7 @@ type TenantData = {
     trialEndDate: string | null;
     agreementNotes: string | null;
     adminName: string | null;
+    agreementS3Key: string | null;
 };
 
 type ProfileData = {
@@ -31,6 +33,7 @@ export default function WelcomePage() {
     const [tenant, setTenant] = useState<TenantData | null>(null);
     const [profile, setProfile] = useState<ProfileData | null>(null);
     const [userId, setUserId] = useState("");
+    const [termsAccepted, setTermsAccepted] = useState(false);
 
     useEffect(() => {
         loadData();
@@ -65,6 +68,7 @@ export default function WelcomePage() {
                         trialEndDate: tenantRes.data.trialEndDate || null,
                         agreementNotes: tenantRes.data.agreementNotes || null,
                         adminName: tenantRes.data.adminName || null,
+                        agreementS3Key: tenantRes.data.agreementS3Key || null,
                     });
                 }
             }
@@ -80,6 +84,7 @@ export default function WelcomePage() {
             await client.models.UserProfile.update({
                 userId,
                 hasSeenWelcome: true,
+                termsAcceptedAt: new Date().toISOString(),
             });
             navigate(redirect);
         } catch (err) {
@@ -88,9 +93,23 @@ export default function WelcomePage() {
         }
     }
 
-    function downloadAgreement() {
+    async function downloadAgreement() {
         if (!tenant || !profile) return;
 
+        // Try S3 PDF download first
+        if (tenant.agreementS3Key) {
+            try {
+                const result = await getUrl({
+                    path: tenant.agreementS3Key,
+                });
+                window.open(result.url.toString(), "_blank");
+                return;
+            } catch (err) {
+                console.error("Error getting S3 agreement URL:", err);
+            }
+        }
+
+        // Fallback: generate text file
         const isTrial = tenant.plan === "TRIAL";
         const limits = getPlanLimits(tenant.plan);
 
@@ -255,12 +274,28 @@ export default function WelcomePage() {
                     Download Agreement
                 </button>
 
+                {/* Terms & Conditions Checkbox */}
+                <label style={styles.checkboxLabel}>
+                    <input
+                        type="checkbox"
+                        checked={termsAccepted}
+                        onChange={(e) => setTermsAccepted(e.target.checked)}
+                        style={styles.checkbox}
+                    />
+                    <span style={styles.checkboxText}>
+                        I have read and accept the TetherTasks Terms & Conditions
+                    </span>
+                </label>
+
                 {/* Continue Button */}
                 <button
                     className="btn"
-                    style={styles.continueBtn}
+                    style={{
+                        ...styles.continueBtn,
+                        ...((!termsAccepted || saving) ? styles.continueBtnDisabled : {}),
+                    }}
                     onClick={handleContinue}
-                    disabled={saving}
+                    disabled={!termsAccepted || saving}
                 >
                     {saving ? "Setting up..." : "Continue to Dashboard →"}
                 </button>
@@ -399,11 +434,39 @@ const styles: Record<string, React.CSSProperties> = {
         fontSize: 14,
         fontWeight: 600,
         cursor: "pointer",
-        marginBottom: 12,
+        marginBottom: 16,
         fontFamily: "Inter, system-ui, Arial",
+    },
+    checkboxLabel: {
+        display: "flex",
+        alignItems: "flex-start",
+        gap: 10,
+        padding: "14px 16px",
+        background: "#f8fafc",
+        border: "1px solid #e2e8f0",
+        borderRadius: 10,
+        marginBottom: 16,
+        cursor: "pointer",
+    },
+    checkbox: {
+        marginTop: 2,
+        width: 16,
+        height: 16,
+        accentColor: "#1e3a5f",
+        flexShrink: 0,
+    },
+    checkboxText: {
+        fontSize: 13,
+        color: "#334155",
+        lineHeight: 1.5,
+        fontWeight: 500,
     },
     continueBtn: {
         width: "100%",
         marginTop: 0,
+    },
+    continueBtnDisabled: {
+        opacity: 0.5,
+        cursor: "not-allowed",
     },
 };
