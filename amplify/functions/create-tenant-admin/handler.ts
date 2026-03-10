@@ -86,7 +86,6 @@ async function generateTermsPdf(data: {
     agreementNotes?: string;
 }): Promise<Uint8Array> {
     const doc = await PDFDocument.create();
-    const page = doc.addPage([595.28, 841.89]); // A4
     const bold = await doc.embedFont(StandardFonts.HelveticaBold);
     const regular = await doc.embedFont(StandardFonts.Helvetica);
 
@@ -98,8 +97,42 @@ async function generateTermsPdf(data: {
 
     const margin = 60;
     const pageWidth = 595.28;
+    const pageHeight = 841.89;
     const contentWidth = pageWidth - margin * 2;
+    const bottomMargin = 60;
+
+    let page = doc.addPage([pageWidth, pageHeight]); // A4
     let y = 780;
+
+    function ensureSpace(needed: number) {
+        if (y - needed < bottomMargin) {
+            page = doc.addPage([pageWidth, pageHeight]);
+            y = 780;
+        }
+    }
+
+    function drawWrappedText(text: string, font: typeof regular, size: number, color: typeof dark, indent = 0) {
+        const maxWidth = contentWidth - indent;
+        const words = text.split(/\s+/);
+        let line = "";
+        const lineHeight = size + 4;
+        for (const word of words) {
+            const test = line ? `${line} ${word}` : word;
+            if (font.widthOfTextAtSize(test, size) > maxWidth) {
+                ensureSpace(lineHeight);
+                page.drawText(line, { x: margin + indent, y, font, size, color });
+                y -= lineHeight;
+                line = word;
+            } else {
+                line = test;
+            }
+        }
+        if (line) {
+            ensureSpace(lineHeight);
+            page.drawText(line, { x: margin + indent, y, font, size, color });
+            y -= lineHeight;
+        }
+    }
 
     // Header
     const titleText = "Tether Tasks";
@@ -133,6 +166,7 @@ async function generateTermsPdf(data: {
     }
 
     for (const [label, value] of fields) {
+        ensureSpace(20);
         const labelStr = `${label}: `;
         page.drawText(labelStr, { x: margin, y, font: bold, size: 12, color: dark });
         const labelWidth = bold.widthOfTextAtSize(labelStr, 12);
@@ -142,11 +176,13 @@ async function generateTermsPdf(data: {
     y -= 12;
 
     // Plan Features
+    ensureSpace(22);
     page.drawText("Plan Features", { x: margin, y, font: bold, size: 14, color: navy });
     y -= 22;
 
     const features = PLAN_FEATURES[data.plan] || PLAN_FEATURES.STARTER;
     for (const feature of features) {
+        ensureSpace(18);
         page.drawText(`  \u2022  ${feature}`, { x: margin, y, font: regular, size: 11, color: dark });
         y -= 18;
     }
@@ -154,63 +190,50 @@ async function generateTermsPdf(data: {
 
     // Agreement Notes
     if (data.agreementNotes) {
+        ensureSpace(22);
         page.drawText("Agreement Notes", { x: margin, y, font: bold, size: 14, color: navy });
         y -= 22;
 
-        const words = data.agreementNotes.split(/\s+/);
-        let line = "";
-        for (const word of words) {
-            const test = line ? `${line} ${word}` : word;
-            if (regular.widthOfTextAtSize(test, 11) > contentWidth) {
-                page.drawText(line, { x: margin, y, font: regular, size: 11, color: dark });
-                y -= 16;
-                line = word;
-            } else {
-                line = test;
-            }
-        }
-        if (line) {
-            page.drawText(line, { x: margin, y, font: regular, size: 11, color: dark });
-            y -= 16;
-        }
+        drawWrappedText(data.agreementNotes, regular, 11, dark);
         y -= 12;
     }
 
     // Terms of Service
+    ensureSpace(22);
     page.drawText("Terms of Service", { x: margin, y, font: bold, size: 14, color: navy });
     y -= 22;
 
-    const termsText =
-        "By using Tether Tasks, you agree to the following terms: " +
-        "1. Platform Usage — Your account is for business use by your organization. You are responsible for maintaining the security of your credentials. " +
-        "2. Data Retention — All data you create on the platform is retained for the duration of your active subscription. Upon account termination, data will be retained for 30 days before permanent deletion. " +
-        "3. Account Termination — Tether Tasks reserves the right to suspend or terminate accounts that violate our usage policies. " +
-        "4. Service Availability — We strive for high availability but do not guarantee uninterrupted service. Scheduled maintenance windows will be communicated in advance.";
+    const termsClauses: { title: string; body: string }[] = [
+        {
+            title: "1. Platform Usage",
+            body: "Your account is for business use by your organization. You are responsible for maintaining the security of your credentials.",
+        },
+        {
+            title: "2. Data Retention",
+            body: "All data you create on the platform is retained for the duration of your active subscription. Upon account termination, data will be retained for 30 days before permanent deletion.",
+        },
+        {
+            title: "3. Account Termination",
+            body: "Tether Tasks reserves the right to suspend or terminate accounts that violate our usage policies.",
+        },
+        {
+            title: "4. Service Availability",
+            body: "We strive for high availability but do not guarantee uninterrupted service. Scheduled maintenance windows will be communicated in advance.",
+        },
+    ];
 
-    const termsHeader = "Tether Tasks Terms of Service";
-    const headerWidth = bold.widthOfTextAtSize(termsHeader, 16);
-    page.drawText(termsHeader, { x: (pageWidth - headerWidth) / 2, y, font: bold, size: 16, color: navy });
-    y -= 26;
-
-    const termsWords = termsText.split(/\s+/);
-    let termsLine = "";
-    for (const word of termsWords) {
-        const test = termsLine ? `${termsLine} ${word}` : word;
-        if (regular.widthOfTextAtSize(test, 10) > contentWidth) {
-            page.drawText(termsLine, { x: margin, y, font: regular, size: 10, color: muted });
-            y -= 14;
-            termsLine = word;
-        } else {
-            termsLine = test;
-        }
-    }
-    if (termsLine) {
-        page.drawText(termsLine, { x: margin, y, font: regular, size: 10, color: muted });
+    for (const clause of termsClauses) {
+        ensureSpace(32);
+        page.drawText(clause.title, { x: margin, y, font: bold, size: 10, color: dark });
         y -= 14;
+        drawWrappedText(clause.body, regular, 10, muted);
+        y -= 8;
     }
-    y -= 20;
+
+    y -= 12;
 
     // Footer divider
+    ensureSpace(40);
     page.drawLine({ start: { x: margin, y }, end: { x: pageWidth - margin, y }, thickness: 1, color: lightGray });
     y -= 18;
 
@@ -416,18 +439,20 @@ export const handler: Schema["createTenantAdmin"]["functionHandler"] =
                 const planFeatures = PLAN_FEATURES[selectedPlan] || PLAN_FEATURES.STARTER;
 
                 const emailHtml = `
-                    <div style="font-family: Inter, system-ui, -apple-system, sans-serif; max-width: 600px; margin: 0 auto; color: #0f172a;">
-                        <div style="background: #1e3a5f; padding: 32px; text-align: center; border-radius: 12px 12px 0 0;">
-                            <h1 style="color: #fff; margin: 0; font-size: 24px;">Welcome to Tether Tasks</h1>
-                            <p style="color: #94a3b8; margin: 8px 0 0; font-size: 14px;">Your ${planName} account is ready</p>
+                    <div style="font-family: Inter, system-ui, -apple-system, sans-serif; max-width: 600px; margin: 40px auto; color: #0f172a; background: #ffffff; border-radius: 14px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.08);">
+                        <div style="background: linear-gradient(135deg,#1e3a5f,#0ea5b8); padding: 18px 16px; text-align: center;">
+                            <img src="https://tethertasks-assets.s3.us-east-1.amazonaws.com/tetherTasksv2.PNG" width="88" alt="TetherTasks Logo" style="display: block; margin: 0 auto 8px auto; border: 0;" />
+                            <div style="color: #dbeafe; font-size: 12px; margin-bottom: 4px;">Flexible. Connected. Powerful.</div>
+                            <h1 style="color: #fff; margin: 0; font-size: 18px; font-weight: 600;">Welcome to TetherTasks</h1>
+                            <p style="color: #dbeafe; margin: 6px 0 0; font-size: 13px;">Your ${planName} account is ready</p>
                         </div>
-                        <div style="padding: 32px; border: 1px solid #e2e8f0; border-top: none; border-radius: 0 0 12px 12px;">
+                        <div style="padding: 32px; border: 1px solid #e5e7eb; border-top: none;">
                             <p style="font-size: 15px;">Hi ${adminFirstName || "there"},</p>
                             <p style="font-size: 14px; color: #475569; line-height: 1.6;">
                                 Your <strong>${planName}</strong> account for <strong>${companyName}</strong> has been set up.
                             </p>
 
-                            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 20px; margin: 20px 0;">
+                            <div style="background: #f8fafc; border: 1px solid #eef2f6; border-radius: 10px; padding: 20px; margin: 20px 0;">
                                 <div style="font-weight: 600; color: #1e3a5f; margin-bottom: 12px; font-size: 14px;">Plan Features</div>
                                 <ul style="font-size: 14px; margin: 0; padding-left: 20px; color: #334155;">
                                     ${planFeatures.map(f => `<li style="padding: 2px 0;">${f}</li>`).join("")}
@@ -435,7 +460,7 @@ export const handler: Schema["createTenantAdmin"]["functionHandler"] =
                             </div>
 
                             ${selectedPlan === "TRIAL" && trialStart && trialEnd ? `
-                            <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 16px; margin: 16px 0;">
+                            <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 10px; margin: 16px 0;">
                                 <div style="font-weight: 600; color: #92400e; font-size: 13px; margin-bottom: 6px;">Trial Period</div>
                                 <div style="font-size: 13px; color: #78350f;">
                                     ${fmtDate(trialStart)} &mdash; ${fmtDate(trialEnd)}
@@ -444,7 +469,7 @@ export const handler: Schema["createTenantAdmin"]["functionHandler"] =
                             ` : ""}
 
                             ${agreementNotes ? `
-                            <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 16px; margin: 16px 0;">
+                            <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 10px; margin: 16px 0;">
                                 <div style="font-weight: 600; color: #92400e; font-size: 13px; margin-bottom: 6px;">Agreement Notes</div>
                                 <div style="font-size: 13px; color: #78350f;">${agreementNotes}</div>
                             </div>
@@ -455,7 +480,7 @@ export const handler: Schema["createTenantAdmin"]["functionHandler"] =
                                 Log in at <strong>www.tethertasks.com</strong> to get started.
                             </p>
 
-                            <div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid #e2e8f0; text-align: center;">
+                            <div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid #e5e7eb; text-align: center;">
                                 <p style="font-size: 12px; color: #94a3b8; margin: 0;">Tether Tasks — Task management made simple</p>
                             </div>
                         </div>

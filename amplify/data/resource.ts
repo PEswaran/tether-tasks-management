@@ -422,6 +422,7 @@ const schema = a.schema({
         role: a.string(),
         hasSeenWelcome: a.boolean(),
         termsAcceptedAt: a.datetime(),
+        signedAgreementS3Key: a.string(),
 
         createdAt: a.datetime(),
     })

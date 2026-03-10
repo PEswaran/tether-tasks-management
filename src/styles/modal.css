@@ -8,10 +8,11 @@
   z-index: 9999;
   background: rgba(15, 23, 42, 0.55);
   backdrop-filter: blur(8px);
-
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 24px;
+  overflow-y: auto;
 
   animation: fadeIn 0.18s ease;
 }
@@ -20,12 +21,14 @@
 .modal {
   width: 560px;
   max-width: 94%;
+  max-height: calc(100vh - 48px);
   background: #ffffff;
   border-radius: 18px;
   padding: 30px;
   box-shadow: 0 40px 120px rgba(0, 0, 0, 0.25);
   animation: pop 0.18s ease;
   font-family: Inter, system-ui, sans-serif;
+  overflow-y: auto;
 }
 
 /* header */

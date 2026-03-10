@@ -1,4 +1,4 @@
-import { BarChart3, Bell, Building2, FlaskConical, LayoutDashboard, Shield, Users } from "lucide-react";
+import { BarChart3, Bell, Building2, FileText, FlaskConical, LayoutDashboard, Shield, Users } from "lucide-react";
 
 export const platformNav = [
   {
@@ -20,6 +20,11 @@ export const platformNav = [
     label: "Pilots",
     path: "/super/pilots",
     icon: <FlaskConical size={18} />
+  },
+  {
+    label: "Agreements",
+    path: "/super/agreements",
+    icon: <FileText size={18} />
   },
   {
     label: "User Directory",

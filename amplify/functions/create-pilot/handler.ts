@@ -478,19 +478,21 @@ export const handler: Schema["createPilot"]["functionHandler"] =
             });
 
             const emailHtml = `
-                <div style="font-family: Inter, system-ui, -apple-system, sans-serif; max-width: 600px; margin: 0 auto; color: #0f172a;">
-                    <div style="background: #1e3a5f; padding: 32px; text-align: center; border-radius: 12px 12px 0 0;">
-                        <h1 style="color: #fff; margin: 0; font-size: 24px;">Welcome to Tether Tasks</h1>
-                        <p style="color: #94a3b8; margin: 8px 0 0; font-size: 14px;">Your pilot program is ready</p>
+                <div style="font-family: Inter, system-ui, -apple-system, sans-serif; max-width: 600px; margin: 40px auto; color: #0f172a; background: #ffffff; border-radius: 14px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.08);">
+                    <div style="background: linear-gradient(135deg,#1e3a5f,#0ea5b8); padding: 18px 16px; text-align: center;">
+                        <img src="https://tethertasks-assets.s3.us-east-1.amazonaws.com/tetherTasksv2.PNG" width="88" alt="TetherTasks Logo" style="display: block; margin: 0 auto 8px auto; border: 0;" />
+                        <div style="color: #dbeafe; font-size: 12px; margin-bottom: 4px;">Flexible. Connected. Powerful.</div>
+                        <h1 style="color: #fff; margin: 0; font-size: 18px; font-weight: 600;">Welcome to TetherTasks</h1>
+                        <p style="color: #dbeafe; margin: 6px 0 0; font-size: 13px;">Your pilot program is ready</p>
                     </div>
-                    <div style="padding: 32px; border: 1px solid #e2e8f0; border-top: none; border-radius: 0 0 12px 12px;">
+                    <div style="padding: 32px; border: 1px solid #e5e7eb; border-top: none;">
                         <p style="font-size: 15px;">Hi ${adminFirstName || "there"},</p>
                         <p style="font-size: 14px; color: #475569; line-height: 1.6;">
                             Your <strong>${pilotDurationDays}-day pilot</strong> for <strong>${companyName}</strong> has been set up.
                             We've pre-provisioned your workspace so you can get started right away.
                         </p>
 
-                        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 20px; margin: 20px 0;">
+                        <div style="background: #f8fafc; border: 1px solid #eef2f6; border-radius: 10px; padding: 20px; margin: 20px 0;">
                             <div style="font-weight: 600; color: #1e3a5f; margin-bottom: 12px; font-size: 14px;">Pilot Details</div>
                             <table style="font-size: 14px; width: 100%; border-collapse: collapse;">
                                 <tr><td style="padding: 4px 0; color: #64748b;">Organization</td><td style="padding: 4px 0; font-weight: 500;">${resolvedOrgName}</td></tr>
@@ -507,13 +509,13 @@ export const handler: Schema["createPilot"]["functionHandler"] =
                         </p>
 
                         ${agreementNotes ? `
-                        <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 16px; margin: 16px 0;">
+                        <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 10px; margin: 16px 0;">
                             <div style="font-weight: 600; color: #92400e; font-size: 13px; margin-bottom: 6px;">Agreement Notes</div>
                             <div style="font-size: 13px; color: #78350f;">${agreementNotes}</div>
                         </div>
                         ` : ""}
 
-                        <div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid #e2e8f0; text-align: center;">
+                        <div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid #e5e7eb; text-align: center;">
                             <p style="font-size: 12px; color: #94a3b8; margin: 0;">Tether Tasks — Task management made simple</p>
                         </div>
                     </div>

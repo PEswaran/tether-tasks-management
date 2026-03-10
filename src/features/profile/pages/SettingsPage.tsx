@@ -5,10 +5,10 @@ import { getUrl } from "aws-amplify/storage";
 import { dataClient } from "../../../libs/data-client";
 import { useWorkspace } from "../../../shared-components/workspace-context";
 import {
-    ArrowLeft, Download, Calendar, Shield, User, CreditCard,
+    ArrowLeft, Download, Calendar, Shield, User, CreditCard, FileText, Eye,
 } from "lucide-react";
 
-type Tab = "profile" | "plan" | "security";
+type Tab = "profile" | "plan" | "agreement" | "security";
 
 export default function SettingsPage() {
     const navigate = useNavigate();
@@ -30,6 +30,9 @@ export default function SettingsPage() {
     // Plan state
     const [tenant, setTenant] = useState<any>(null);
     const [tenantLoading, setTenantLoading] = useState(false);
+
+    // Agreement state
+    const [signedAgreement, setSignedAgreement] = useState<{ s3Key: string; signedAt: string } | null>(null);
 
     useEffect(() => {
         loadProfile();
@@ -54,6 +57,12 @@ export default function SettingsPage() {
                 setEmail(res.data.email || "");
                 setProfileTenantId(res.data.tenantId || "");
                 setProfileExists(true);
+                if (res.data.signedAgreementS3Key && res.data.termsAcceptedAt) {
+                    setSignedAgreement({
+                        s3Key: res.data.signedAgreementS3Key,
+                        signedAt: res.data.termsAcceptedAt,
+                    });
+                }
             } else {
                 setEmail(user.username || "");
             }
@@ -132,6 +141,7 @@ export default function SettingsPage() {
     const tabs: { key: Tab; label: string; icon: any; visible: boolean }[] = [
         { key: "profile", label: "Profile", icon: <User size={15} />, visible: true },
         { key: "plan", label: "Plan & Billing", icon: <CreditCard size={15} />, visible: role === "TENANT_ADMIN" },
+        { key: "agreement", label: "My Agreement", icon: <FileText size={15} />, visible: !!signedAgreement },
         { key: "security", label: "Security", icon: <Shield size={15} />, visible: true },
     ];
 
@@ -212,6 +222,14 @@ export default function SettingsPage() {
                     </div>
                 )}
 
+                {activeTab === "agreement" && signedAgreement && (
+                    <AgreementTab
+                        s3Key={signedAgreement.s3Key}
+                        signedAt={signedAgreement.signedAt}
+                        signedBy={`${firstName} ${lastName}`.trim()}
+                    />
+                )}
+
                 {activeTab === "security" && (
                     <div style={styles.placeholder}>
                         <Shield size={32} style={{ color: "#94a3b8", marginBottom: 12 }} />
@@ -231,8 +249,7 @@ function PlanTab({ tenant, onDownloadPilot, onDownloadTerms }: { tenant: any; on
     const plan = (tenant.plan || "STARTER").toUpperCase();
     const status = tenant.subscriptionStatus || "Active";
 
-    function daysBetween(start: string, end: string) {
-        const s = new Date(start).getTime();
+    function daysBetween(_start: string, end: string) {
         const e = new Date(end).getTime();
         return Math.max(0, Math.ceil((e - Date.now()) / (1000 * 60 * 60 * 24)));
     }
@@ -380,6 +397,98 @@ function PlanTab({ tenant, onDownloadPilot, onDownloadTerms }: { tenant: any; on
                     )}
                 </>
             )}
+        </div>
+    );
+}
+
+/* ---------- Agreement Tab Component ---------- */
+
+function AgreementTab({ s3Key, signedAt, signedBy }: { s3Key: string; signedAt: string; signedBy: string }) {
+    const [viewLoading, setViewLoading] = useState(false);
+    const [downloadLoading, setDownloadLoading] = useState(false);
+
+    async function viewAgreement() {
+        setViewLoading(true);
+        try {
+            const result = await getUrl({ path: s3Key });
+            window.open(result.url.toString(), "_blank");
+        } catch (err) {
+            console.error("Error viewing signed agreement:", err);
+        }
+        setViewLoading(false);
+    }
+
+    async function downloadAgreement() {
+        setDownloadLoading(true);
+        try {
+            const result = await getUrl({ path: s3Key });
+            const response = await fetch(result.url.toString());
+            const blob = await response.blob();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `signed-agreement-${new Date(signedAt).toISOString().slice(0, 10)}.pdf`;
+            a.click();
+            URL.revokeObjectURL(url);
+        } catch (err) {
+            console.error("Error downloading signed agreement:", err);
+        }
+        setDownloadLoading(false);
+    }
+
+    return (
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            {/* Status badge */}
+            <div style={styles.infoRow}>
+                <span style={styles.infoLabel}>Status</span>
+                <span style={{
+                    ...styles.badge,
+                    background: "#dcfce7",
+                    color: "#166534",
+                }}>
+                    Signed
+                </span>
+            </div>
+
+            <div style={styles.infoRow}>
+                <span style={styles.infoLabel}>Signed Date</span>
+                <span style={styles.infoValue}>
+                    {new Date(signedAt).toLocaleDateString("en-US", {
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric",
+                    })}
+                </span>
+            </div>
+
+            <div style={styles.infoRow}>
+                <span style={styles.infoLabel}>Signed By</span>
+                <span style={styles.infoValue}>{signedBy}</span>
+            </div>
+
+            <div style={styles.divider} />
+
+            {/* Action buttons */}
+            <div style={{ display: "flex", gap: 12 }}>
+                <button
+                    className="btn secondary"
+                    style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
+                    onClick={viewAgreement}
+                    disabled={viewLoading}
+                >
+                    <Eye size={15} />
+                    {viewLoading ? "Opening..." : "View Agreement"}
+                </button>
+                <button
+                    className="btn secondary"
+                    style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
+                    onClick={downloadAgreement}
+                    disabled={downloadLoading}
+                >
+                    <Download size={15} />
+                    {downloadLoading ? "Downloading..." : "Download"}
+                </button>
+            </div>
         </div>
     );
 }

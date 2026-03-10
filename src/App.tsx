@@ -38,6 +38,7 @@ import NotificationsPage from "./features/notifications/pages/NotificationsPage"
 import AnalyticsPage from "./features/platform-admin/pages/AnalyticsPage";
 import PilotsPage from "./features/platform-admin/pages/PilotsPage";
 import PilotDetail from "./features/platform-admin/pages/PilotDetail";
+import AgreementsPage from "./features/platform-admin/pages/AgreementsPage";
 
 function GeneralTasksRoute({ assignedToMe }: { assignedToMe?: boolean } = {}) {
   const { role, memberships, workspaceId, organizationId, workspaces, tenantId } = useWorkspace();
@@ -108,6 +109,7 @@ export default function App() {
             <Route path="tenant/:tenantId" element={<TenantDetail />} />
             <Route path="pilots" element={<PilotsPage />} />
             <Route path="pilot/:tenantId" element={<PilotDetail />} />
+            <Route path="agreements" element={<AgreementsPage />} />
             <Route path="user-directory" element={<AdminUserDirectoryPage mode="platform" />} />
             <Route path="audit" element={<AuditLogsPage />} />
             <Route path="analytics" element={<AnalyticsPage />} />
