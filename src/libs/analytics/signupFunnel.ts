@@ -46,11 +46,13 @@ export function trackSignupSubmitAttempt(config: {
     teamSize?: string;
     numberOfOrgs?: string;
     businessType?: string;
+    pilotInterest?: string;
 }) {
     emitAnalyticsEvent("sign_up_submit", {
         team_size: config.teamSize || "unknown",
         org_count: config.numberOfOrgs || "unknown",
         business_type: config.businessType || "unknown",
+        pilot_interest: config.pilotInterest || "unknown",
     });
 }
 
@@ -58,16 +60,17 @@ export function trackSignupSubmitSuccess(config: {
     teamSize?: string;
     numberOfOrgs?: string;
     businessType?: string;
+    pilotInterest?: string;
 }) {
     emitAnalyticsEvent("sign_up_success", {
         method: "contact_form",
         team_size: config.teamSize || "unknown",
         org_count: config.numberOfOrgs || "unknown",
         business_type: config.businessType || "unknown",
+        pilot_interest: config.pilotInterest || "unknown",
     });
 }
 
 export function trackSignupSubmitError(reason: string) {
     emitAnalyticsEvent("sign_up_error", { reason });
 }
-

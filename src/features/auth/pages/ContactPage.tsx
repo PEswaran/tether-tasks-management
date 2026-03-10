@@ -22,6 +22,7 @@ export default function ContactPage({ onBack }: ContactPageProps) {
     teamSize: "",
     numberOfOrgs: "",
     businessType: "",
+    pilotInterest: "",
     message: "",
   });
   const [submitting, setSubmitting] = useState(false);
@@ -56,6 +57,7 @@ export default function ContactPage({ onBack }: ContactPageProps) {
       teamSize: form.teamSize,
       numberOfOrgs: form.numberOfOrgs,
       businessType: form.businessType,
+      pilotInterest: form.pilotInterest,
     });
 
     try {
@@ -68,6 +70,7 @@ export default function ContactPage({ onBack }: ContactPageProps) {
           teamSize: form.teamSize || undefined,
           numberOfOrgs: form.numberOfOrgs || undefined,
           businessType: form.businessType || undefined,
+          pilotInterest: form.pilotInterest || undefined,
           message: form.message,
         },
         { authMode: "apiKey" }
@@ -90,6 +93,7 @@ export default function ContactPage({ onBack }: ContactPageProps) {
           teamSize: form.teamSize,
           numberOfOrgs: form.numberOfOrgs,
           businessType: form.businessType,
+          pilotInterest: form.pilotInterest,
         });
       } else {
         trackEvent("sign_up_submit_error", {
@@ -259,6 +263,21 @@ export default function ContactPage({ onBack }: ContactPageProps) {
                   <option value="6-20">6–20 people</option>
                   <option value="21-50">21–50 people</option>
                   <option value="50+">50+ people</option>
+                </select>
+              </div>
+
+              <div className="contact-form-field">
+                <label htmlFor="pilotInterest">Pilot Program Interest</label>
+                <select
+                  id="pilotInterest"
+                  name="pilotInterest"
+                  value={form.pilotInterest}
+                  onChange={handleChange}
+                >
+                  <option value="">Select an option</option>
+                  <option value="interested">Yes, I'm interested in joining the pilot program</option>
+                  <option value="want_more_info">I'm interested but want more information first</option>
+                  <option value="not_now">Not right now</option>
                 </select>
               </div>
 

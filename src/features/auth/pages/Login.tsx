@@ -117,113 +117,127 @@ export default function Login({ onSignedIn }: LoginProps) {
 
     return (
         <div className="auth-page">
-            <div className="auth-card">
-                <div className="auth-logo-header">
-                    <div className="auth-logo-glow" />
-                    <button
-                        type="button"
-                        className="auth-logo-btn"
-                        onClick={() => navigate("/")}
-                        aria-label="Back to landing page"
-                    >
-                        <img src="https://tethertasks-assets.s3.us-east-1.amazonaws.com/tetherTasksv2.PNG" alt="TetherTasks logo" className="auth-logo" />
-                    </button>
-                </div>
-                <h2>Welcome to TetherTasks</h2>
+            <div className="auth-stage">
+                <section className="auth-brand-panel">
+                    <div className="auth-brand-scrim" />
+                    <div className="auth-brand-copy">
+                        <span className="auth-brand-eyebrow">One company. Multiple orgs.</span>
+                        <h1>Stay connected. Get things done.</h1>
+                        <p>
+                            Run organizations, workspaces, task boards, and execution
+                            from one control layer without losing structure.
+                        </p>
+                    </div>
+                </section>
 
-                {step === "signIn" && (
-                    <form onSubmit={handleSignIn}>
-                    <input
-                        id="login-email"
-                        name="email"
-                        type="email"
-                        placeholder="Email"
-                        autoComplete="email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        required
-                        />
+                <div className="auth-card">
+                    <div className="auth-logo-header">
+                        <div className="auth-logo-glow" />
+                        <button
+                            type="button"
+                            className="auth-logo-btn"
+                            onClick={() => navigate("/")}
+                            aria-label="Back to landing page"
+                        >
+                            <img src="https://tethertasks-assets.s3.us-east-1.amazonaws.com/tetherTasksv2.PNG" alt="TetherTasks logo" className="auth-logo" />
+                        </button>
+                    </div>
+                    <h2>Welcome to TetherTasks</h2>
 
-                        <div className="auth-password-wrap">
+                    {step === "signIn" && (
+                        <form onSubmit={handleSignIn}>
                         <input
-                            id="login-password"
-                            name="password"
-                            type={showPassword ? "text" : "password"}
-                            placeholder="Password"
-                            autoComplete="current-password"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
+                            id="login-email"
+                            name="email"
+                            type="email"
+                            placeholder="Email"
+                            autoComplete="email"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
                             required
                             />
-                            <button
-                                type="button"
-                                className="auth-password-toggle"
-                                onClick={() => setShowPassword((prev) => !prev)}
-                                aria-label={showPassword ? "Hide password" : "Show password"}
-                            >
-                                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                            </button>
-                        </div>
 
-                        {isDemo && !error && (
-                            <div className="auth-demo-hint">
-                                Demo credentials loaded — click Sign In to explore
-                            </div>
-                        )}
-
-                        {error && <div className="auth-error">{error}</div>}
-
-                        <button className="auth-submit-btn" disabled={loading}>
-                            {loading ? "Signing in..." : "Sign in"}
-                        </button>
-                    </form>
-                )}
-
-                {step === "newPassword" && (
-                    <form onSubmit={handleConfirmNewPassword}>
-                        <p className="auth-hint">
-                            A temporary password was used. Please set a new password to continue.
-                        </p>
-
-                        <div className="auth-password-wrap">
+                            <div className="auth-password-wrap">
                             <input
-                                id="login-new-password"
-                                name="new_password"
+                                id="login-password"
+                                name="password"
+                                type={showPassword ? "text" : "password"}
+                                placeholder="Password"
+                                autoComplete="current-password"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                required
+                                />
+                                <button
+                                    type="button"
+                                    className="auth-password-toggle"
+                                    onClick={() => setShowPassword((prev) => !prev)}
+                                    aria-label={showPassword ? "Hide password" : "Show password"}
+                                >
+                                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                                </button>
+                            </div>
+
+                            {isDemo && !error && (
+                                <div className="auth-demo-hint">
+                                    Demo credentials loaded — click Sign In to explore
+                                </div>
+                            )}
+
+                            {error && <div className="auth-error">{error}</div>}
+
+                            <button className="auth-submit-btn" disabled={loading}>
+                                {loading ? "Signing in..." : "Sign in"}
+                            </button>
+                        </form>
+                    )}
+
+                    {step === "newPassword" && (
+                        <form onSubmit={handleConfirmNewPassword}>
+                            <p className="auth-hint">
+                                A temporary password was used. Please set a new password to continue.
+                            </p>
+
+                            <div className="auth-password-wrap">
+                                <input
+                                    id="login-new-password"
+                                    name="new_password"
+                                    type={showNewPassword ? "text" : "password"}
+                                    placeholder="New password"
+                                    autoComplete="new-password"
+                                    value={newPassword}
+                                    onChange={(e) => setNewPassword(e.target.value)}
+                                    required
+                                />
+                                <button
+                                    type="button"
+                                    className="auth-password-toggle"
+                                    onClick={() => setShowNewPassword((prev) => !prev)}
+                                    aria-label={showNewPassword ? "Hide password" : "Show password"}
+                                >
+                                    {showNewPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                                </button>
+                            </div>
+
+                            <input
+                                id="login-confirm-password"
+                                name="confirm_password"
                                 type={showNewPassword ? "text" : "password"}
-                                placeholder="New password"
+                                placeholder="Confirm new password"
                                 autoComplete="new-password"
-                                value={newPassword}
-                                onChange={(e) => setNewPassword(e.target.value)}
+                                value={confirmPassword}
+                                onChange={(e) => setConfirmPassword(e.target.value)}
                                 required
                             />
-                            <button
-                                type="button"
-                                className="auth-password-toggle"
-                                onClick={() => setShowNewPassword((prev) => !prev)}
-                                aria-label={showNewPassword ? "Hide password" : "Show password"}
-                            >
-                                {showNewPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+
+                            {error && <div className="auth-error">{error}</div>}
+
+                            <button className="auth-submit-btn" disabled={loading}>
+                                {loading ? "Updating..." : "Update password"}
                             </button>
-                        </div>
-
-                        <input
-                            id="login-confirm-password"
-                            name="confirm_password"
-                            type={showNewPassword ? "text" : "password"}
-                            placeholder="Confirm new password"
-                            autoComplete="new-password"
-                            value={confirmPassword}
-                            onChange={(e) => setConfirmPassword(e.target.value)}
-                            required
-                        />
-
-                        {error && <div className="auth-error">{error}</div>}
-
-                        <button className="auth-submit-btn" disabled={loading}>
-                            {loading ? "Updating..." : "Update password"}
-                        </button>
-                    </form>
-                )}
+                        </form>
+                    )}
+                </div>
             </div>
         </div>
     );

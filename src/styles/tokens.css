@@ -4,29 +4,37 @@
   /* ===============================
      CORE BACKGROUNDS
   =============================== */
-  --bg: #f6f8fb;
+  --bg: #eef5fb;
   --panel: #ffffff;
-  --panel-soft: #f8fafc;
+  --panel-soft: #f5f9fd;
+  --panel-tint: #e6f1fb;
 
   /* ===============================
      TEXT
   =============================== */
-  --text: #0f172a;
-  --muted: #64748b;
+  --text: #123868;
+  --muted: #5f7694;
+  --text-soft: #7e94af;
 
   /* ===============================
      BRAND (matches logo — blue & teal)
   =============================== */
-  --primary: #1e3a5f;
-  --primary-600: #152d4a;
-  --primary-soft: #e8f0fa;
-  --accent: #0ea5b8;
+  --primary: #1455a5;
+  --primary-700: #0d3f7d;
+  --primary-600: #104987;
+  --primary-soft: #dbeafd;
+  --accent: #f59a1c;
+  --accent-soft: #fff2de;
+  --brand-sky: #7bc5ed;
+  --brand-navy: #0d2f57;
+  --brand-wave: linear-gradient(135deg, #0d3f7d 0%, #1455a5 38%, #7bc5ed 76%, #eef7ff 100%);
+  --brand-wave-soft: linear-gradient(145deg, rgba(13, 63, 125, 0.12), rgba(123, 197, 237, 0.16) 52%, rgba(255, 255, 255, 0.92));
 
   /* ===============================
      BORDERS + UI
   =============================== */
-  --border: #e5e7eb;
-  --border-soft: #eef2f6;
+  --border: #d8e6f3;
+  --border-soft: #e6eef6;
 
   /* ===============================
      STATUS
@@ -40,6 +48,6 @@
   =============================== */
   --radius: 14px;
   --radius-sm: 10px;
-  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.05);
-  --shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+  --shadow-sm: 0 4px 14px rgba(17, 66, 121, 0.08);
+  --shadow: 0 18px 42px rgba(17, 66, 121, 0.12);
 }

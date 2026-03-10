@@ -567,6 +567,7 @@ const schema = a.schema({
             teamSize: a.string(),
             numberOfOrgs: a.string(),
             businessType: a.string(),
+            pilotInterest: a.string(),
             message: a.string().required(),
         })
         .returns(a.customType({

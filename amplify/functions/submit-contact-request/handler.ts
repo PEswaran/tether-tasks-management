@@ -22,7 +22,7 @@ const ses = new SESClient({});
 export const handler: Schema["submitContactRequest"]["functionHandler"] =
     async (event) => {
 
-        const { name, email, companyName, phone, teamSize, numberOfOrgs, businessType, message } = event.arguments;
+        const { name, email, companyName, phone, teamSize, numberOfOrgs, businessType, pilotInterest, message } = event.arguments;
         const userPoolId = process.env.USER_POOL_ID;
         const destinationEmail = process.env.CONTACT_REQUEST_TO_EMAIL || "parveeneswaran@outlook.com";
         const sourceEmail = process.env.CONTACT_REQUEST_FROM_EMAIL || "no-reply@tethertasks.com";
@@ -48,6 +48,7 @@ export const handler: Schema["submitContactRequest"]["functionHandler"] =
                     teamSize: teamSize || "",
                     numberOfOrgs: numberOfOrgs || "",
                     businessType: businessType || "",
+                    pilotInterest: pilotInterest || "",
                     message,
                 }),
                 timestamp: new Date().toISOString(),
@@ -76,7 +77,7 @@ export const handler: Schema["submitContactRequest"]["functionHandler"] =
                     recipientId: adminSub,
                     type: "CONTACT_REQUEST",
                     title: "New Contact Request",
-                    message: `${name} from ${companyName} (${email}) wants to get started.${numberOfOrgs ? ` Orgs: ${numberOfOrgs}.` : ""}${businessType ? ` Type: ${businessType}.` : ""}`,
+                    message: `${name} from ${companyName} (${email}) wants to get started.${numberOfOrgs ? ` Orgs: ${numberOfOrgs}.` : ""}${businessType ? ` Type: ${businessType}.` : ""}${pilotInterest ? ` Pilot: ${pilotInterest}.` : ""}`,
                     isRead: false,
                     createdAt: new Date().toISOString(),
                 });
@@ -95,6 +96,7 @@ export const handler: Schema["submitContactRequest"]["functionHandler"] =
                 `Team Size: ${teamSize || "—"}`,
                 `Number of Orgs: ${numberOfOrgs || "—"}`,
                 `Business Type: ${businessType || "—"}`,
+                `Pilot Interest: ${pilotInterest || "—"}`,
                 "",
                 "Message:",
                 message,
@@ -110,6 +112,7 @@ export const handler: Schema["submitContactRequest"]["functionHandler"] =
                     <p style="margin: 0 0 8px;"><strong>Team Size:</strong> ${teamSize || "—"}</p>
                     <p style="margin: 0 0 8px;"><strong>Number of Orgs:</strong> ${numberOfOrgs || "—"}</p>
                     <p style="margin: 0 0 8px;"><strong>Business Type:</strong> ${businessType || "—"}</p>
+                    <p style="margin: 0 0 8px;"><strong>Pilot Interest:</strong> ${pilotInterest || "—"}</p>
                     <p style="margin: 12px 0 4px;"><strong>Message:</strong></p>
                     <div style="padding: 12px; border: 1px solid #e2e8f0; border-radius: 8px; white-space: pre-wrap;">${message}</div>
                 </div>
