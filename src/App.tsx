@@ -1,44 +1,54 @@
+import { Suspense, lazy } from "react";
 import { Routes, Route } from "react-router-dom";
 import { WorkspaceProvider } from "./shared-components/workspace-context";
-import Dashboard from "./features/platform-admin/pages/Dashboard";
-import Tenants from "./features/platform-admin/pages/TenantsPage";
 import AuthRedirect from "./auth-redirect";
-import NoAccessPage from "./features/auth/pages/NoAccessPage";
-import SuspendedPage from "./features/auth/pages/SuspendedPage";
 import MemberShell from "./layouts/MemberShell";
 import OwnerShell from "./layouts/OwnerShell";
 import PlatformShell from "./layouts/PlatformAdminShell";
 import TenantAdminShell from "./layouts/TenantAdminShell";
 import GeneralMemberShell from "./layouts/GeneralMemberShell";
-import MembersPage from "./features/members/pages/MembersPage";
-import TenantDetail from "./features/platform-admin/pages/TenantDetails";
-import AcceptInvitationPage from "./features/tenant-admin/pages/AcceptInvitationPage";
-import AuditLogsPage from "./features/tenant-admin/pages/AuditLogsPage";
-import OrganizationsPage from "./features/tenant-admin/pages/OrganizationsPage";
-import WorkspacesPage from "./features/tenant-admin/pages/WorkspacesPage";
-import TenantDashboard from "./features/tenant-admin/pages/TenantDashboard";
 import { Toaster } from "sonner";
 import useGlobalNotifications from "./hooks/useGlobalNotifications";
 import GlobalTaskModal from "./components/shared/modals/global-task-modal";
 import { ConfirmProvider } from "./shared-components/confirm-context";
-import TasksPage from "./features/tasks/pages/TasksPage";
-import AcceptOrgInvitationPage from "./features/owners/pages/AcceptOrgInvitationPage";
-import OwnerDashboard from "./features/owners/pages/OwnerDashboard";
-import OwnerWorkspacesPage from "./features/owners/pages/OwnerWorkspacesPage";
-import MemberDashboard from "./features/members/pages/MemberDashboard";
-import Login from "./features/auth/pages/Login";
 import { useWorkspace } from "./shared-components/workspace-context";
-import GeneralDashboard from "./features/general/pages/GeneralDashboard";
-import GeneralWorkspacesPage from "./features/general/pages/GeneralWorkspacesPage";
-import AdminUserDirectoryPage from "./features/admin/pages/AdminUserDirectoryPage";
-import ProfilePage from "./features/profile/pages/ProfilePage";
-import SettingsPage from "./features/profile/pages/SettingsPage";
-import WelcomePage from "./features/tenant-admin/pages/WelcomePage";
-import NotificationsPage from "./features/notifications/pages/NotificationsPage";
-import AnalyticsPage from "./features/platform-admin/pages/AnalyticsPage";
-import PilotsPage from "./features/platform-admin/pages/PilotsPage";
-import PilotDetail from "./features/platform-admin/pages/PilotDetail";
-import AgreementsPage from "./features/platform-admin/pages/AgreementsPage";
+
+const Dashboard = lazy(() => import("./features/platform-admin/pages/Dashboard"));
+const Tenants = lazy(() => import("./features/platform-admin/pages/TenantsPage"));
+const NoAccessPage = lazy(() => import("./features/auth/pages/NoAccessPage"));
+const SuspendedPage = lazy(() => import("./features/auth/pages/SuspendedPage"));
+const MembersPage = lazy(() => import("./features/members/pages/MembersPage"));
+const TenantDetail = lazy(() => import("./features/platform-admin/pages/TenantDetails"));
+const AcceptInvitationPage = lazy(() => import("./features/tenant-admin/pages/AcceptInvitationPage"));
+const AuditLogsPage = lazy(() => import("./features/tenant-admin/pages/AuditLogsPage"));
+const OrganizationsPage = lazy(() => import("./features/tenant-admin/pages/OrganizationsPage"));
+const WorkspacesPage = lazy(() => import("./features/tenant-admin/pages/WorkspacesPage"));
+const TenantDashboard = lazy(() => import("./features/tenant-admin/pages/TenantDashboard"));
+const TasksPage = lazy(() => import("./features/tasks/pages/TasksPage"));
+const AcceptOrgInvitationPage = lazy(() => import("./features/owners/pages/AcceptOrgInvitationPage"));
+const OwnerDashboard = lazy(() => import("./features/owners/pages/OwnerDashboard"));
+const OwnerWorkspacesPage = lazy(() => import("./features/owners/pages/OwnerWorkspacesPage"));
+const MemberDashboard = lazy(() => import("./features/members/pages/MemberDashboard"));
+const Login = lazy(() => import("./features/auth/pages/Login"));
+const GeneralDashboard = lazy(() => import("./features/general/pages/GeneralDashboard"));
+const GeneralWorkspacesPage = lazy(() => import("./features/general/pages/GeneralWorkspacesPage"));
+const AdminUserDirectoryPage = lazy(() => import("./features/admin/pages/AdminUserDirectoryPage"));
+const ProfilePage = lazy(() => import("./features/profile/pages/ProfilePage"));
+const SettingsPage = lazy(() => import("./features/profile/pages/SettingsPage"));
+const WelcomePage = lazy(() => import("./features/tenant-admin/pages/WelcomePage"));
+const NotificationsPage = lazy(() => import("./features/notifications/pages/NotificationsPage"));
+const AnalyticsPage = lazy(() => import("./features/platform-admin/pages/AnalyticsPage"));
+const PilotsPage = lazy(() => import("./features/platform-admin/pages/PilotsPage"));
+const PilotDetail = lazy(() => import("./features/platform-admin/pages/PilotDetail"));
+const AgreementsPage = lazy(() => import("./features/platform-admin/pages/AgreementsPage"));
+
+function RouteFallback() {
+  return (
+    <div style={{ minHeight: "100vh", display: "grid", placeItems: "center", color: "#5f7694", background: "#eef5fb" }}>
+      Loading...
+    </div>
+  );
+}
 
 function GeneralTasksRoute({ assignedToMe }: { assignedToMe?: boolean } = {}) {
   const { role, memberships, workspaceId, organizationId, workspaces, tenantId } = useWorkspace();
@@ -82,6 +92,7 @@ export default function App() {
   return (
     <ConfirmProvider>
       <WorkspaceProvider>
+        <Suspense fallback={<RouteFallback />}>
         <Routes>
 
           {/* LOGIN REDIRECT */}
@@ -159,6 +170,7 @@ export default function App() {
           </Route>
 
         </Routes>
+        </Suspense>
         <GlobalTaskModal />
 
         <Toaster

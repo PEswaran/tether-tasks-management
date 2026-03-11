@@ -14,11 +14,55 @@ function ensureString(value: string | null | undefined, label: string): string {
 
 type InviteResult = { email: string; role: string; success: boolean; message: string };
 
-const BOARD_TYPES = [
-    { value: "KANBAN", label: "Kanban Board", desc: "Visual columns for campaign workflow stages (Planning -> Active -> Completed)" },
-    { value: "TIMELINE", label: "Timeline", desc: "Plan campaigns with launch dates, deadlines, and milestones" },
-    { value: "PROCESS", label: "Process Tracker", desc: "Track repeatable marketing processes like campaign launches or ad approvals" },
-    { value: "LIST", label: "Simple List", desc: "A straightforward list for quick campaign tasks and to-dos" },
+const WORKFLOW_TEMPLATES = [
+    {
+        value: "KANBAN",
+        label: "Kanban Workflow",
+        desc: "Best for ongoing execution across clear stages.",
+        preview: ["Backlog", "In Progress", "Done"],
+        boardSuffix: "Workflow Board",
+        starterTasks: [
+            { title: "Add first priority", status: "TODO", priority: "HIGH" },
+            { title: "Assign active work", status: "IN_PROGRESS", priority: "MEDIUM" },
+            { title: "Review completed work", status: "DONE", priority: "LOW" },
+        ],
+    },
+    {
+        value: "TIMELINE",
+        label: "Timeline Setup",
+        desc: "Best for launches, deadlines, and milestone-driven work.",
+        preview: ["Milestones", "Deadlines", "Launches"],
+        boardSuffix: "Launch Plan",
+        starterTasks: [
+            { title: "Define launch milestone", status: "TODO", priority: "HIGH" },
+            { title: "Confirm delivery deadline", status: "TODO", priority: "HIGH" },
+            { title: "Prepare launch checklist", status: "IN_PROGRESS", priority: "MEDIUM" },
+        ],
+    },
+    {
+        value: "PROCESS",
+        label: "Process Tracker",
+        desc: "Best for repeatable operational workflows and approvals.",
+        preview: ["Intake", "Review", "Complete"],
+        boardSuffix: "Process Tracker",
+        starterTasks: [
+            { title: "Capture new request", status: "TODO", priority: "MEDIUM" },
+            { title: "Review process step", status: "IN_PROGRESS", priority: "MEDIUM" },
+            { title: "Finalize and document", status: "DONE", priority: "LOW" },
+        ],
+    },
+    {
+        value: "LIST",
+        label: "Simple Task List",
+        desc: "Best for lightweight teams that just need a clean starting point.",
+        preview: ["To Do", "Next Up", "Done"],
+        boardSuffix: "Task List",
+        starterTasks: [
+            { title: "Add first team to-do", status: "TODO", priority: "MEDIUM" },
+            { title: "Set upcoming priority", status: "TODO", priority: "LOW" },
+            { title: "Mark a completed win", status: "DONE", priority: "LOW" },
+        ],
+    },
 ];
 
 export default function CreateOrganizationModal({ tenantId, onClose, onCreated }: { tenantId: string | null; onClose: () => void; onCreated: () => void }) {
@@ -48,7 +92,8 @@ export default function CreateOrganizationModal({ tenantId, onClose, onCreated }
 
     // Derived defaults
     const resolvedWorkspaceName = workspaceName.trim() || (name.trim() ? `${name.trim()} Workspace` : "");
-    const resolvedBoardName = boardName.trim() || (name.trim() ? `${name.trim()} Board` : "");
+    const selectedTemplate = WORKFLOW_TEMPLATES.find((t) => t.value === boardType) || WORKFLOW_TEMPLATES[0];
+    const resolvedBoardName = boardName.trim() || (name.trim() ? `${name.trim()} ${selectedTemplate.boardSuffix}` : "");
 
     // ─── Step 1: Create org + workspace + board ───
     async function handleCreate() {
@@ -165,6 +210,20 @@ export default function CreateOrganizationModal({ tenantId, onClose, onCreated }
                         userId: sub,
                         metadata: { name: resolvedBoardName, boardType },
                     });
+
+                    for (const task of selectedTemplate.starterTasks) {
+                        await models.Task.create({
+                            tenantId: tenantIdForApi,
+                            organizationId: orgId,
+                            workspaceId: wsResult.data.id,
+                            taskBoardId: boardResult.data.id,
+                            title: task.title,
+                            status: task.status,
+                            priority: task.priority,
+                            createdBy: sub,
+                            createdAt: new Date().toISOString(),
+                        });
+                    }
                 }
             }
 
@@ -310,7 +369,7 @@ export default function CreateOrganizationModal({ tenantId, onClose, onCreated }
                                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" /></svg>
                                     </div>
                                     <div>
-                                        <div style={styles.createdLabel}>Board ({BOARD_TYPES.find(b => b.value === boardType)?.label})</div>
+                                        <div style={styles.createdLabel}>Board ({selectedTemplate.label})</div>
                                         <div style={styles.createdValue}>{resolvedBoardName}</div>
                                     </div>
                                 </div>
@@ -397,9 +456,10 @@ export default function CreateOrganizationModal({ tenantId, onClose, onCreated }
                             onChange={(e) => setDescription(e.target.value)}
                         />
 
-                        <label>Board Type</label>
+                        <label>Workflow Template</label>
+                        <div style={styles.fieldHint}>Choose the starting setup that best matches how this organization will work.</div>
                         <div style={styles.boardTypeGrid}>
-                            {BOARD_TYPES.map((bt) => (
+                            {WORKFLOW_TEMPLATES.map((bt) => (
                                 <div
                                     key={bt.value}
                                     style={{
@@ -418,6 +478,11 @@ export default function CreateOrganizationModal({ tenantId, onClose, onCreated }
                                         <div style={styles.boardTypeLabel}>{bt.label}</div>
                                     </div>
                                     <div style={styles.boardTypeDesc}>{bt.desc}</div>
+                                    <div style={styles.boardTypePreview}>
+                                        {bt.preview.map((item) => (
+                                            <span key={item} style={styles.boardTypePreviewChip}>{item}</span>
+                                        ))}
+                                    </div>
                                 </div>
                             ))}
                         </div>
@@ -436,11 +501,11 @@ export default function CreateOrganizationModal({ tenantId, onClose, onCreated }
                             </div>
                             <div>
                                 <label htmlFor="org-board-name">Board Name</label>
-                                <div style={styles.fieldHint}>Initial project or campaign</div>
+                                <div style={styles.fieldHint}>First board created from the selected workflow template</div>
                                 <input
                                     id="org-board-name"
                                     name="org_board_name"
-                                    placeholder={name.trim() ? `${name.trim()} Board` : "Q2 Paid Media Tasks"}
+                                    placeholder={name.trim() ? `${name.trim()} ${selectedTemplate.boardSuffix}` : selectedTemplate.boardSuffix}
                                     value={boardName}
                                     onChange={(e) => setBoardName(e.target.value)}
                                 />
@@ -556,7 +621,7 @@ const styles: Record<string, React.CSSProperties> = {
     boardTypeCard: {
         border: "1.5px solid #e2e8f0",
         borderRadius: 8,
-        padding: "8px 12px",
+        padding: "10px 12px",
         cursor: "pointer",
         transition: "border-color 0.15s, background 0.15s",
     },
@@ -599,6 +664,22 @@ const styles: Record<string, React.CSSProperties> = {
         color: "#64748b",
         lineHeight: 1.3,
         marginLeft: 22,
+    },
+    boardTypePreview: {
+        display: "flex",
+        gap: 6,
+        flexWrap: "wrap" as const,
+        marginTop: 10,
+        marginLeft: 22,
+    },
+    boardTypePreviewChip: {
+        fontSize: 10,
+        fontWeight: 700,
+        color: "#1e3a5f",
+        background: "#f8fbff",
+        border: "1px solid #dbe7f3",
+        borderRadius: 999,
+        padding: "3px 8px",
     },
     fieldHint: {
         fontSize: 12,

@@ -20,6 +20,53 @@ type WorkspaceOption = {
     organizationId?: string | null;
 };
 
+const WORKFLOW_TEMPLATES = [
+    {
+        value: "KANBAN",
+        label: "Kanban Workflow",
+        desc: "Best for ongoing execution across clear stages.",
+        preview: ["Backlog", "In Progress", "Done"],
+        starterTasks: [
+            { title: "Add first priority", status: "TODO", priority: "HIGH" },
+            { title: "Assign active work", status: "IN_PROGRESS", priority: "MEDIUM" },
+            { title: "Review completed work", status: "DONE", priority: "LOW" },
+        ],
+    },
+    {
+        value: "TIMELINE",
+        label: "Timeline Setup",
+        desc: "Best for launches, deadlines, and milestone-driven work.",
+        preview: ["Milestones", "Deadlines", "Launches"],
+        starterTasks: [
+            { title: "Define launch milestone", status: "TODO", priority: "HIGH" },
+            { title: "Confirm delivery deadline", status: "TODO", priority: "HIGH" },
+            { title: "Prepare launch checklist", status: "IN_PROGRESS", priority: "MEDIUM" },
+        ],
+    },
+    {
+        value: "PROCESS",
+        label: "Process Tracker",
+        desc: "Best for repeatable operational workflows and approvals.",
+        preview: ["Intake", "Review", "Complete"],
+        starterTasks: [
+            { title: "Capture new request", status: "TODO", priority: "MEDIUM" },
+            { title: "Review process step", status: "IN_PROGRESS", priority: "MEDIUM" },
+            { title: "Finalize and document", status: "DONE", priority: "LOW" },
+        ],
+    },
+    {
+        value: "LIST",
+        label: "Simple Task List",
+        desc: "Best for lightweight teams that just need a clean starting point.",
+        preview: ["To Do", "Next Up", "Done"],
+        starterTasks: [
+            { title: "Add first team to-do", status: "TODO", priority: "MEDIUM" },
+            { title: "Set upcoming priority", status: "TODO", priority: "LOW" },
+            { title: "Mark a completed win", status: "DONE", priority: "LOW" },
+        ],
+    },
+] as const;
+
 export default function CreateTaskBoardModal({
     organizations,
     workspaces,
@@ -44,10 +91,12 @@ export default function CreateTaskBoardModal({
 
     const [name, setName] = useState("");
     const [description, setDescription] = useState("");
+    const [boardType, setBoardType] = useState<(typeof WORKFLOW_TEMPLATES)[number]["value"]>("KANBAN");
     const workspaceOptions = workspaces?.length ? workspaces : (organizations || []);
     const [workspaceId, setworkspaceId] = useState(forcedWorkspaceId || workspaceOptions[0]?.id || "");
     const [ownerEmail, setOwnerEmail] = useState("");
     const [loading, setLoading] = useState(false);
+    const selectedTemplate = WORKFLOW_TEMPLATES.find((template) => template.value === boardType) || WORKFLOW_TEMPLATES[0];
 
     const ownerCandidates = useMemo<string[]>(() => {
         const filtered = members.filter((m) => m.workspaceId === workspaceId);
@@ -126,6 +175,7 @@ export default function CreateTaskBoardModal({
                 workspaceId,
                 name,
                 description: description || undefined,
+                boardType,
                 ownerUserSub: sub,
                 createdBy: sub,
                 isActive: true,
@@ -141,8 +191,22 @@ export default function CreateTaskBoardModal({
                     resourceType: "TaskBoard",
                     resourceId: created.data.id,
                     userId: sub,
-                    metadata: { name },
+                    metadata: { name, boardType },
                 });
+
+                for (const task of selectedTemplate.starterTasks) {
+                    await client.models.Task.create({
+                        tenantId,
+                        organizationId: resolvedOrganizationId,
+                        workspaceId,
+                        taskBoardId: created.data.id,
+                        title: task.title,
+                        status: task.status,
+                        priority: task.priority,
+                        createdBy: sub,
+                        createdAt: new Date().toISOString(),
+                    });
+                }
             }
 
             if (!templateMode && desiredOwnerEmail && desiredOwnerEmail !== myEmail && ownerUserSub !== sub && created?.data?.id) {
@@ -202,10 +266,65 @@ export default function CreateTaskBoardModal({
             <div className="modal">
                 <h2>Create Task Board</h2>
 
+                <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#64748b", marginTop: 4, marginBottom: 8 }}>
+                    Workflow Template
+                </label>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14 }}>
+                    {WORKFLOW_TEMPLATES.map((template) => (
+                        <button
+                            key={template.value}
+                            type="button"
+                            onClick={() => setBoardType(template.value)}
+                            style={{
+                                textAlign: "left",
+                                padding: "12px 12px 10px",
+                                borderRadius: 10,
+                                border: boardType === template.value ? "1.5px solid #1455a5" : "1px solid #d8e6f3",
+                                background: boardType === template.value ? "#eaf4ff" : "#fff",
+                                cursor: "pointer",
+                            }}
+                        >
+                            <div style={{ fontSize: 13, fontWeight: 700, color: "#123868", marginBottom: 4 }}>
+                                {template.label}
+                            </div>
+                            <div style={{ fontSize: 11, color: "#5f7694", lineHeight: 1.4 }}>
+                                {template.desc}
+                            </div>
+                            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 10 }}>
+                                {template.preview.map((item) => (
+                                    <span
+                                        key={item}
+                                        style={{
+                                            fontSize: 10,
+                                            fontWeight: 700,
+                                            color: "#1455a5",
+                                            background: "#f8fbff",
+                                            border: "1px solid #dbe7f3",
+                                            borderRadius: 999,
+                                            padding: "3px 8px",
+                                        }}
+                                    >
+                                        {item}
+                                    </span>
+                                ))}
+                            </div>
+                        </button>
+                    ))}
+                </div>
+
+                <label
+                    htmlFor="task-board-name"
+                    style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#64748b", marginTop: 4, marginBottom: 4 }}
+                >
+                    Board Name
+                </label>
+                <div style={{ fontSize: 11, color: "#5f7694", marginBottom: 8 }}>
+                    Name the board this team will start working from.
+                </div>
                 <input
                     id="task-board-name"
                     name="task_board_name"
-                    placeholder="Board name"
+                    placeholder={selectedTemplate.label}
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                 />

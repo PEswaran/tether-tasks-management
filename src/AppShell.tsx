@@ -1,12 +1,13 @@
-import { useEffect, useState } from "react";
+import { Suspense, lazy, useEffect, useState } from "react";
 import { BrowserRouter, Navigate, Route, Routes, useNavigate } from "react-router-dom";
 import { fetchAuthSession } from "aws-amplify/auth";
 import { Hub } from "aws-amplify/utils";
 import App from "./App";
-import LandingPage from "./features/auth/pages/LandingPage";
-import ContactPage from "./features/auth/pages/ContactPage";
-import Login from "./features/auth/pages/Login";
 import { trackEvent } from "./libs/analytics";
+
+const LandingPage = lazy(() => import("./features/auth/pages/LandingPage"));
+const ContactPage = lazy(() => import("./features/auth/pages/ContactPage"));
+const Login = lazy(() => import("./features/auth/pages/Login"));
 
 function PublicLanding() {
   const navigate = useNavigate();
@@ -81,6 +82,11 @@ export default function AppShell() {
 
   return (
     <BrowserRouter>
+      <Suspense fallback={
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh" }}>
+          Loading...
+        </div>
+      }>
       <Routes>
         <Route path="/" element={<PublicLanding />} />
         <Route path="/contact" element={<PublicContact />} />
@@ -101,6 +107,7 @@ export default function AppShell() {
           }
         />
       </Routes>
+      </Suspense>
     </BrowserRouter>
   );
 }

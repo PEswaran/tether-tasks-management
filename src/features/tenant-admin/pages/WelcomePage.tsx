@@ -1,8 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { getCurrentUser, fetchAuthSession } from "aws-amplify/auth";
-import { getUrl, uploadData } from "aws-amplify/storage";
-import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import { dataClient } from "../../../libs/data-client";
 import { getPlanLimits } from "../../../libs/planLimits";
 
@@ -106,6 +104,7 @@ export default function WelcomePage() {
             return;
         }
         try {
+            const { getUrl } = await import("aws-amplify/storage");
             const result = await getUrl({ path: s3Key });
             const response = await fetch(result.url.toString());
             if (!response.ok) throw new Error("Failed to fetch PDF");
@@ -131,8 +130,13 @@ export default function WelcomePage() {
         setSaving(true);
 
         try {
+            const [{ getUrl, uploadData }, pdfLib] = await Promise.all([
+                import("aws-amplify/storage"),
+                import("pdf-lib"),
+            ]);
+            const { PDFDocument, StandardFonts, rgb } = pdfLib;
             const s3Key = getAgreementS3Key(tenant);
-            let doc: PDFDocument;
+            let doc: any;
 
             if (s3Key) {
                 // Load existing PDF
