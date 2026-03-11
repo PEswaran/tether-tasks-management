@@ -34,6 +34,7 @@ export default function AuthRedirect() {
                 });
 
                 const memberships = res?.data || [];
+                const activeMemberships = memberships.filter((m: any) => m.status === "ACTIVE");
 
                 // helper: check for pending invitations
                 async function hasPendingInvitation(): Promise<boolean> {
@@ -71,7 +72,7 @@ export default function AuthRedirect() {
                 }
 
                 // no memberships at all — check for pending invitations first
-                if (!memberships.length) {
+                if (!activeMemberships.length) {
                     if (await hasPendingInvitation()) {
                         navigate("/accept-org-invitation");
                     } else {
@@ -81,10 +82,10 @@ export default function AuthRedirect() {
                 }
 
                 // prefer last-used workspace, fall back to first membership
-                let activeMem = memberships[0];
+                let activeMem = activeMemberships[0];
                 const storedOrg = localStorage.getItem("activeOrganization");
                 if (storedOrg) {
-                    const found = memberships.find((m: any) => m.organizationId === storedOrg);
+                    const found = activeMemberships.find((m: any) => m.organizationId === storedOrg);
                     if (found) activeMem = found;
                 }
 
@@ -100,7 +101,7 @@ export default function AuthRedirect() {
                     return;
                 }
 
-                const activeNonAdminMemberships = memberships.filter(
+                const activeNonAdminMemberships = activeMemberships.filter(
                     (m: any) => m.status === "ACTIVE" && m.role !== "TENANT_ADMIN"
                 );
                 const accessibleWorkspaceIds = new Set<string>();

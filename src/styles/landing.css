@@ -459,7 +459,7 @@
 
 /* ---------- Trusted By ---------- */
 .landing-trusted {
-  padding: 48px 40px;
+  padding: 40px 40px 32px;
   text-align: center;
   border-bottom: 1px solid var(--border);
   background: var(--panel-soft);
@@ -491,7 +491,12 @@
 
 /* ---------- Section Base ---------- */
 .landing-section {
-  padding: 96px 40px;
+  padding: 80px 40px 48px;
+}
+
+.landing-section-architecture {
+  padding-bottom: 40px;
+  scroll-margin-top: 104px;
 }
 
 .landing-section-header {
@@ -994,7 +999,7 @@
 
 .landing-pilot-banner {
   max-width: 1100px;
-  margin: 0 auto 96px;
+  margin: 0 auto 64px;
   padding: 34px 36px;
   border-radius: 22px;
   background: linear-gradient(135deg, #f5f9fd, #eef9fb);
@@ -1095,7 +1100,7 @@
 
 /* ---------- Final CTA ---------- */
 .landing-cta-banner {
-  padding: 80px 40px;
+  padding: 64px 40px 48px;
   text-align: center;
   background: linear-gradient(135deg, var(--primary), var(--accent));
   color: #fff;
@@ -1570,7 +1575,7 @@
 
   /* -- trusted -- */
   .landing-trusted {
-    padding: 36px 20px;
+    padding: 32px 20px 24px;
   }
 
   .landing-trusted-logos {
@@ -1583,7 +1588,12 @@
 
   /* -- sections -- */
   .landing-section {
-    padding: 56px 20px;
+    padding: 48px 20px 32px;
+  }
+
+  .landing-section-architecture {
+    padding-bottom: 28px;
+    scroll-margin-top: 88px;
   }
 
   .landing-section-header {
@@ -1701,7 +1711,7 @@
   }
 
   .landing-pilot-banner {
-    margin: 0 20px 64px;
+    margin: 0 20px 40px;
     padding: 28px 20px;
   }
 
@@ -1726,7 +1736,7 @@
 
   /* -- CTA banner -- */
   .landing-cta-banner {
-    padding: 48px 20px;
+    padding: 40px 20px 32px;
   }
 
   .landing-cta-banner h2 {

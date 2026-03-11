@@ -50,7 +50,7 @@ type WorkspaceCtx = {
     isTenantAdmin: boolean;
     isMember: boolean;
 
-    refreshSession: () => Promise<{ tenantId: string; orgId: string | null } | null>;
+    refreshSession: (options?: { preserveSelection?: boolean }) => Promise<{ tenantId: string; orgId: string | null } | null>;
     refreshOrganizations: () => Promise<void>;
     refreshWorkspaces: () => Promise<void>;
     switchTenant: (tenantId: string) => void;
@@ -107,8 +107,9 @@ export function WorkspaceProvider({ children }: any) {
        LOAD SESSION STATE ONLY
     =============================== */
 
-    async function refreshSession(): Promise<{ tenantId: string; orgId: string | null } | null> {
+    async function refreshSession(options?: { preserveSelection?: boolean }): Promise<{ tenantId: string; orgId: string | null } | null> {
         try {
+            const preserveSelection = options?.preserveSelection === true;
             let user;
             try {
                 user = await getCurrentUser();
@@ -150,11 +151,37 @@ export function WorkspaceProvider({ children }: any) {
             const active = mems.filter((m: any) => m.status === "ACTIVE");
 
             if (active.length) {
-                const m = active[0];
+                if (preserveSelection && tenantId && active.some((m: any) => m.tenantId === tenantId)) {
+                    return { tenantId, orgId: organizationId };
+                }
+
+                const rolePriority: Record<string, number> = {
+                    TENANT_ADMIN: 3,
+                    OWNER: 2,
+                    MEMBER: 1,
+                };
+                const sortedActive = [...active].sort((a: any, b: any) => {
+                    const priorityDiff = (rolePriority[b.role] || 0) - (rolePriority[a.role] || 0);
+                    if (priorityDiff !== 0) return priorityDiff;
+                    return String(a.organizationId || a.workspaceId || a.tenantId || "").localeCompare(
+                        String(b.organizationId || b.workspaceId || b.tenantId || "")
+                    );
+                });
+
+                let m = sortedActive[0];
+                if (preserveSelection) {
+                    const currentWorkspaceMembership = workspaceId
+                        ? sortedActive.find((mem: any) => mem.workspaceId === workspaceId)
+                        : null;
+                    const currentOrgMembership = organizationId
+                        ? sortedActive.find((mem: any) => mem.organizationId === organizationId)
+                        : null;
+                    m = currentWorkspaceMembership || currentOrgMembership || m;
+                }
 
                 setRole(m.role);
                 setTenantId(m.tenantId);
-                if (m.workspaceId && m.role !== "TENANT_ADMIN") {
+                if (!preserveSelection && m.workspaceId && m.role !== "TENANT_ADMIN") {
                     setWorkspaceIdState(m.workspaceId);
                     localStorage.setItem("activeWorkspace", m.workspaceId);
                 }
@@ -169,23 +196,31 @@ export function WorkspaceProvider({ children }: any) {
 
                 if (m.role === "TENANT_ADMIN" || isMultiOrg) {
                     // Tenant admins and multi-org users default to "All Organizations" / "All Workspaces"
-                    setOrganizationIdState(null);
-                    localStorage.removeItem("activeOrganization");
-                    setWorkspaceIdState(null);
-                    localStorage.removeItem("activeWorkspace");
-                    resolvedOrgId = null;
+                    if (!preserveSelection) {
+                        setOrganizationIdState(null);
+                        localStorage.removeItem("activeOrganization");
+                        setWorkspaceIdState(null);
+                        localStorage.removeItem("activeWorkspace");
+                        resolvedOrgId = null;
+                    } else {
+                        resolvedOrgId = organizationId;
+                    }
                 } else if (m.organizationId) {
-                    setOrganizationIdState(m.organizationId);
-                    localStorage.setItem("activeOrganization", m.organizationId);
-                    resolvedOrgId = m.organizationId;
+                    if (!preserveSelection || organizationId !== m.organizationId) {
+                        setOrganizationIdState(m.organizationId);
+                        localStorage.setItem("activeOrganization", m.organizationId);
+                    }
+                    resolvedOrgId = preserveSelection ? (organizationId || m.organizationId) : m.organizationId;
                 } else if (m.workspaceId) {
                     try {
                         const wsRes = await client.models.Workspace.get({ id: m.workspaceId });
                         const orgId = wsRes?.data?.organizationId;
                         if (orgId) {
-                            setOrganizationIdState(orgId);
-                            localStorage.setItem("activeOrganization", orgId);
-                            resolvedOrgId = orgId;
+                            if (!preserveSelection || organizationId !== orgId) {
+                                setOrganizationIdState(orgId);
+                                localStorage.setItem("activeOrganization", orgId);
+                            }
+                            resolvedOrgId = preserveSelection ? (organizationId || orgId) : orgId;
                         }
                     } catch {
                         // ignore
@@ -504,6 +539,37 @@ export function WorkspaceProvider({ children }: any) {
         }
 
         init();
+    }, []);
+
+    useEffect(() => {
+        let cancelled = false;
+
+        async function revalidateAccess() {
+            if (cancelled) return;
+            try {
+                const session = await fetchAuthSession();
+                if (!session.tokens?.accessToken) return;
+                await refreshSession({ preserveSelection: true });
+            } catch {
+                // Ignore transient auth read failures here.
+            }
+        }
+
+        const handleFocus = () => { void revalidateAccess(); };
+        const handleVisibility = () => {
+            if (document.visibilityState === "visible") {
+                void revalidateAccess();
+            }
+        };
+
+        window.addEventListener("focus", handleFocus);
+        document.addEventListener("visibilitychange", handleVisibility);
+
+        return () => {
+            cancelled = true;
+            window.removeEventListener("focus", handleFocus);
+            document.removeEventListener("visibilitychange", handleVisibility);
+        };
     }, []);
 
     return (

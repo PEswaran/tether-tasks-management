@@ -128,7 +128,9 @@ export default function LandingPage({ onSignIn, onGetStarted }: LandingPageProps
         </a>
         <div className="landing-nav-links">
           <a href="#features" onClick={(e) => { e.preventDefault(); scrollTo("features"); }}>Features</a>
-          <a href="#how-it-works" onClick={(e) => { e.preventDefault(); scrollTo("how-it-works"); }}>How It Works</a>
+          <a href="#architecture" onClick={(e) => { e.preventDefault(); scrollTo("architecture"); }}>Architecture</a>
+          <a href="#how-it-works" onClick={(e) => { e.preventDefault(); scrollTo("how-it-works"); }}>Getting Started</a>
+          <a href="#who-its-for" onClick={(e) => { e.preventDefault(); scrollTo("who-its-for"); }}>Built For</a>
           <a href="#pricing" onClick={(e) => { e.preventDefault(); scrollTo("pricing"); }}>Pricing</a>
           <a href="#faq" onClick={(e) => { e.preventDefault(); scrollTo("faq"); }}>FAQ</a>
         </div>
@@ -229,7 +231,58 @@ export default function LandingPage({ onSignIn, onGetStarted }: LandingPageProps
         </div>
       </section>
 
-      <section className="landing-section">
+      <section className="landing-section" id="features">
+        <div className="landing-section-header">
+          <span className="landing-section-badge">Why TetherTasks</span>
+          <h2>Operator-First Infrastructure for Multi-Org Execution</h2>
+          <p>
+            Built for the real structure behind multi-company work:
+            oversight at the top, clean org boundaries in the middle, and execution where the work actually happens.
+          </p>
+        </div>
+        <div className="landing-features-grid">
+          {[
+            {
+              icon: <Building2 size={24} />,
+              title: "Tenant Admin Control Center",
+              desc: "Manage organizations, workspaces, members, usage, and account health from one control center."
+            },
+            {
+              icon: <Waypoints size={24} />,
+              title: "True Company Hierarchy",
+              desc: "Model the business the way it actually operates instead of flattening everything into one shared team."
+            },
+            {
+              icon: <Kanban size={24} />,
+              title: "Visual Kanban Boards",
+              desc: "Run execution inside the right workspace with clear board flow, ownership, and status visibility."
+            },
+            {
+              icon: <UserCog size={24} />,
+              title: "Role-Based Workspaces",
+              desc: "Tenant admins, owners, members, and cross-workspace users each land in the right operating view."
+            },
+            {
+              icon: <UserPlus size={24} />,
+              title: "Invites and Onboarding",
+              desc: "Invite admins and members, send branded emails, and onboard users through structured welcome and agreement flows."
+            },
+            {
+              icon: <LayoutGrid size={24} />,
+              title: "Plan-Aware Capacity Controls",
+              desc: "Plan limits are part of the product, so growth stays visible and intentional instead of drifting."
+            },
+          ].map((f) => (
+            <div className="landing-feature-card" key={f.title}>
+              <div className="landing-feature-icon">{f.icon}</div>
+              <h3>{f.title}</h3>
+              <p>{f.desc}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="landing-section landing-section-architecture" id="architecture">
         <div className="landing-section-header">
           <span className="landing-section-badge">Product Architecture</span>
           <h2>Built to Expand Without Losing Structure</h2>
@@ -304,58 +357,6 @@ export default function LandingPage({ onSignIn, onGetStarted }: LandingPageProps
         </div>
       </section>
 
-      {/* ========== FEATURES ========== */}
-      <section className="landing-section" id="features">
-        <div className="landing-section-header">
-          <span className="landing-section-badge">Why TetherTasks</span>
-          <h2>Operator-First Infrastructure for Multi-Org Execution</h2>
-          <p>
-            Built for the real structure behind multi-company work:
-            oversight at the top, clean org boundaries in the middle, and execution where the work actually happens.
-          </p>
-        </div>
-        <div className="landing-features-grid">
-          {[
-            {
-              icon: <Building2 size={24} />,
-              title: "Tenant Admin Control Center",
-              desc: "Manage organizations, workspaces, members, usage, and account health from one control center."
-            },
-            {
-              icon: <Waypoints size={24} />,
-              title: "True Company Hierarchy",
-              desc: "Model the business the way it actually operates instead of flattening everything into one shared team."
-            },
-            {
-              icon: <Kanban size={24} />,
-              title: "Visual Kanban Boards",
-              desc: "Run execution inside the right workspace with clear board flow, ownership, and status visibility."
-            },
-            {
-              icon: <UserCog size={24} />,
-              title: "Role-Based Workspaces",
-              desc: "Tenant admins, owners, members, and cross-workspace users each land in the right operating view."
-            },
-            {
-              icon: <UserPlus size={24} />,
-              title: "Invites and Onboarding",
-              desc: "Invite admins and members, send branded emails, and onboard users through structured welcome and agreement flows."
-            },
-            {
-              icon: <LayoutGrid size={24} />,
-              title: "Plan-Aware Capacity Controls",
-              desc: "Plan limits are part of the product, so growth stays visible and intentional instead of drifting."
-            },
-          ].map((f) => (
-            <div className="landing-feature-card" key={f.title}>
-              <div className="landing-feature-icon">{f.icon}</div>
-              <h3>{f.title}</h3>
-              <p>{f.desc}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
       <section className="landing-section" style={{ background: "var(--panel-soft)" }}>
         <div className="landing-section-header">
           <span className="landing-section-badge">Inside The App</span>
@@ -400,7 +401,7 @@ export default function LandingPage({ onSignIn, onGetStarted }: LandingPageProps
       {/* ========== HOW IT WORKS ========== */}
       <section className="landing-section" id="how-it-works" style={{ background: "var(--panel-soft)" }}>
         <div className="landing-section-header">
-          <span className="landing-section-badge">How It Works</span>
+          <span className="landing-section-badge">Getting Started</span>
           <h2>From Sign-Up to Full Control in 3 Steps</h2>
           <p>No complex onboarding. No sales calls. Just sign up and start organizing.</p>
         </div>
@@ -432,9 +433,9 @@ export default function LandingPage({ onSignIn, onGetStarted }: LandingPageProps
       </section>
 
       {/* ========== WHO IT'S FOR ========== */}
-      <section className="landing-section">
+      <section className="landing-section" id="who-its-for">
         <div className="landing-section-header">
-          <span className="landing-section-badge">Who It's For</span>
+          <span className="landing-section-badge">Built For</span>
           <h2>Built for Operators Managing Parallel Work</h2>
           <p>
             If your work spans multiple clients, brands, locations, or business units,
@@ -512,31 +513,6 @@ export default function LandingPage({ onSignIn, onGetStarted }: LandingPageProps
         </div>
       </section>
 
-      <section className="landing-pilot-banner">
-        <div className="landing-pilot-copy">
-          <span className="landing-section-badge">Pilot Ready</span>
-          <h2>Need a Guided Rollout First?</h2>
-          <p>
-            The platform already supports pilot provisioning, agreement generation, and structured admin onboarding.
-            That gives you a credible rollout path for agencies, franchise groups, and larger teams that want a guided start.
-          </p>
-        </div>
-        <div className="landing-pilot-actions">
-          <button
-            className="landing-btn landing-btn-primary"
-            onClick={() => {
-              trackSignupStart("pilot_banner_contact_sales");
-              navigate("/pilot");
-            }}
-          >
-            Start a Pilot
-          </button>
-          <button className="landing-btn landing-btn-outline" onClick={() => handleGetStartedClick("pilot_banner_start_free")}>
-            Try Starter Free
-          </button>
-        </div>
-      </section>
-
       {/* ========== PRICING ========== */}
       <section className="landing-section" id="pricing">
         <div className="landing-section-header">
@@ -611,6 +587,31 @@ export default function LandingPage({ onSignIn, onGetStarted }: LandingPageProps
               Contact Sales
             </button>
           </div>
+        </div>
+      </section>
+
+      <section className="landing-pilot-banner">
+        <div className="landing-pilot-copy">
+          <span className="landing-section-badge">Pilot Ready</span>
+          <h2>Need a Guided Rollout First?</h2>
+          <p>
+            The platform already supports pilot provisioning, agreement generation, and structured admin onboarding.
+            That gives you a credible rollout path for agencies, franchise groups, and larger teams that want a guided start.
+          </p>
+        </div>
+        <div className="landing-pilot-actions">
+          <button
+            className="landing-btn landing-btn-primary"
+            onClick={() => {
+              trackSignupStart("pilot_banner_contact_sales");
+              navigate("/pilot");
+            }}
+          >
+            Start a Pilot
+          </button>
+          <button className="landing-btn landing-btn-outline" onClick={() => handleGetStartedClick("pilot_banner_start_free")}>
+            Try Starter Free
+          </button>
         </div>
       </section>
 

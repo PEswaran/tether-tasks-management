@@ -35,6 +35,12 @@ export const ownerNav = [
         icon: <Users size={18} />,
         section: "Manage"
     },
+    {
+        label: "User Directory",
+        path: "/owner/user-directory",
+        icon: <Users size={18} />,
+        section: "Manage"
+    },
 ];
 
 export const memberNav = [

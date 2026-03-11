@@ -14,6 +14,8 @@ import {
 } from "lucide-react";
 import { displayName } from "../../../libs/displayName";
 import { getPlanLimits } from "../../../libs/planLimits";
+import { useConfirm } from "../../../shared-components/confirm-context";
+import { logAudit } from "../../../libs/audit";
 
 type Stats = {
     boards: number;
@@ -91,8 +93,9 @@ export default function TenantDashboard() {
     const navigate = useNavigate();
     const {
         tenantId, organizationId, workspaceId, setWorkspaceId, setOrganizationId,
-        organizations, workspaces, refreshOrganizations,
+        organizations, workspaces, refreshOrganizations, refreshWorkspaces,
     } = useWorkspace();
+    const { alert } = useConfirm();
 
     // ─── Mode 1: Workspace grid stats ───
     const [wsStats, setWsStats] = useState<Record<string, WsStats>>({});
@@ -119,6 +122,9 @@ export default function TenantDashboard() {
     const [memberSort, setMemberSort] = useState<"name" | "role" | "organization">("name");
     const [memberStatus, setMemberStatus] = useState<"ALL" | "ACTIVE" | "REMOVED">("ACTIVE");
     const [activeTab, setActiveTab] = useState<"workspaces" | "boards" | "members">("workspaces");
+    const [editingWorkspaceId, setEditingWorkspaceId] = useState<string | null>(null);
+    const [workspaceDescriptionDraft, setWorkspaceDescriptionDraft] = useState("");
+    const [savingWorkspaceDescription, setSavingWorkspaceDescription] = useState(false);
     const [showGuide, setShowGuide] = useState(() => {
         return localStorage.getItem("hideGettingStarted") !== "true";
     });
@@ -229,6 +235,48 @@ export default function TenantDashboard() {
         const parts = orgName.trim().split(/\s+/).filter(Boolean);
         if (!parts.length) return "ORG";
         return parts.slice(0, 2).map((part: string) => part[0]?.toUpperCase() || "").join("");
+    }
+
+    useEffect(() => {
+        if (!selectedWorkspace) {
+            setEditingWorkspaceId(null);
+            setWorkspaceDescriptionDraft("");
+            return;
+        }
+        if (editingWorkspaceId !== selectedWorkspace.id) {
+            setWorkspaceDescriptionDraft(selectedWorkspace.description || "");
+        }
+    }, [selectedWorkspaceId, selectedWorkspace?.description, editingWorkspaceId]);
+
+    async function saveWorkspaceDescription() {
+        if (!selectedWorkspace || !tenantId) return;
+        setSavingWorkspaceDescription(true);
+        try {
+            const nextDescription = workspaceDescriptionDraft.trim();
+            await client.models.Workspace.update({
+                id: selectedWorkspace.id,
+                description: nextDescription || null,
+            });
+            logAudit({
+                tenantId,
+                organizationId: selectedWorkspace.organizationId || organizationId,
+                action: "UPDATE",
+                resourceType: "Workspace",
+                resourceId: selectedWorkspace.id,
+                metadata: { field: "description" },
+            });
+            await refreshWorkspaces();
+            setEditingWorkspaceId(null);
+        } catch (err) {
+            console.error("Failed to update workspace description", err);
+            await alert({
+                title: "Error",
+                message: "Failed to update workspace description.",
+                variant: "danger",
+            });
+        } finally {
+            setSavingWorkspaceDescription(false);
+        }
     }
 
     useEffect(() => {
@@ -815,7 +863,11 @@ export default function TenantDashboard() {
                                                         <div
                                                             key={ws.id}
                                                             className={`ws-card ${isSelected ? "selected" : ""}`}
-                                                            onClick={() => setSelectedWorkspaceId(ws.id)}
+                                                            onClick={() => {
+                                                                setSelectedWorkspaceId(ws.id);
+                                                                setEditingWorkspaceId(null);
+                                                                setWorkspaceDescriptionDraft(ws.description || "");
+                                                            }}
                                                         >
                                                             <div className="ws-card-header">
                                                                 <div className="ws-card-name">{ws.name || ws.id}</div>
@@ -846,9 +898,53 @@ export default function TenantDashboard() {
                                                 {selectedWorkspace ? (
                                                     <>
                                                         <h3 className="workspace-drawer-title">{selectedWorkspace.name || selectedWorkspace.id}</h3>
-                                                        <p className="workspace-drawer-sub">
-                                                            {(selectedWorkspace.description || "No description") as string}
-                                                        </p>
+                                                        {editingWorkspaceId === selectedWorkspace.id ? (
+                                                            <div className="workspace-drawer-editor">
+                                                                <label htmlFor="workspace-description-inline" className="workspace-drawer-label">
+                                                                    Description
+                                                                </label>
+                                                                <textarea
+                                                                    id="workspace-description-inline"
+                                                                    name="workspace_description_inline"
+                                                                    className="workspace-drawer-textarea"
+                                                                    rows={4}
+                                                                    value={workspaceDescriptionDraft}
+                                                                    onChange={(e) => setWorkspaceDescriptionDraft(e.target.value)}
+                                                                    placeholder="Add a short description for this workspace"
+                                                                />
+                                                                <div className="workspace-drawer-editor-actions">
+                                                                    <button
+                                                                        className="btn"
+                                                                        onClick={saveWorkspaceDescription}
+                                                                        disabled={savingWorkspaceDescription}
+                                                                    >
+                                                                        {savingWorkspaceDescription ? "Saving..." : "Save Description"}
+                                                                    </button>
+                                                                    <button
+                                                                        className="btn secondary"
+                                                                        onClick={() => {
+                                                                            setEditingWorkspaceId(null);
+                                                                            setWorkspaceDescriptionDraft(selectedWorkspace.description || "");
+                                                                        }}
+                                                                        disabled={savingWorkspaceDescription}
+                                                                    >
+                                                                        Cancel
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                        ) : (
+                                                            <>
+                                                                <p className="workspace-drawer-sub">
+                                                                    {(selectedWorkspace.description || "No description") as string}
+                                                                </p>
+                                                                <button
+                                                                    className="workspace-inline-link"
+                                                                    onClick={() => setEditingWorkspaceId(selectedWorkspace.id)}
+                                                                >
+                                                                    Edit Description
+                                                                </button>
+                                                            </>
+                                                        )}
                                                         <div className="workspace-drawer-stats">
                                                             <div><strong>{wsStats[selectedWorkspace.id]?.boards || 0}</strong><span>Boards</span></div>
                                                             <div><strong>{wsStats[selectedWorkspace.id]?.members || 0}</strong><span>Members</span></div>

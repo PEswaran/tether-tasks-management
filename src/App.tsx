@@ -145,6 +145,7 @@ export default function App() {
             <Route path="my-tasks" element={<TasksPage role="OWNER" assignedToMe />} />
             <Route path="workspaces" element={<OwnerWorkspacesPage />} />
             <Route path="members" element={<MembersPage />} />
+            <Route path="user-directory" element={<AdminUserDirectoryPage mode="tenant" />} />
             <Route path="tasks" element={<TasksPage role="OWNER" />} />
             <Route path="boards" element={<TasksPage role="OWNER" />} />
             <Route path="notifications" element={<NotificationsPage />} />

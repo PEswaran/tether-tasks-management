@@ -2,20 +2,27 @@ import { useEffect, useMemo, useState } from "react";
 import { dataClient } from "../../../libs/data-client";
 import { useWorkspace } from "../../../shared-components/workspace-context";
 import { displayName } from "../../../libs/displayName";
+import InviteMemberModal from "../../../components/shared/modals/invite-members-modal";
+import { useConfirm } from "../../../shared-components/confirm-context";
+import { logAudit } from "../../../libs/audit";
 
 type ScopeMode = "tenant" | "platform";
 
 export default function AdminUserDirectoryPage({ mode }: { mode: ScopeMode }) {
     const client = dataClient();
-    const { tenantId } = useWorkspace();
+    const { tenantId, tenantName, role, organizations, memberships: contextMemberships } = useWorkspace();
+    const { confirm, alert } = useConfirm();
 
     const [loading, setLoading] = useState(true);
-    const [memberships, setMemberships] = useState<any[]>([]);
+    const [directoryMemberships, setDirectoryMemberships] = useState<any[]>([]);
+    const [invitations, setInvitations] = useState<any[]>([]);
     const [profiles, setProfiles] = useState<any[]>([]);
     const [workspaces, setWorkspaces] = useState<any[]>([]);
     const [boards, setBoards] = useState<any[]>([]);
     const [tenants, setTenants] = useState<any[]>([]);
+    const [inviteOrganizations, setInviteOrganizations] = useState<any[]>([]);
     const [selectedTenantId, setSelectedTenantId] = useState<string>("");
+    const [showInvite, setShowInvite] = useState(false);
 
     const [search, setSearch] = useState("");
     const [roleFilter, setRoleFilter] = useState("ALL");
@@ -34,6 +41,22 @@ export default function AdminUserDirectoryPage({ mode }: { mode: ScopeMode }) {
         if (mode === "tenant" && !tenantId) return;
         loadDirectory();
     }, [mode, tenantId, selectedTenantId]);
+
+    useEffect(() => {
+        if (mode === "platform") {
+            loadInviteOrganizationsForPlatform();
+            return;
+        }
+        const activeOwnerOrgIds = new Set(
+            (contextMemberships || [])
+                .filter((m: any) => m.status === "ACTIVE" && m.role === "OWNER" && m.organizationId)
+                .map((m: any) => m.organizationId)
+        );
+        const scopedOrganizations = role === "OWNER"
+            ? (organizations || []).filter((org: any) => activeOwnerOrgIds.has(org.id))
+            : organizations || [];
+        setInviteOrganizations(scopedOrganizations);
+    }, [mode, selectedTenantId, organizations, contextMemberships, role]);
 
     async function loadTenants() {
         const tenantRes = await client.models.Tenant.list();
@@ -60,20 +83,38 @@ export default function AdminUserDirectoryPage({ mode }: { mode: ScopeMode }) {
                 ? { tenantId: { eq: effectiveTenantId } }
                 : undefined;
 
-            const [memRes, wsRes, boardRes, profileRes] = await Promise.all([
+            const invitationFilter = effectiveTenantId
+                ? { tenantId: { eq: effectiveTenantId } }
+                : undefined;
+
+            const [memRes, invRes, wsRes, boardRes, profileRes] = await Promise.all([
                 client.models.Membership.list(membershipFilter ? { filter: membershipFilter } : undefined),
+                client.models.Invitation.list(invitationFilter ? { filter: invitationFilter } : undefined),
                 client.models.Workspace.list(workspaceFilter ? { filter: workspaceFilter } : undefined),
                 client.models.TaskBoard.list(boardFilter ? { filter: boardFilter } : undefined),
                 client.models.UserProfile.list(profileFilter ? { filter: profileFilter } : undefined),
             ]);
 
-            setMemberships(memRes.data || []);
+            setDirectoryMemberships(memRes.data || []);
+            setInvitations(invRes.data || []);
             setWorkspaces(wsRes.data || []);
             setBoards(boardRes.data || []);
             setProfiles(profileRes.data || []);
         } finally {
             setLoading(false);
         }
+    }
+
+    async function loadInviteOrganizationsForPlatform() {
+        if (mode !== "platform") return;
+        if (!selectedTenantId) {
+            setInviteOrganizations([]);
+            return;
+        }
+        const orgRes = await client.models.Organization.list({
+            filter: { tenantId: { eq: selectedTenantId } },
+        });
+        setInviteOrganizations(orgRes.data || []);
     }
 
     const workspaceById = useMemo(
@@ -103,14 +144,14 @@ export default function AdminUserDirectoryPage({ mode }: { mode: ScopeMode }) {
 
     const rows = useMemo(() => {
         const userMap = new Map<string, any[]>();
-        memberships.forEach((m: any) => {
+        directoryMemberships.forEach((m: any) => {
             if (!m?.userSub) return;
             const list = userMap.get(m.userSub) || [];
             list.push(m);
             userMap.set(m.userSub, list);
         });
 
-        return Array.from(userMap.entries()).map(([userSub, userMemberships]) => {
+        const membershipRows = Array.from(userMap.entries()).map(([userSub, userMemberships]) => {
             const statuses = Array.from(new Set(userMemberships.map((m: any) => m.status).filter(Boolean)));
             const activeMemberships = userMemberships.filter((m: any) => m.status === "ACTIVE");
             const roles = Array.from(new Set(activeMemberships.map((m: any) => m.role).filter(Boolean)));
@@ -163,19 +204,72 @@ export default function AdminUserDirectoryPage({ mode }: { mode: ScopeMode }) {
                 email,
                 roles,
                 statuses,
+                membershipIds: userMemberships.map((m: any) => m.id).filter(Boolean),
                 workspaceIds: Array.from(workspaceIds),
                 workspaceNames,
                 boardNames,
                 tenantNames,
+                pendingInviteIds: [] as string[],
             };
         });
-    }, [memberships, workspaces, workspaceById, boardNamesByWorkspaceId, profiles, tenants]);
+
+        const activeMembershipEmails = new Set(
+            membershipRows
+                .filter((row) => row.statuses.includes("ACTIVE"))
+                .map((row) => row.email?.toLowerCase())
+                .filter(Boolean)
+        );
+
+        const pendingInviteRows = (invitations || [])
+            .filter((inv: any) => inv?.status === "PENDING")
+            .filter((inv: any) => !activeMembershipEmails.has((inv.email || "").toLowerCase()))
+            .map((inv: any) => {
+                const invitedWorkspaceIds = new Set<string>();
+                if (inv.workspaceId) {
+                    invitedWorkspaceIds.add(inv.workspaceId);
+                } else if (inv.organizationId) {
+                    workspaces
+                        .filter((ws: any) => ws.organizationId === inv.organizationId)
+                        .forEach((ws: any) => invitedWorkspaceIds.add(ws.id));
+                }
+
+                const workspaceNames = Array.from(invitedWorkspaceIds)
+                    .map((id) => workspaceById[id]?.name || id)
+                    .filter(Boolean);
+
+                const boardNamesSet = new Set<string>();
+                Array.from(invitedWorkspaceIds).forEach((wsId) => {
+                    const names = boardNamesByWorkspaceId.get(wsId);
+                    if (!names) return;
+                    names.forEach((name) => boardNamesSet.add(name));
+                });
+
+                const tenantLabel = tenants.find((t: any) => t.id === inv.tenantId)?.companyName || inv.tenantId;
+
+                return {
+                    userSub: `invite:${inv.id}`,
+                    name: displayName(inv.email),
+                    email: inv.email,
+                    roles: inv.role ? [inv.role] : [],
+                    statuses: ["PENDING"],
+                    membershipIds: [] as string[],
+                    workspaceIds: Array.from(invitedWorkspaceIds),
+                    workspaceNames,
+                    boardNames: Array.from(boardNamesSet),
+                    tenantNames: tenantLabel ? [tenantLabel] : [],
+                    pendingInviteIds: [inv.id],
+                };
+            });
+
+        return [...membershipRows, ...pendingInviteRows];
+    }, [directoryMemberships, invitations, workspaces, workspaceById, boardNamesByWorkspaceId, profiles, tenants]);
 
     const filteredRows = useMemo(() => {
         const q = search.trim().toLowerCase();
         return rows.filter((row) => {
             if (statusFilter !== "ALL") {
                 if (statusFilter === "ACTIVE" && !row.statuses.includes("ACTIVE")) return false;
+                if (statusFilter === "PENDING" && !row.statuses.includes("PENDING")) return false;
                 if (statusFilter === "REMOVED" && !row.statuses.includes("REMOVED")) return false;
             }
             if (roleFilter !== "ALL" && !row.roles.includes(roleFilter)) return false;
@@ -198,6 +292,73 @@ export default function AdminUserDirectoryPage({ mode }: { mode: ScopeMode }) {
         });
     }, [rows, search, roleFilter, workspaceFilter, boardFilter, statusFilter, boards]);
 
+    const selectedTenant = tenants.find((tenant: any) => tenant.id === selectedTenantId) || null;
+    const inviteTenantId = mode === "platform" ? selectedTenantId : (tenantId || "");
+    const inviteTenantName = mode === "platform" ? selectedTenant?.companyName || "" : tenantName || "";
+    const canInvite = mode === "platform" || role === "TENANT_ADMIN" || role === "OWNER";
+    const inviteDisabled = !inviteTenantId || inviteOrganizations.length === 0;
+    const canRemoveFromDirectory = mode === "tenant" && role === "TENANT_ADMIN";
+
+    async function removeDirectoryUser(row: any) {
+        if (!effectiveTenantId) return;
+        if (row.roles?.includes("TENANT_ADMIN")) {
+            await alert({
+                title: "Restricted",
+                message: "Only a platform super admin can remove a tenant admin.",
+                variant: "warning",
+            });
+            return;
+        }
+        const ok = await confirm({
+            title: "Remove User",
+            message: `Remove ${row.name} from this tenant and revoke their pending invites?`,
+            confirmLabel: "Remove",
+            variant: "danger",
+        });
+        if (!ok) return;
+
+        try {
+            const membershipUpdates = directoryMemberships
+                .filter((m: any) =>
+                    m.tenantId === effectiveTenantId &&
+                    m.status !== "REMOVED" &&
+                    ((row.userSub && !String(row.userSub).startsWith("invite:") && m.userSub === row.userSub) ||
+                        (row.email && row.email.toLowerCase() && row.email.toLowerCase() === (profiles.find((p: any) => p.userId === m.userSub)?.email || "").toLowerCase()))
+                )
+                .map((m: any) => client.models.Membership.update({ id: m.id, status: "REMOVED" }));
+
+            const invitationUpdates = invitations
+                .filter((inv: any) =>
+                    inv.tenantId === effectiveTenantId &&
+                    inv.status === "PENDING" &&
+                    (inv.email || "").toLowerCase() === (row.email || "").toLowerCase()
+                )
+                .map((inv: any) => client.models.Invitation.update({ id: inv.id, status: "REVOKED" }));
+
+            await Promise.all([...membershipUpdates, ...invitationUpdates]);
+            await logAudit({
+                tenantId: effectiveTenantId,
+                action: "REMOVE",
+                resourceType: "Membership",
+                resourceId: row.userSub || row.email,
+                metadata: { email: row.email, removedFrom: "user-directory" },
+            });
+            await loadDirectory();
+            await alert({
+                title: "Removed",
+                message: `${row.name} was removed from this tenant.`,
+                variant: "success",
+            });
+        } catch (err) {
+            console.error("Failed to remove directory user", err);
+            await alert({
+                title: "Error",
+                message: "Failed to remove user from this tenant.",
+                variant: "danger",
+            });
+        }
+    }
+
     if (loading) {
         return <div className="page"><h2>Loading user directory...</h2></div>;
     }
@@ -211,6 +372,15 @@ export default function AdminUserDirectoryPage({ mode }: { mode: ScopeMode }) {
                         Filterable admin directory of users, roles, workspaces, and board access.
                     </div>
                 </div>
+                {canInvite && (
+                    <button
+                        className="workspace-page-btn workspace-page-btn-primary"
+                        onClick={() => setShowInvite(true)}
+                        disabled={inviteDisabled}
+                    >
+                        + Invite User
+                    </button>
+                )}
             </div>
 
             <div className="workspace-page-controls admin-user-filters" style={{ marginBottom: 14 }}>
@@ -259,6 +429,7 @@ export default function AdminUserDirectoryPage({ mode }: { mode: ScopeMode }) {
                     onChange={(e) => setStatusFilter(e.target.value)}
                 >
                     <option value="ACTIVE">Status: Active</option>
+                    <option value="PENDING">Status: Pending</option>
                     <option value="ALL">Status: All</option>
                     <option value="REMOVED">Status: Removed</option>
                 </select>
@@ -299,6 +470,7 @@ export default function AdminUserDirectoryPage({ mode }: { mode: ScopeMode }) {
                         <th>Workspace(s)</th>
                         <th>Board(s)</th>
                         <th>Status</th>
+                        {canRemoveFromDirectory && <th>Actions</th>}
                     </tr>
                 </thead>
                 <tbody>
@@ -315,21 +487,54 @@ export default function AdminUserDirectoryPage({ mode }: { mode: ScopeMode }) {
                             <td style={{ fontSize: 13 }}>{row.workspaceNames.slice(0, 6).join(", ") || "—"}</td>
                             <td style={{ fontSize: 13 }}>{row.boardNames.slice(0, 8).join(", ") || "—"}</td>
                             <td>
-                                <span className={`badge ${row.statuses.includes("ACTIVE") ? "green" : "gray"}`}>
-                                    {row.statuses.includes("ACTIVE") ? "Active" : row.statuses.join(", ") || "—"}
+                                <span className={`badge ${row.statuses.includes("ACTIVE") ? "green" : row.statuses.includes("PENDING") ? "amber" : "gray"}`}>
+                                    {row.statuses.includes("ACTIVE")
+                                        ? "Active"
+                                        : row.statuses.includes("PENDING")
+                                            ? "Pending"
+                                            : row.statuses.join(", ") || "—"}
                                 </span>
                             </td>
+                            {canRemoveFromDirectory && (
+                                <td>
+                                    {!row.roles.includes("TENANT_ADMIN") && (
+                                        <button
+                                            className="btn secondary"
+                                            onClick={() => { void removeDirectoryUser(row); }}
+                                            disabled={!row.email}
+                                        >
+                                            Remove
+                                        </button>
+                                    )}
+                                </td>
+                            )}
                         </tr>
                     ))}
                     {filteredRows.length === 0 && (
                         <tr>
-                            <td colSpan={mode === "platform" ? 6 : 5} style={{ textAlign: "center", color: "#94a3b8" }}>
+                            <td colSpan={mode === "platform" ? 6 : canRemoveFromDirectory ? 6 : 5} style={{ textAlign: "center", color: "#94a3b8" }}>
                                 No users match your filters.
                             </td>
                         </tr>
                     )}
                 </tbody>
             </table>
+
+            {showInvite && canInvite && inviteTenantId && (
+                <InviteMemberModal
+                    tenantId={inviteTenantId}
+                    tenantName={inviteTenantName}
+                    organizations={inviteOrganizations}
+                    currentOrganizationId={inviteOrganizations[0]?.id}
+                    onClose={() => {
+                        setShowInvite(false);
+                        loadDirectory();
+                    }}
+                    onInvited={() => {
+                        loadDirectory();
+                    }}
+                />
+            )}
         </div>
     );
 }
