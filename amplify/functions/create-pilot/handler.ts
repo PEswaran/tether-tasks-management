@@ -4,7 +4,6 @@ import {
     AdminAddUserToGroupCommand,
     AdminGetUserCommand,
 } from "@aws-sdk/client-cognito-identity-provider";
-import { SESClient, SendEmailCommand } from "@aws-sdk/client-ses";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import { generateClient } from "aws-amplify/data";
@@ -20,7 +19,6 @@ Amplify.configure(resourceConfig, libraryOptions);
 
 const client = generateClient<Schema>();
 const cognito = new CognitoIdentityProviderClient({});
-const ses = new SESClient({});
 const s3 = new S3Client({});
 
 function hexToRgb(hex: string) {
@@ -468,85 +466,7 @@ export const handler: Schema["createPilot"]["functionHandler"] =
             });
 
             /* =========================================================
-               10. SEND CONFIRMATION EMAIL VIA SES
-            ========================================================= */
-            const startFormatted = new Date(pilotStartDate).toLocaleDateString("en-US", {
-                month: "long", day: "numeric", year: "numeric",
-            });
-            const endFormatted = new Date(pilotEndDate).toLocaleDateString("en-US", {
-                month: "long", day: "numeric", year: "numeric",
-            });
-
-            const emailHtml = `
-                <div style="font-family: Inter, system-ui, -apple-system, sans-serif; max-width: 600px; margin: 40px auto; color: #0f172a; background: #ffffff; border-radius: 14px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.08);">
-                    <div style="background: linear-gradient(135deg,#1e3a5f,#0ea5b8); padding: 18px 16px; text-align: center;">
-                        <img src="https://tethertasks-assets.s3.us-east-1.amazonaws.com/tetherTasksv2.PNG" width="88" alt="TetherTasks Logo" style="display: block; margin: 0 auto 8px auto; border: 0;" />
-                        <div style="color: #dbeafe; font-size: 12px; margin-bottom: 4px;">Flexible. Connected. Powerful.</div>
-                        <h1 style="color: #fff; margin: 0; font-size: 18px; font-weight: 600;">Welcome to TetherTasks</h1>
-                        <p style="color: #dbeafe; margin: 6px 0 0; font-size: 13px;">Your pilot program is ready</p>
-                    </div>
-                    <div style="padding: 32px; border: 1px solid #e5e7eb; border-top: none;">
-                        <p style="font-size: 15px;">Hi ${adminFirstName || "there"},</p>
-                        <p style="font-size: 14px; color: #475569; line-height: 1.6;">
-                            Your <strong>${pilotDurationDays}-day pilot</strong> for <strong>${companyName}</strong> has been set up.
-                            We've pre-provisioned your workspace so you can get started right away.
-                        </p>
-
-                        <div style="background: #f8fafc; border: 1px solid #eef2f6; border-radius: 10px; padding: 20px; margin: 20px 0;">
-                            <div style="font-weight: 600; color: #1e3a5f; margin-bottom: 12px; font-size: 14px;">Pilot Details</div>
-                            <table style="font-size: 14px; width: 100%; border-collapse: collapse;">
-                                <tr><td style="padding: 4px 0; color: #64748b;">Organization</td><td style="padding: 4px 0; font-weight: 500;">${resolvedOrgName}</td></tr>
-                                <tr><td style="padding: 4px 0; color: #64748b;">Workspace</td><td style="padding: 4px 0; font-weight: 500;">${resolvedWorkspaceName}</td></tr>
-                                <tr><td style="padding: 4px 0; color: #64748b;">Duration</td><td style="padding: 4px 0; font-weight: 500;">${pilotDurationDays} days</td></tr>
-                                <tr><td style="padding: 4px 0; color: #64748b;">Start Date</td><td style="padding: 4px 0; font-weight: 500;">${startFormatted}</td></tr>
-                                <tr><td style="padding: 4px 0; color: #64748b;">End Date</td><td style="padding: 4px 0; font-weight: 500;">${endFormatted}</td></tr>
-                            </table>
-                        </div>
-
-                        <p style="font-size: 14px; color: #475569;">
-                            You'll receive a separate email with your login credentials.
-                            Log in at <strong>www.tethertasks.com</strong> to access your workspace.
-                        </p>
-
-                        ${agreementNotes ? `
-                        <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 10px; margin: 16px 0;">
-                            <div style="font-weight: 600; color: #92400e; font-size: 13px; margin-bottom: 6px;">Agreement Notes</div>
-                            <div style="font-size: 13px; color: #78350f;">${agreementNotes}</div>
-                        </div>
-                        ` : ""}
-
-                        <div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid #e5e7eb; text-align: center;">
-                            <p style="font-size: 12px; color: #94a3b8; margin: 0;">Tether Tasks — Task management made simple</p>
-                        </div>
-                    </div>
-                </div>
-            `;
-
-            try {
-                await ses.send(
-                    new SendEmailCommand({
-                        Source: "no-reply@tethertasks.com",
-                        Destination: { ToAddresses: [adminEmail] },
-                        Message: {
-                            Subject: { Data: `Welcome to Tether Tasks — Your ${pilotDurationDays}-Day Pilot` },
-                            Body: {
-                                Html: { Data: emailHtml },
-                                Text: { Data: `Welcome to Tether Tasks! Your ${pilotDurationDays}-day pilot for ${companyName} is ready. Log in at app.tethertasks.com with the credentials sent to ${adminEmail}.` },
-                            },
-                        },
-                    })
-                );
-
-                await client.models.Tenant.update({
-                    id: tenantId,
-                    pilotConfirmationSentAt: new Date().toISOString(),
-                });
-            } catch (emailErr) {
-                console.warn("SES email send failed (non-fatal):", emailErr);
-            }
-
-            /* =========================================================
-               11. INVITATION + AUDIT LOG
+               10. INVITATION + AUDIT LOG
             ========================================================= */
             const now = new Date();
             const expiresAt = new Date(now);
@@ -588,7 +508,7 @@ export const handler: Schema["createPilot"]["functionHandler"] =
                 success: true,
                 tenantId,
                 agreementS3Key: s3Key,
-                message: "Pilot created — workspace provisioned and agreement emailed",
+                message: "Pilot created — workspace provisioned and agreement generated",
             };
 
         } catch (err: any) {

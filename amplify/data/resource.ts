@@ -9,6 +9,7 @@ import { submitContactRequestFn } from '../functions/submit-contact-request/reso
 import { deleteOrganizationFn } from '../functions/delete-organization/resource';
 import { getPlatformAnalyticsFn } from '../functions/get-platform-analytics/resource';
 import { createPilotFn } from '../functions/create-pilot/resource';
+import { sendDueDateRemindersFn } from '../functions/send-due-date-reminders/resource';
 
 const schema = a.schema({
 
@@ -23,7 +24,7 @@ const schema = a.schema({
     TaskPriority: a.enum(['LOW', 'MEDIUM', 'HIGH', 'URGENT']),
 
     NotificationType: a.enum([
-        'TASK_DELETE_REQUEST', 'TASK_ASSIGNED', 'TASK_UPDATED', 'TASK_COMPLETED', 'BOARD_ASSIGNED', 'INVITED_TO_WORKSPACE', 'CONTACT_REQUEST'
+        'TASK_DELETE_REQUEST', 'TASK_ASSIGNED', 'TASK_UPDATED', 'TASK_COMPLETED', 'BOARD_ASSIGNED', 'INVITED_TO_WORKSPACE', 'CONTACT_REQUEST', 'TASK_DUE_REMINDER', 'TASK_OVERDUE'
     ]),
 
     AuditAction: a.enum(['CREATE', 'UPDATE', 'DELETE', 'INVITE', 'REMOVE', 'LOGIN', 'LOGOUT', 'ASSIGN']),
@@ -620,7 +621,8 @@ const schema = a.schema({
         allow.resource(submitContactRequestFn),
         allow.resource(deleteOrganizationFn),
         allow.resource(getPlatformAnalyticsFn),
-        allow.resource(createPilotFn)
+        allow.resource(createPilotFn),
+        allow.resource(sendDueDateRemindersFn)
     ]);
 
 export type Schema = ClientSchema<typeof schema>;

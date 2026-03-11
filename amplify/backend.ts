@@ -1,5 +1,7 @@
 import { defineBackend } from '@aws-amplify/backend';
 import { PolicyStatement, Effect } from 'aws-cdk-lib/aws-iam';
+import { Rule, Schedule } from 'aws-cdk-lib/aws-events';
+import { LambdaFunction } from 'aws-cdk-lib/aws-events-targets';
 import { auth } from './auth/resource';
 import { createTenantAdminFn } from './functions/create-tenant-admin/resource';
 import { deleteTenantFn } from './functions/delete-tenant/resource';
@@ -10,6 +12,7 @@ import { submitContactRequestFn } from './functions/submit-contact-request/resou
 import { deleteOrganizationFn } from './functions/delete-organization/resource';
 import { getPlatformAnalyticsFn } from './functions/get-platform-analytics/resource';
 import { createPilotFn } from './functions/create-pilot/resource';
+import { sendDueDateRemindersFn } from './functions/send-due-date-reminders/resource';
 import { storage } from './storage/resource';
 import { data } from './data/resource';
 
@@ -27,6 +30,7 @@ const backend = defineBackend({
   deleteOrganizationFn,
   getPlatformAnalyticsFn,
   createPilotFn,
+  sendDueDateRemindersFn,
 });
 
 // Configure createTenantAdmin function
@@ -190,4 +194,23 @@ backend.createPilotFn.resources.lambda.addToRolePolicy(
 backend.createPilotFn.addEnvironment(
   "PILOT_BUCKET_NAME",
   backend.storage.resources.bucket.bucketName
+);
+
+// SES access for due date reminder emails
+backend.sendDueDateRemindersFn.resources.lambda.addToRolePolicy(
+  new PolicyStatement({
+    effect: Effect.ALLOW,
+    actions: ["ses:SendEmail", "ses:SendRawEmail"],
+    resources: ["*"],
+  })
+);
+
+// EventBridge schedule: run daily at 8:00 AM UTC
+const dueDateRule = new Rule(
+  backend.sendDueDateRemindersFn.resources.lambda.stack,
+  'DueDateReminderSchedule',
+  { schedule: Schedule.cron({ minute: '0', hour: '8' }) }
+);
+dueDateRule.addTarget(
+  new LambdaFunction(backend.sendDueDateRemindersFn.resources.lambda)
 );

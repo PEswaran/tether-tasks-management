@@ -7,6 +7,7 @@ import { trackEvent } from "./libs/analytics";
 
 const LandingPage = lazy(() => import("./features/auth/pages/LandingPage"));
 const ContactPage = lazy(() => import("./features/auth/pages/ContactPage"));
+const PilotRequestPage = lazy(() => import("./features/auth/pages/PilotRequestPage"));
 const Login = lazy(() => import("./features/auth/pages/Login"));
 
 function PublicLanding() {
@@ -26,6 +27,11 @@ function PublicLanding() {
 function PublicContact() {
   const navigate = useNavigate();
   return <ContactPage onBack={() => navigate("/")} />;
+}
+
+function PublicPilot() {
+  const navigate = useNavigate();
+  return <PilotRequestPage onBack={() => navigate("/")} />;
 }
 
 type PublicLoginProps = {
@@ -90,6 +96,7 @@ export default function AppShell() {
       <Routes>
         <Route path="/" element={<PublicLanding />} />
         <Route path="/contact" element={<PublicContact />} />
+        <Route path="/pilot" element={<PublicPilot />} />
         <Route
           path="/login"
           element={

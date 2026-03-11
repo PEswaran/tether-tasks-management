@@ -9,18 +9,17 @@ import {
   trackSignupSubmitSuccess,
 } from "../../../libs/analytics/signupFunnel";
 
-interface ContactPageProps {
+interface PilotRequestPageProps {
   onBack: () => void;
 }
 
-export default function ContactPage({ onBack }: ContactPageProps) {
+export default function PilotRequestPage({ onBack }: PilotRequestPageProps) {
   const [form, setForm] = useState({
     name: "",
     email: "",
     companyName: "",
-    phone: "",
-    teamSize: "",
     numberOfOrgs: "",
+    teamSize: "",
     businessType: "",
     message: "",
   });
@@ -31,11 +30,10 @@ export default function ContactPage({ onBack }: ContactPageProps) {
   const client = dataClient();
 
   useEffect(() => {
-    trackEvent("sign_up_page_view", { page: "contact" });
+    trackEvent("sign_up_page_view", { page: "pilot" });
   }, []);
 
   useEffect(() => {
-    // Feature: Signup Funnel Analytics - track signup/contact page view.
     trackSignupPageView();
   }, []);
 
@@ -49,9 +47,8 @@ export default function ContactPage({ onBack }: ContactPageProps) {
     e.preventDefault();
     setError("");
     setSubmitting(true);
-    trackEvent("sign_up_submit_attempt", { page: "contact" });
+    trackEvent("sign_up_submit_attempt", { page: "pilot" });
 
-    // Feature: Signup Funnel Analytics - track submit attempts with non-PII config.
     trackSignupSubmitAttempt({
       teamSize: form.teamSize,
       numberOfOrgs: form.numberOfOrgs,
@@ -64,9 +61,8 @@ export default function ContactPage({ onBack }: ContactPageProps) {
           name: form.name,
           email: form.email,
           companyName: form.companyName,
-          phone: form.phone || undefined,
-          teamSize: form.teamSize || undefined,
           numberOfOrgs: form.numberOfOrgs || undefined,
+          teamSize: form.teamSize || undefined,
           businessType: form.businessType || undefined,
           message: form.message,
         },
@@ -75,17 +71,15 @@ export default function ContactPage({ onBack }: ContactPageProps) {
 
       if (res.errors?.length) {
         trackEvent("sign_up_submit_error", {
-          page: "contact",
+          page: "pilot",
           error_type: "graphql_error",
         });
         setError(res.errors[0].message);
-        // Feature: Signup Funnel Analytics - track mutation-level error.
         trackSignupSubmitError("graphql_error");
       } else if (res.data?.success) {
-        trackEvent("sign_up", { method: "contact_form" });
-        trackEvent("generate_lead", { source: "contact_form" });
+        trackEvent("sign_up", { method: "pilot_form" });
+        trackEvent("generate_lead", { source: "pilot_form" });
         setSubmitted(true);
-        // Feature: Signup Funnel Analytics - track successful signup request.
         trackSignupSubmitSuccess({
           teamSize: form.teamSize,
           numberOfOrgs: form.numberOfOrgs,
@@ -93,20 +87,18 @@ export default function ContactPage({ onBack }: ContactPageProps) {
         });
       } else {
         trackEvent("sign_up_submit_error", {
-          page: "contact",
+          page: "pilot",
           error_type: "unknown_response",
         });
         setError(res.data?.message || "Something went wrong. Please try again.");
-        // Feature: Signup Funnel Analytics - track business-level failure response.
         trackSignupSubmitError("submission_rejected");
       }
     } catch (err: any) {
       trackEvent("sign_up_submit_error", {
-        page: "contact",
+        page: "pilot",
         error_type: "exception",
       });
       setError(err.message || "Something went wrong. Please try again.");
-      // Feature: Signup Funnel Analytics - track runtime/network errors.
       trackSignupSubmitError("request_exception");
     } finally {
       setSubmitting(false);
@@ -130,15 +122,15 @@ export default function ContactPage({ onBack }: ContactPageProps) {
         </div>
       </nav>
 
-      {/* Contact Form Section */}
+      {/* Pilot Request Form Section */}
       <section className="contact-section">
         {submitted ? (
           <div className="contact-success">
             <CheckCircle size={56} />
             <h2>Thank You!</h2>
             <p>
-              Your request has been submitted successfully. Our team will review
-              your information and get in touch shortly.
+              Your pilot request has been submitted successfully. Our team will
+              review your information and get in touch shortly to set up your pilot.
             </p>
             <button
               className="landing-btn landing-btn-primary landing-btn-lg"
@@ -150,10 +142,10 @@ export default function ContactPage({ onBack }: ContactPageProps) {
         ) : (
           <div className="contact-form-wrapper">
             <div className="contact-header">
-              <h1>Get Started with TetherTasks</h1>
+              <h1>Start a Pilot with TetherTasks</h1>
               <p>
-                Tell us about your business and how many organizations you
-                manage. We'll help you find the right plan.
+                Tell us about your business and pilot needs. We'll set up a
+                guided rollout tailored to your team.
               </p>
             </div>
 
@@ -185,30 +177,17 @@ export default function ContactPage({ onBack }: ContactPageProps) {
                 </div>
               </div>
 
-              <div className="contact-form-row">
-                <div className="contact-form-field">
-                  <label htmlFor="companyName">Company Name *</label>
-                  <input
-                    id="companyName"
-                    name="companyName"
-                    type="text"
-                    required
-                    value={form.companyName}
-                    onChange={handleChange}
-                    placeholder="Acme Inc."
-                  />
-                </div>
-                <div className="contact-form-field">
-                  <label htmlFor="phone">Phone</label>
-                  <input
-                    id="phone"
-                    name="phone"
-                    type="tel"
-                    value={form.phone}
-                    onChange={handleChange}
-                    placeholder="+1 (555) 123-4567"
-                  />
-                </div>
+              <div className="contact-form-field">
+                <label htmlFor="companyName">Company Name *</label>
+                <input
+                  id="companyName"
+                  name="companyName"
+                  type="text"
+                  required
+                  value={form.companyName}
+                  onChange={handleChange}
+                  placeholder="Acme Inc."
+                />
               </div>
 
               <div className="contact-form-row">
@@ -227,15 +206,33 @@ export default function ContactPage({ onBack }: ContactPageProps) {
                     <option value="10+">10+ companies</option>
                   </select>
                 </div>
+              </div>
+
+              <div className="contact-form-row">
                 <div className="contact-form-field">
-                  <label htmlFor="businessType">Type of Business</label>
+                  <label htmlFor="teamSize">Team Size</label>
+                  <select
+                    id="teamSize"
+                    name="teamSize"
+                    value={form.teamSize}
+                    onChange={handleChange}
+                  >
+                    <option value="">Select team size</option>
+                    <option value="1-5">1–5 people</option>
+                    <option value="6-20">6–20 people</option>
+                    <option value="21-50">21–50 people</option>
+                    <option value="50+">50+ people</option>
+                  </select>
+                </div>
+                <div className="contact-form-field">
+                  <label htmlFor="businessType">Use Case / Industry</label>
                   <select
                     id="businessType"
                     name="businessType"
                     value={form.businessType}
                     onChange={handleChange}
                   >
-                    <option value="">Select your business type</option>
+                    <option value="">Select your use case</option>
                     <option value="consulting">Consulting</option>
                     <option value="agency">Agency</option>
                     <option value="franchise">Franchise / Multi-location</option>
@@ -247,23 +244,7 @@ export default function ContactPage({ onBack }: ContactPageProps) {
               </div>
 
               <div className="contact-form-field">
-                <label htmlFor="teamSize">Team Size</label>
-                <select
-                  id="teamSize"
-                  name="teamSize"
-                  value={form.teamSize}
-                  onChange={handleChange}
-                >
-                  <option value="">Select team size</option>
-                  <option value="1-5">1–5 people</option>
-                  <option value="6-20">6–20 people</option>
-                  <option value="21-50">21–50 people</option>
-                  <option value="50+">50+ people</option>
-                </select>
-              </div>
-
-              <div className="contact-form-field">
-                <label htmlFor="message">Message *</label>
+                <label htmlFor="message">Tell us about your pilot needs *</label>
                 <textarea
                   id="message"
                   name="message"
@@ -271,7 +252,7 @@ export default function ContactPage({ onBack }: ContactPageProps) {
                   rows={4}
                   value={form.message}
                   onChange={handleChange}
-                  placeholder="Tell us about your team and what you're looking for..."
+                  placeholder="Describe your team structure, goals for the pilot, and any specific requirements..."
                 />
               </div>
 
@@ -283,7 +264,7 @@ export default function ContactPage({ onBack }: ContactPageProps) {
                 disabled={submitting}
               >
                 {submitting ? "Submitting..." : (
-                  <>Submit Request <Send size={18} /></>
+                  <>Submit Pilot Request <Send size={18} /></>
                 )}
               </button>
             </form>

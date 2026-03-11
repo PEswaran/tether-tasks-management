@@ -526,7 +526,7 @@ export default function LandingPage({ onSignIn, onGetStarted }: LandingPageProps
             className="landing-btn landing-btn-primary"
             onClick={() => {
               trackSignupStart("pilot_banner_contact_sales");
-              navigate("/contact");
+              navigate("/pilot");
             }}
           >
             Start a Pilot
