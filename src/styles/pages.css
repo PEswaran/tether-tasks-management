@@ -34,6 +34,13 @@
   gap: 12px;
 }
 
+/* Reports header */
+.reports-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
 /* ===============================
    DASHBOARD — ANALYTICAL
 ================================ */
@@ -2404,4 +2411,39 @@ input {
 .sv-content {
   padding: 28px;
   overflow-y: auto;
+}
+
+/* Error boundary fallback */
+.error-fallback {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--text);
+}
+
+.error-fallback-icon {
+  color: var(--danger);
+  margin-bottom: 16px;
+}
+
+.error-fallback-title {
+  font-size: 20px;
+  font-weight: 700;
+  margin: 0 0 8px;
+}
+
+.error-fallback-message {
+  font-size: 14px;
+  color: var(--muted);
+  margin: 0 0 24px;
+  max-width: 400px;
+  word-break: break-word;
+}
+
+.error-fallback-actions {
+  display: flex;
+  gap: 12px;
 }

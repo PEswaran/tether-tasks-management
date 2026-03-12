@@ -9,6 +9,7 @@ import { getCurrentUser } from "aws-amplify/auth";
 import DemoBanner from "../components/ui/demo-banner";
 import { clearDemoFlag } from "../config/demo";
 import { logAudit } from "../libs/audit";
+import ErrorBoundary from "../shared-components/ErrorBoundary";
 
 type NavItem = {
     label: string;
@@ -427,7 +428,9 @@ export default function AppShell({
                     </div>
 
                     <div className="app-content">
-                        <Outlet key={`${tenantId || "no-tenant"}:${workspaceId || "no-workspace"}`} />
+                        <ErrorBoundary level="content">
+                            <Outlet key={`${tenantId || "no-tenant"}:${workspaceId || "no-workspace"}`} />
+                        </ErrorBoundary>
                     </div>
 
                 </main>

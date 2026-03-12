@@ -12,6 +12,7 @@ import useGlobalNotifications from "./hooks/useGlobalNotifications";
 import GlobalTaskModal from "./components/shared/modals/global-task-modal";
 import { ConfirmProvider } from "./shared-components/confirm-context";
 import { useWorkspace } from "./shared-components/workspace-context";
+import ErrorBoundary from "./shared-components/ErrorBoundary";
 
 const Dashboard = lazy(() => import("./features/platform-admin/pages/Dashboard"));
 const Tenants = lazy(() => import("./features/platform-admin/pages/TenantsPage"));
@@ -41,6 +42,8 @@ const AnalyticsPage = lazy(() => import("./features/platform-admin/pages/Analyti
 const PilotsPage = lazy(() => import("./features/platform-admin/pages/PilotsPage"));
 const PilotDetail = lazy(() => import("./features/platform-admin/pages/PilotDetail"));
 const AgreementsPage = lazy(() => import("./features/platform-admin/pages/AgreementsPage"));
+const ReportsPage = lazy(() => import("./features/tenant-admin/pages/ReportsPage"));
+const ErrorTestPage = lazy(() => import("./test/ErrorTestPage"));
 
 function RouteFallback() {
   return (
@@ -90,6 +93,7 @@ export default function App() {
   useGlobalNotifications();
 
   return (
+    <ErrorBoundary level="app">
     <ConfirmProvider>
       <WorkspaceProvider>
         <Suspense fallback={<RouteFallback />}>
@@ -137,6 +141,7 @@ export default function App() {
             <Route path="tasks" element={<TasksPage role="TENANT_ADMIN" />} />
             <Route path="audit" element={<AuditLogsPage />} />
             <Route path="notifications" element={<NotificationsPage />} />
+            <Route path="reports" element={<ReportsPage />} />
           </Route>
 
           {/* ================= OWNER ================= */}
@@ -170,6 +175,11 @@ export default function App() {
             <Route path="notifications" element={<NotificationsPage />} />
           </Route>
 
+          {/* DEV-ONLY: test routes for Playwright */}
+          {import.meta.env.DEV && (
+            <Route path="/test/error-boundary" element={<ErrorTestPage />} />
+          )}
+
         </Routes>
         </Suspense>
         <GlobalTaskModal />
@@ -182,5 +192,6 @@ export default function App() {
         />
       </WorkspaceProvider>
     </ConfirmProvider>
+    </ErrorBoundary>
   );
 }

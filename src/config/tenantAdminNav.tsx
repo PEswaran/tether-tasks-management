@@ -1,4 +1,4 @@
-import { Bell, Building2, Kanban, LayoutDashboard, Layers, Users } from "lucide-react";
+import { BarChart3, Bell, Building2, Kanban, LayoutDashboard, Layers, Users } from "lucide-react";
 
 export const tenantAdminNav = [
     {
@@ -11,6 +11,12 @@ export const tenantAdminNav = [
         label: "Notifications",
         path: "/tenant/notifications",
         icon: <Bell size={18} />,
+        section: "Overview",
+    },
+    {
+        label: "Reports",
+        path: "/tenant/reports",
+        icon: <BarChart3 size={18} />,
         section: "Overview",
     },
     {
