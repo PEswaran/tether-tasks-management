@@ -74,6 +74,8 @@ export default function RequestTaskDeleteModal({ task, profiles, onClose, onRequ
                 </p>
 
                 <textarea
+                    id="task-delete-request-reason"
+                    name="task_delete_request_reason"
                     placeholder="Reason for deletion (required)"
                     value={reason}
                     onChange={(e) => setReason(e.target.value)}

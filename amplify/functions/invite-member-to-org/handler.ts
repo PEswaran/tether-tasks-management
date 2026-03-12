@@ -22,7 +22,7 @@ const cognito = new CognitoIdentityProviderClient({});
 export const handler: Schema["inviteMemberToOrg"]["functionHandler"] =
     async (event) => {
 
-        const { email, workspaceId, tenantId, role } = event.arguments;
+        const { email, organizationId, tenantId, role } = event.arguments as any;
         const userPoolId = process.env.USER_POOL_ID;
 
         if (!userPoolId) throw new Error("Missing USER_POOL_ID");
@@ -37,6 +37,10 @@ export const handler: Schema["inviteMemberToOrg"]["functionHandler"] =
             /* =========================================================
                🔒 BULLETPROOF ROLE PROTECTION
             ========================================================= */
+
+            if (!organizationId) {
+                return { success: false, message: "Organization is required", invitationId: null };
+            }
 
             if (!role) {
                 return { success: false, message: "Role is required", invitationId: null };
@@ -67,7 +71,7 @@ export const handler: Schema["inviteMemberToOrg"]["functionHandler"] =
 
                 const isOrgOwner = callerMemberships.data.some(
                     (m: any) =>
-                        m.workspaceId === workspaceId &&
+                        m.organizationId === organizationId &&
                         m.role === "OWNER" &&
                         m.status === "ACTIVE"
                 );
@@ -87,8 +91,8 @@ export const handler: Schema["inviteMemberToOrg"]["functionHandler"] =
 
             if (role === "OWNER") {
                 const existingOwner =
-                    await client.models.Membership.listMembershipsByWorkspace(
-                        { workspaceId }
+                    await client.models.Membership.listMembershipsByOrganization(
+                        { organizationId }
                     );
 
                 const hasActiveOwner = existingOwner.data.some(
@@ -104,8 +108,8 @@ export const handler: Schema["inviteMemberToOrg"]["functionHandler"] =
                 }
 
                 const existingInvites =
-                    await client.models.Invitation.listInvitesByWorkspace(
-                        { workspaceId }
+                    await client.models.Invitation.listInvitesByOrganization(
+                        { organizationId }
                     );
 
                 const hasPendingOwner = existingInvites.data.some(
@@ -145,10 +149,13 @@ export const handler: Schema["inviteMemberToOrg"]["functionHandler"] =
                 if (err.name === "UserNotFoundException") {
                     isNewUser = true;
 
+                    const tempPassword = `Tether${crypto.randomUUID().slice(0, 6)}!`;
+
                     const createUser = await cognito.send(
                         new AdminCreateUserCommand({
                             UserPoolId: userPoolId,
                             Username: email,
+                            TemporaryPassword: tempPassword,
                             UserAttributes: [
                                 { Name: "email", Value: email },
                                 { Name: "email_verified", Value: "true" },
@@ -199,13 +206,13 @@ export const handler: Schema["inviteMemberToOrg"]["functionHandler"] =
 
             await client.models.Notification.create({
                 tenantId,
-                workspaceId,
+                organizationId,
                 recipientId: userSub,
                 senderId: invitedBy,
                 type: "INVITED_TO_WORKSPACE",
-                title: "You've been invited to a workspace",
+                title: "You've been invited to an organization",
                 message: `You've been invited as ${role}`,
-                link: "/app",
+                resourceId: organizationId,
                 isRead: false,
                 emailSent: false,
                 createdAt: new Date().toISOString(),
@@ -222,8 +229,8 @@ export const handler: Schema["inviteMemberToOrg"]["functionHandler"] =
                     await client.mutations.sendAssignmentEmail({
                         userSub,
                         type: "INVITE",
-                        itemName: "Workspace",
-                        workspaceId,
+                        itemName: "Organization",
+                        workspaceId: organizationId,
                     });
                 } catch (emailErr) {
                     console.warn("sendAssignmentEmail failed (non-critical):", emailErr);
@@ -241,7 +248,7 @@ export const handler: Schema["inviteMemberToOrg"]["functionHandler"] =
 
             const invitation = await client.models.Invitation.create({
                 tenantId,
-                workspaceId,
+                organizationId,
                 email,
                 role: role as any,
                 status: "PENDING",

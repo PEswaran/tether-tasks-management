@@ -47,6 +47,18 @@ export const handler: Schema["removeTenantAndData"]["functionHandler"] =
                 (args) => client.models.Membership.list(args),
                 { filter: { tenantId: { eq: tenantId } } }
             );
+            const organizations = await listAll(
+                (args) => client.models.Organization.list(args),
+                { filter: { tenantId: { eq: tenantId } } }
+            );
+            const workspaces = await listAll(
+                (args) => client.models.Workspace.list(args),
+                { filter: { tenantId: { eq: tenantId } } }
+            );
+            const userProfiles = await listAll(
+                (args) => client.models.UserProfile.list(args),
+                { filter: { tenantId: { eq: tenantId } } }
+            );
 
             const activeNonAdmins = memberships.filter(
                 (m: any) => m.role !== "TENANT_ADMIN" && m.status !== "REMOVED"
@@ -108,60 +120,85 @@ export const handler: Schema["removeTenantAndData"]["functionHandler"] =
                 await client.models.AuditLog.delete({ id: (log as any).id });
             }
 
-            // 6. Delete all Organizations
-            const orgs = await listAll(
-                (args) => client.models.Workspace.list(args),
-                { filter: { tenantId: { eq: tenantId } } }
-            );
-            for (const org of orgs) {
-                await client.models.Workspace.delete({ id: (org as any).id });
+            // 6. Delete all tenant pilot agreements
+            try {
+                const agreements = await listAll(
+                    (args) => client.models.PilotAgreement.list(args),
+                    { filter: { tenantId: { eq: tenantId } } }
+                );
+                for (const agreement of agreements) {
+                    await client.models.PilotAgreement.delete({ id: (agreement as any).id });
+                }
+            } catch {
+                // Safe to skip if model/table state differs across envs
             }
 
-            // 7. For each Membership: delete Cognito user, UserProfile, then Membership
+            // 7. Delete all Workspaces
+            for (const workspace of workspaces) {
+                await client.models.Workspace.delete({ id: (workspace as any).id });
+            }
+
+            // 8. Delete all Organizations
+            for (const org of organizations) {
+                await client.models.Organization.delete({ id: (org as any).id });
+            }
+
+            // 9. For each Membership: delete Cognito user only if they don't belong elsewhere
+            const processedUsers = new Set<string>();
             for (const mem of memberships) {
                 const m = mem as any;
 
-                // Delete Cognito user by looking up via userSub
-                if (m.userSub) {
-                    try {
-                        // Get Cognito username from sub
-                        const userInfo = await cognito.send(
-                            new AdminGetUserCommand({
+                if (!m.userSub || processedUsers.has(m.userSub)) continue;
+                processedUsers.add(m.userSub);
+
+                const allUserMemberships = await listAll(
+                    (args) => client.models.Membership.list(args),
+                    { filter: { userSub: { eq: m.userSub } } }
+                );
+                const hasMembershipOutsideTenant = allUserMemberships.some(
+                    (userMembership: any) =>
+                        userMembership.id !== m.id &&
+                        userMembership.tenantId !== tenantId &&
+                        userMembership.status !== "REMOVED"
+                );
+
+                if (hasMembershipOutsideTenant) continue;
+
+                try {
+                    const userInfo = await cognito.send(
+                        new AdminGetUserCommand({
+                            UserPoolId: userPoolId,
+                            Username: m.userSub,
+                        })
+                    );
+
+                    if (userInfo.Username) {
+                        await cognito.send(
+                            new AdminDeleteUserCommand({
                                 UserPoolId: userPoolId,
-                                Username: m.userSub,
+                                Username: userInfo.Username,
                             })
                         );
-
-                        if (userInfo.Username) {
-                            await cognito.send(
-                                new AdminDeleteUserCommand({
-                                    UserPoolId: userPoolId,
-                                    Username: userInfo.Username,
-                                })
-                            );
-                        }
-                    } catch (err: any) {
-                        // User may already be deleted — skip
-                        if (err.name !== "UserNotFoundException") {
-                            console.warn(`Failed to delete Cognito user ${m.userSub}:`, err.message);
-                        }
+                    }
+                } catch (err: any) {
+                    // User may already be deleted — skip
+                    if (err.name !== "UserNotFoundException") {
+                        console.warn(`Failed to delete Cognito user ${m.userSub}:`, err.message);
                     }
                 }
-
-                // Delete UserProfile
-                if (m.userId) {
-                    try {
-                        await client.models.UserProfile.delete({ userId: m.userId });
-                    } catch {
-                        // Profile may not exist — skip
-                    }
-                }
-
-                // Delete Membership
-                await client.models.Membership.delete({ id: m.id });
             }
 
-            // 8. Delete the Tenant record
+            // 10. Delete tenant memberships
+            for (const mem of memberships) {
+                await client.models.Membership.delete({ id: (mem as any).id });
+            }
+
+            // 11. Delete tenant-scoped user profiles
+            for (const profile of userProfiles) {
+                await client.models.UserProfile.delete({ userId: (profile as any).userId });
+            }
+
+            // 12. Delete the Tenant record
             const tenantRecord = await client.models.Tenant.get({ id: tenantId });
             if (tenantRecord.data) {
                 await client.models.Tenant.delete({ id: tenantRecord.data.id });

@@ -19,7 +19,7 @@ export default function EditOrganizationModal({ organization, onClose, onUpdated
         setLoading(true);
 
         try {
-            await client.models.Workspace.update({
+            await client.models.Organization.update({
                 id: organization.id,
                 name,
                 description: description || undefined,
@@ -39,13 +39,19 @@ export default function EditOrganizationModal({ organization, onClose, onUpdated
             <div className="modal">
                 <h2>Edit Organization</h2>
 
+                <label htmlFor="edit-org-name">Organization name</label>
                 <input
+                    id="edit-org-name"
+                    name="edit_org_name"
                     placeholder="Organization name"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                 />
 
+                <label htmlFor="edit-org-description">Description (optional)</label>
                 <input
+                    id="edit-org-description"
+                    name="edit_org_description"
                     placeholder="Description (optional)"
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}

@@ -55,7 +55,7 @@ export const handler = async (event: any) => {
                 }
             }
         },
-        Source: "noreply@tethertasks.cloudling88.com"
+        Source: "noreply@tethertasks.com"
     }));
 
     return { ok: true };

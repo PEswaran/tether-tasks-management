@@ -1,39 +1,46 @@
-import {
-    LayoutDashboard,
-    Users,
-    FolderKanban,
-    CheckSquare,
-    Shield
-} from "lucide-react";
+import { BarChart3, Bell, Building2, Kanban, LayoutDashboard, Layers, Users } from "lucide-react";
 
 export const tenantAdminNav = [
     {
-        label: "Dashboard",
+        label: "My Dashboard",
         path: "/tenant",
-        icon: <LayoutDashboard size={18} />
+        icon: <LayoutDashboard size={18} />,
+        section: "Overview",
+    },
+    {
+        label: "Notifications",
+        path: "/tenant/notifications",
+        icon: <Bell size={18} />,
+        section: "Overview",
+    },
+    {
+        label: "Reports",
+        path: "/tenant/reports",
+        icon: <BarChart3 size={18} />,
+        section: "Overview",
+    },
+    {
+        label: "Organizations",
+        path: "/tenant/organizations",
+        icon: <Building2 size={18} />,
+        section: "Management Controls",
     },
     {
         label: "Workspaces",
-        path: "/tenant/organizations",
-        icon: <FolderKanban size={18} />
+        path: "/tenant/workspaces",
+        icon: <Layers size={18} />,
+        section: "Management Controls",
     },
     {
-        label: "Members",
-        path: "/tenant/members",
+        label: "User Directory",
+        path: "/tenant/user-directory",
         icon: <Users size={18} />,
-        section: "Manage"
+        section: "Management Controls",
     },
     {
-        label: "Tasks",
+        label: "Taskboards",
         path: "/tenant/tasks",
-        icon: <CheckSquare size={18} />,
-        parent: "/tenant/organizations",
-        section: "Manage"
+        icon: <Kanban size={18} />,
+        section: "Management Controls",
     },
-    {
-        label: "Audit",
-        path: "/tenant/audit",
-        icon: <Shield size={18} />,
-        section: "Manage"
-    }
 ];

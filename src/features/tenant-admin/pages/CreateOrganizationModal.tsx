@@ -2,39 +2,130 @@ import { useState } from "react";
 import { fetchAuthSession } from "aws-amplify/auth";
 import { dataClient } from "../../../libs/data-client";
 import { useConfirm } from "../../../shared-components/confirm-context";
+import { getPlanLimits, formatPlanLimitMessage } from "../../../libs/planLimits";
+import { logAudit } from "../../../libs/audit";
+
+function ensureString(value: string | null | undefined, label: string): string {
+    if (!value) {
+        throw new Error(`${label} is required`);
+    }
+    return value;
+}
 
 type InviteResult = { email: string; role: string; success: boolean; message: string };
 
+const WORKFLOW_TEMPLATES = [
+    {
+        value: "KANBAN",
+        label: "Kanban Workflow",
+        desc: "Best for ongoing execution across clear stages.",
+        preview: ["Backlog", "In Progress", "Done"],
+        boardSuffix: "Workflow Board",
+        starterTasks: [
+            { title: "Add first priority", status: "TODO", priority: "HIGH" },
+            { title: "Assign active work", status: "IN_PROGRESS", priority: "MEDIUM" },
+            { title: "Review completed work", status: "DONE", priority: "LOW" },
+        ],
+    },
+    {
+        value: "TIMELINE",
+        label: "Timeline Setup",
+        desc: "Best for launches, deadlines, and milestone-driven work.",
+        preview: ["Milestones", "Deadlines", "Launches"],
+        boardSuffix: "Launch Plan",
+        starterTasks: [
+            { title: "Define launch milestone", status: "TODO", priority: "HIGH" },
+            { title: "Confirm delivery deadline", status: "TODO", priority: "HIGH" },
+            { title: "Prepare launch checklist", status: "IN_PROGRESS", priority: "MEDIUM" },
+        ],
+    },
+    {
+        value: "PROCESS",
+        label: "Process Tracker",
+        desc: "Best for repeatable operational workflows and approvals.",
+        preview: ["Intake", "Review", "Complete"],
+        boardSuffix: "Process Tracker",
+        starterTasks: [
+            { title: "Capture new request", status: "TODO", priority: "MEDIUM" },
+            { title: "Review process step", status: "IN_PROGRESS", priority: "MEDIUM" },
+            { title: "Finalize and document", status: "DONE", priority: "LOW" },
+        ],
+    },
+    {
+        value: "LIST",
+        label: "Simple Task List",
+        desc: "Best for lightweight teams that just need a clean starting point.",
+        preview: ["To Do", "Next Up", "Done"],
+        boardSuffix: "Task List",
+        starterTasks: [
+            { title: "Add first team to-do", status: "TODO", priority: "MEDIUM" },
+            { title: "Set upcoming priority", status: "TODO", priority: "LOW" },
+            { title: "Mark a completed win", status: "DONE", priority: "LOW" },
+        ],
+    },
+];
+
 export default function CreateOrganizationModal({ tenantId, onClose, onCreated }: { tenantId: string | null; onClose: () => void; onCreated: () => void }) {
     const client = dataClient();
+    const models = client.models as any;
     const { alert } = useConfirm();
 
-    const [step, setStep] = useState<"create" | "invite" | "summary">("create");
+    const [step, setStep] = useState<"setup" | "invite" | "summary">("setup");
     const [loading, setLoading] = useState(false);
 
-    // Step 1
+    // Step 1 — org + workspace + board config
     const [name, setName] = useState("");
     const [description, setDescription] = useState("");
+    const [boardType, setBoardType] = useState("KANBAN");
+    const [workspaceName, setWorkspaceName] = useState("");
+    const [boardName, setBoardName] = useState("");
 
-    // Step 2 — all invites on one screen
+    // Step 2 — invites
     const [ownerEmail, setOwnerEmail] = useState("");
     const [memberEmails, setMemberEmails] = useState<string[]>([""]);
 
     // Shared
     const [createdOrgId, setCreatedOrgId] = useState("");
+    const [createdWorkspaceId, setCreatedWorkspaceId] = useState("");
+    const [createdBoardId, setCreatedBoardId] = useState("");
     const [inviteResults, setInviteResults] = useState<InviteResult[]>([]);
 
-    // Step 1: create the workspace
+    // Derived defaults
+    const resolvedWorkspaceName = workspaceName.trim() || (name.trim() ? `${name.trim()} Workspace` : "");
+    const selectedTemplate = WORKFLOW_TEMPLATES.find((t) => t.value === boardType) || WORKFLOW_TEMPLATES[0];
+    const resolvedBoardName = boardName.trim() || (name.trim() ? `${name.trim()} ${selectedTemplate.boardSuffix}` : "");
+
+    // ─── Step 1: Create org + workspace + board ───
     async function handleCreate() {
         if (!name.trim()) {
-            await alert({ title: "Missing Name", message: "Enter a workspace name", variant: "warning" });
+            await alert({ title: "Missing Name", message: "Enter an organization name.", variant: "warning" });
             return;
         }
 
         setLoading(true);
         try {
             if (!tenantId) {
-                await alert({ title: "Error", message: "Could not determine tenant", variant: "danger" });
+                await alert({ title: "Error", message: "Could not determine tenant.", variant: "danger" });
+                setLoading(false);
+                return;
+            }
+            const tenantIdForApi: string = ensureString(tenantId, "tenantId");
+
+            // Plan limit check
+            const tenantRes = await models.Tenant.get({ id: tenantIdForApi });
+            const plan = tenantRes.data?.plan;
+            const limits = getPlanLimits(plan);
+
+            const orgCountRes = await models.Organization.list({
+                filter: { tenantId: { eq: tenantIdForApi } },
+            });
+            const existingOrgs = (orgCountRes.data || []).filter((o: any) => o.isActive !== false).length;
+            if (existingOrgs >= limits.orgs) {
+                await alert({
+                    title: "Organization limit reached",
+                    message: `You already have ${existingOrgs} organization(s) (plan: ${plan || "Free"}). ${formatPlanLimitMessage(plan)}`,
+                    variant: "warning",
+                });
                 setLoading(false);
                 return;
             }
@@ -42,30 +133,109 @@ export default function CreateOrganizationModal({ tenantId, onClose, onCreated }
             const session = await fetchAuthSession();
             const sub = session.tokens?.accessToken?.payload?.sub as string;
 
-            const result = await client.models.Workspace.create({
-                tenantId,
+            // 1. Create organization
+            const orgResult = await models.Organization.create({
+                tenantId: tenantIdForApi,
                 name: name.trim(),
                 description: description.trim() || undefined,
                 createdBy: sub,
                 isActive: true,
             });
 
-            if (!result.data?.id) {
-                await alert({ title: "Error", message: "Error creating workspace — no ID returned", variant: "danger" });
+            if (!orgResult.data?.id) {
+                await alert({ title: "Error", message: "Error creating organization — no ID returned.", variant: "danger" });
                 setLoading(false);
                 return;
             }
 
-            setCreatedOrgId(result.data.id);
+            const orgId = orgResult.data.id;
+            setCreatedOrgId(orgId);
+
+            logAudit({
+                tenantId: tenantIdForApi,
+                organizationId: orgId,
+                action: "CREATE",
+                resourceType: "Organization",
+                resourceId: orgId,
+                userId: sub,
+                metadata: { name: name.trim() },
+            });
+
+            // 2. Create default workspace
+            const wsResult = await models.Workspace.create({
+                tenantId: tenantIdForApi,
+                organizationId: orgId,
+                name: resolvedWorkspaceName,
+                isActive: true,
+                createdBy: sub,
+                createdAt: new Date().toISOString(),
+            });
+
+            if (wsResult.data?.id) {
+                setCreatedWorkspaceId(wsResult.data.id);
+
+                logAudit({
+                    tenantId: tenantIdForApi,
+                    organizationId: orgId,
+                    action: "CREATE",
+                    resourceType: "Workspace",
+                    resourceId: wsResult.data.id,
+                    userId: sub,
+                    metadata: { name: resolvedWorkspaceName },
+                });
+
+                // 3. Create first task board
+                const boardResult = await models.TaskBoard.create({
+                    tenantId: tenantIdForApi,
+                    organizationId: orgId,
+                    workspaceId: wsResult.data.id,
+                    name: resolvedBoardName,
+                    boardType,
+                    ownerUserSub: sub,
+                    createdBy: sub,
+                    isActive: true,
+                    createdAt: new Date().toISOString(),
+                });
+
+                if (boardResult.data?.id) {
+                    setCreatedBoardId(boardResult.data.id);
+
+                    logAudit({
+                        tenantId: tenantIdForApi,
+                        organizationId: orgId,
+                        workspaceId: wsResult.data.id,
+                        action: "CREATE",
+                        resourceType: "TaskBoard",
+                        resourceId: boardResult.data.id,
+                        userId: sub,
+                        metadata: { name: resolvedBoardName, boardType },
+                    });
+
+                    for (const task of selectedTemplate.starterTasks) {
+                        await models.Task.create({
+                            tenantId: tenantIdForApi,
+                            organizationId: orgId,
+                            workspaceId: wsResult.data.id,
+                            taskBoardId: boardResult.data.id,
+                            title: task.title,
+                            status: task.status,
+                            priority: task.priority,
+                            createdBy: sub,
+                            createdAt: new Date().toISOString(),
+                        });
+                    }
+                }
+            }
+
             setStep("invite");
         } catch (err) {
             console.error(err);
-            await alert({ title: "Error", message: "Error creating workspace", variant: "danger" });
+            await alert({ title: "Error", message: "Error creating organization.", variant: "danger" });
         }
         setLoading(false);
     }
 
-    // Step 2: send all invites
+    // ─── Step 2: Send invites ───
     async function handleSendInvites() {
         const invites: { email: string; role: string }[] = [];
 
@@ -78,7 +248,6 @@ export default function CreateOrganizationModal({ tenantId, onClose, onCreated }
             .map((e) => e.trim().toLowerCase())
             .filter((e) => e !== "");
 
-        // Duplicate checks
         if (owner && members.includes(owner)) {
             await alert({ title: "Duplicate Email", message: "Owner email also appears in the member list. Please remove the duplicate.", variant: "warning" });
             return;
@@ -106,12 +275,20 @@ export default function CreateOrganizationModal({ tenantId, onClose, onCreated }
             try {
                 const res = await client.mutations.inviteMemberToOrg({
                     email: invite.email,
-                    workspaceId: createdOrgId,
+                    organizationId: createdOrgId,
                     tenantId: tenantId!,
                     role: invite.role,
                 });
 
                 if (res.data?.success) {
+                    logAudit({
+                        tenantId: tenantId!,
+                        organizationId: createdOrgId,
+                        action: "INVITE",
+                        resourceType: "Membership",
+                        resourceId: invite.email,
+                        metadata: { email: invite.email, role: invite.role },
+                    });
                     results.push({ email: invite.email, role: invite.role, success: true, message: "Sent" });
                 } else {
                     const errMsg =
@@ -152,47 +329,88 @@ export default function CreateOrganizationModal({ tenantId, onClose, onCreated }
         setMemberEmails(updated);
     }
 
+
     // ─── Summary ───
     if (step === "summary") {
         return (
             <div className="modal-backdrop">
-                <div className="modal modern">
+                <div className="modal modern" style={{ width: 680 }}>
                     <div className="modal-header">
-                        <h2>Invitations Sent</h2>
-                        <div className="modal-sub">Results for {name}</div>
+                        <h2>All Set!</h2>
+                        <div className="modal-sub">Your organization is ready to use</div>
                     </div>
 
                     <div className="modal-body">
-                        {inviteResults.map((r, i) => (
-                            <div
-                                key={i}
-                                style={{
-                                    display: "flex",
-                                    justifyContent: "space-between",
-                                    alignItems: "center",
-                                    padding: "10px 0",
-                                    borderBottom: "1px solid #f1f5f9",
-                                }}
-                            >
-                                <div>
-                                    <div style={{ fontWeight: 500 }}>{r.email}</div>
-                                    <div style={{ fontSize: 12, color: "#64748b" }}>{r.role}</div>
+                        {/* What was created */}
+                        <div style={styles.createdSummary}>
+                            <div style={styles.createdItem}>
+                                <div style={styles.createdIcon}>
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" /></svg>
                                 </div>
-                                <span
-                                    className={`badge ${r.success ? "green" : "red"}`}
-                                >
-                                    {r.success ? "Sent" : "Failed"}
-                                </span>
+                                <div>
+                                    <div style={styles.createdLabel}>Organization</div>
+                                    <div style={styles.createdValue}>{name}</div>
+                                </div>
                             </div>
-                        ))}
+                            {createdWorkspaceId && (
+                                <div style={styles.createdItem}>
+                                    <div style={styles.createdIcon}>
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" /></svg>
+                                    </div>
+                                    <div>
+                                        <div style={styles.createdLabel}>Workspace</div>
+                                        <div style={styles.createdValue}>{resolvedWorkspaceName}</div>
+                                    </div>
+                                </div>
+                            )}
+                            {createdBoardId && (
+                                <div style={styles.createdItem}>
+                                    <div style={styles.createdIcon}>
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" /></svg>
+                                    </div>
+                                    <div>
+                                        <div style={styles.createdLabel}>Board ({selectedTemplate.label})</div>
+                                        <div style={styles.createdValue}>{resolvedBoardName}</div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
 
-                        {inviteResults.some((r) => !r.success) && (
-                            <div style={{ marginTop: 12, fontSize: 13, color: "#dc2626" }}>
-                                {inviteResults
-                                    .filter((r) => !r.success)
-                                    .map((r) => `${r.email}: ${r.message}`)
-                                    .join(". ")}
-                            </div>
+                        {/* Invite results */}
+                        {inviteResults.length > 0 && (
+                            <>
+                                <div style={styles.divider} />
+                                <div style={{ fontSize: 13, fontWeight: 600, color: "#334155", marginBottom: 8 }}>Invitations</div>
+                                {inviteResults.map((r, i) => (
+                                    <div
+                                        key={i}
+                                        style={{
+                                            display: "flex",
+                                            justifyContent: "space-between",
+                                            alignItems: "center",
+                                            padding: "8px 0",
+                                            borderBottom: "1px solid #f1f5f9",
+                                        }}
+                                    >
+                                        <div>
+                                            <div style={{ fontWeight: 500, fontSize: 14 }}>{r.email}</div>
+                                            <div style={{ fontSize: 12, color: "#64748b" }}>{r.role}</div>
+                                        </div>
+                                        <span className={`badge ${r.success ? "green" : "red"}`}>
+                                            {r.success ? "Sent" : "Failed"}
+                                        </span>
+                                    </div>
+                                ))}
+
+                                {inviteResults.some((r) => !r.success) && (
+                                    <div style={{ marginTop: 8, fontSize: 12, color: "#dc2626" }}>
+                                        {inviteResults
+                                            .filter((r) => !r.success)
+                                            .map((r) => `${r.email}: ${r.message}`)
+                                            .join(". ")}
+                                    </div>
+                                )}
+                            </>
                         )}
                     </div>
 
@@ -206,30 +424,93 @@ export default function CreateOrganizationModal({ tenantId, onClose, onCreated }
         );
     }
 
-    // ─── Step 1: Create Workspace ───
-    if (step === "create") {
+    // ─── Step 1: Organization Setup ───
+    if (step === "setup") {
         return (
             <div className="modal-backdrop">
-                <div className="modal modern">
+                <div className="modal modern" style={{ width: 680 }}>
                     <div className="modal-header">
-                        <h2>Create Workspace</h2>
-                        <div className="modal-sub">Set up a new workspace for your team</div>
+                        <div style={styles.stepIndicator}>Step 1 of 2</div>
+                        <h2>Create Organization</h2>
                     </div>
 
                     <div className="modal-body">
-                        <label>Name</label>
+                        <label htmlFor="org-name">Organization Name <span style={{ color: "#ef4444" }}>*</span></label>
+                        <div style={styles.fieldHint}>Client or Account Name</div>
                         <input
-                            placeholder="e.g. Marketing, Engineering"
+                            id="org-name"
+                            name="org_name"
+                            placeholder="UrbanThread, CloudBridge, FreshFork Kitchens"
                             value={name}
                             onChange={(e) => setName(e.target.value)}
+                            autoFocus
                         />
 
-                        <label>Description</label>
+                        <label htmlFor="org-description">Description</label>
+                        <div style={styles.fieldHint}>Brief description of the client or account you manage.</div>
                         <input
-                            placeholder="Optional"
+                            id="org-description"
+                            name="org_description"
+                            placeholder="Digital advertising and campaign management for UrbanThread's e-commerce growth."
                             value={description}
                             onChange={(e) => setDescription(e.target.value)}
                         />
+
+                        <label>Workflow Template</label>
+                        <div style={styles.fieldHint}>Choose the starting setup that best matches how this organization will work.</div>
+                        <div style={styles.boardTypeGrid}>
+                            {WORKFLOW_TEMPLATES.map((bt) => (
+                                <div
+                                    key={bt.value}
+                                    style={{
+                                        ...styles.boardTypeCard,
+                                        ...(boardType === bt.value ? styles.boardTypeCardActive : {}),
+                                    }}
+                                    onClick={() => setBoardType(bt.value)}
+                                >
+                                    <div style={styles.boardTypeHeader}>
+                                        <div style={{
+                                            ...styles.boardTypeRadio,
+                                            ...(boardType === bt.value ? styles.boardTypeRadioActive : {}),
+                                        }}>
+                                            {boardType === bt.value && <div style={styles.boardTypeRadioDot} />}
+                                        </div>
+                                        <div style={styles.boardTypeLabel}>{bt.label}</div>
+                                    </div>
+                                    <div style={styles.boardTypeDesc}>{bt.desc}</div>
+                                    <div style={styles.boardTypePreview}>
+                                        {bt.preview.map((item) => (
+                                            <span key={item} style={styles.boardTypePreviewChip}>{item}</span>
+                                        ))}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+
+                        <div style={styles.nameRow}>
+                            <div>
+                                <label htmlFor="org-workspace-name">Workspace Name</label>
+                                <div style={styles.fieldHint}>Team managing this client</div>
+                                <input
+                                    id="org-workspace-name"
+                                    name="org_workspace_name"
+                                    placeholder={name.trim() ? `${name.trim()} Workspace` : "Paid Media Team"}
+                                    value={workspaceName}
+                                    onChange={(e) => setWorkspaceName(e.target.value)}
+                                />
+                            </div>
+                            <div>
+                                <label htmlFor="org-board-name">Board Name</label>
+                                <div style={styles.fieldHint}>First board created from the selected workflow template</div>
+                                <input
+                                    id="org-board-name"
+                                    name="org_board_name"
+                                    placeholder={name.trim() ? `${name.trim()} ${selectedTemplate.boardSuffix}` : selectedTemplate.boardSuffix}
+                                    value={boardName}
+                                    onChange={(e) => setBoardName(e.target.value)}
+                                />
+                            </div>
+                        </div>
                     </div>
 
                     <div className="modal-footer">
@@ -237,7 +518,7 @@ export default function CreateOrganizationModal({ tenantId, onClose, onCreated }
                             Cancel
                         </button>
                         <button className="btn primary" onClick={handleCreate} disabled={loading}>
-                            {loading ? "Creating..." : "Create & Continue"}
+                            {loading ? "Setting up..." : "Create & Continue"}
                         </button>
                     </div>
                 </div>
@@ -245,66 +526,67 @@ export default function CreateOrganizationModal({ tenantId, onClose, onCreated }
         );
     }
 
-    // ─── Step 2: Invite Owner + Members (single screen) ───
+    // ─── Step 2: Invite Team (optional) ───
     return (
         <div className="modal-backdrop">
-            <div className="modal modern">
+            <div className="modal modern" style={{ width: 680 }}>
                 <div className="modal-header">
-                    <h2>Invite People</h2>
+                    <div style={styles.stepIndicator}>Step 2 of 2</div>
+                    <h2>Invite Your Team</h2>
                     <div className="modal-sub">
-                        Add people to <strong>{name}</strong> — you can skip this and invite later
+                        Add people to <strong>{name}</strong> now, or skip and invite later
                     </div>
                 </div>
 
                 <div className="modal-body">
+                        <div style={{ fontSize: 13, fontWeight: 700, color: "#334155", textTransform: "uppercase" as any, letterSpacing: 0.5, marginBottom: 4 }}>Team Members</div>
 
-                    {/* OWNER */}
-                    <label>Owner (optional, 1 max)</label>
-                    <input
-                        type="email"
-                        placeholder="owner@company.com"
-                        value={ownerEmail}
-                        onChange={(e) => setOwnerEmail(e.target.value)}
-                    />
+                        {/* OWNER */}
+                        <label htmlFor="org-owner-email">Owner (optional, 1 max)</label>
+                        <input
+                            id="org-owner-email"
+                            name="org_owner_email"
+                            type="email"
+                            placeholder="owner@company.com"
+                            value={ownerEmail}
+                            onChange={(e) => setOwnerEmail(e.target.value)}
+                        />
 
-                    {/* MEMBERS */}
-                    <label style={{ marginTop: 8 }}>Members (optional)</label>
-                    {memberEmails.map((email, i) => (
-                        <div key={i} style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                            <input
-                                type="email"
-                                placeholder="member@company.com"
-                                value={email}
-                                onChange={(e) => updateMemberEmail(i, e.target.value)}
-                                style={{ flex: 1 }}
-                            />
-                            {memberEmails.length > 1 && (
-                                <button
-                                    className="btn ghost"
-                                    style={{ padding: "6px 10px", minWidth: "auto" }}
-                                    onClick={() => removeMemberEmail(i)}
-                                >
-                                    &times;
-                                </button>
-                            )}
+                        {/* MEMBERS */}
+                        <label htmlFor="org-member-email-0">Members (optional)</label>
+                        {memberEmails.map((email, i) => (
+                            <div key={i} style={styles.memberEmailRow}>
+                                <input
+                                    id={`org-member-email-${i}`}
+                                    name={`org_member_email_${i}`}
+                                    type="email"
+                                    placeholder="member@company.com"
+                                    value={email}
+                                    onChange={(e) => updateMemberEmail(i, e.target.value)}
+                                    style={{ flex: 1 }}
+                                />
+                                {memberEmails.length > 1 && (
+                                    <button
+                                        className="btn ghost"
+                                        style={{ padding: "6px 10px", minWidth: "auto" }}
+                                        onClick={() => removeMemberEmail(i)}
+                                    >
+                                        &times;
+                                    </button>
+                                )}
+                            </div>
+                        ))}
+
+                        <button
+                            onClick={() => setMemberEmails([...memberEmails, ""])}
+                            style={styles.addMemberBtn}
+                        >
+                            + Add another member
+                        </button>
+
+                        <div style={styles.inviteNote}>
+                            Invited members will be asked to complete their profile (name) when they first sign in.
                         </div>
-                    ))}
-
-                    <button
-                        onClick={() => setMemberEmails([...memberEmails, ""])}
-                        style={{
-                            background: "none",
-                            border: "none",
-                            color: "#4f46e5",
-                            cursor: "pointer",
-                            fontSize: 13,
-                            padding: 0,
-                            fontWeight: 600,
-                            marginTop: 4,
-                        }}
-                    >
-                        + Add another member
-                    </button>
                 </div>
 
                 <div className="modal-footer">
@@ -319,3 +601,155 @@ export default function CreateOrganizationModal({ tenantId, onClose, onCreated }
         </div>
     );
 }
+
+const styles: Record<string, React.CSSProperties> = {
+    stepIndicator: {
+        fontSize: 11,
+        fontWeight: 700,
+        color: "#1e3a5f",
+        textTransform: "uppercase" as const,
+        letterSpacing: 1,
+        marginBottom: 6,
+    },
+    boardTypeGrid: {
+        display: "grid",
+        gridTemplateColumns: "1fr 1fr",
+        gap: 8,
+        marginTop: 6,
+        marginBottom: 4,
+    },
+    boardTypeCard: {
+        border: "1.5px solid #e2e8f0",
+        borderRadius: 8,
+        padding: "10px 12px",
+        cursor: "pointer",
+        transition: "border-color 0.15s, background 0.15s",
+    },
+    boardTypeCardActive: {
+        borderColor: "#1e3a5f",
+        background: "#e8f0fa",
+    },
+    boardTypeHeader: {
+        display: "flex",
+        alignItems: "center",
+        gap: 6,
+        marginBottom: 2,
+    },
+    boardTypeRadio: {
+        width: 16,
+        height: 16,
+        borderRadius: "50%",
+        border: "2px solid #cbd5e1",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        flexShrink: 0,
+    },
+    boardTypeRadioActive: {
+        borderColor: "#1e3a5f",
+    },
+    boardTypeRadioDot: {
+        width: 8,
+        height: 8,
+        borderRadius: "50%",
+        background: "#1e3a5f",
+    },
+    boardTypeLabel: {
+        fontSize: 13,
+        fontWeight: 600,
+        color: "#0f172a",
+    },
+    boardTypeDesc: {
+        fontSize: 11,
+        color: "#64748b",
+        lineHeight: 1.3,
+        marginLeft: 22,
+    },
+    boardTypePreview: {
+        display: "flex",
+        gap: 6,
+        flexWrap: "wrap" as const,
+        marginTop: 10,
+        marginLeft: 22,
+    },
+    boardTypePreviewChip: {
+        fontSize: 10,
+        fontWeight: 700,
+        color: "#1e3a5f",
+        background: "#f8fbff",
+        border: "1px solid #dbe7f3",
+        borderRadius: 999,
+        padding: "3px 8px",
+    },
+    fieldHint: {
+        fontSize: 12,
+        color: "#94a3b8",
+        marginTop: 0,
+        marginBottom: 6,
+        lineHeight: 1.5,
+    },
+    nameRow: {
+        display: "grid",
+        gridTemplateColumns: "1fr 1fr",
+        gap: 16,
+    },
+    memberEmailRow: {
+        display: "flex",
+        alignItems: "center",
+        gap: 8,
+    },
+    addMemberBtn: {
+        background: "none",
+        border: "none",
+        color: "#1e3a5f",
+        cursor: "pointer",
+        fontSize: 13,
+        padding: 0,
+        fontWeight: 600,
+        marginTop: 4,
+        width: "fit-content",
+    },
+    createdSummary: {
+        display: "flex",
+        flexDirection: "column" as const,
+        gap: 12,
+    },
+    createdItem: {
+        display: "flex",
+        alignItems: "center",
+        gap: 12,
+    },
+    createdIcon: {
+        width: 28,
+        height: 28,
+        borderRadius: "50%",
+        background: "#ecfdf5",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        flexShrink: 0,
+    },
+    createdLabel: {
+        fontSize: 11,
+        color: "#64748b",
+        fontWeight: 600,
+    },
+    createdValue: {
+        fontSize: 14,
+        fontWeight: 600,
+        color: "#0f172a",
+    },
+    divider: {
+        borderTop: "1px solid #e2e8f0",
+        margin: "14px 0",
+    },
+    inviteNote: {
+        fontSize: 12,
+        color: "#64748b",
+        marginTop: 14,
+        padding: "10px 12px",
+        background: "#f8fafc",
+        borderRadius: 8,
+        lineHeight: 1.5,
+    },
+};

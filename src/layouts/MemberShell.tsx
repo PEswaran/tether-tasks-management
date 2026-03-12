@@ -7,7 +7,7 @@ export default function MemberShell() {
 
     return (
         <AppShell
-            companyName={tenantName || "Workspace"}
+            companyName={tenantName || "Organization"}
             navItems={memberNav}
         />
     );

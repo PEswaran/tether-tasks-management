@@ -5,6 +5,7 @@ import { INDUSTRY_TEMPLATES } from "../config/industryTemplates";
 export async function createIndustryBoards(
     industry: "general" | "software" | "accounting",
     workspaceId: string,
+    organizationId: string | null,
     tenantId: string
 ) {
     const client = dataClient();
@@ -22,6 +23,7 @@ export async function createIndustryBoards(
 
         const newBoard = await client.models.TaskBoard.create({
             tenantId,
+            organizationId: organizationId || undefined,
             workspaceId,
             name: board.name,
             description: board.description,
@@ -37,6 +39,7 @@ export async function createIndustryBoards(
         for (const task of board.tasks) {
             await client.models.Task.create({
                 tenantId,
+                organizationId: organizationId || undefined,
                 workspaceId,
                 taskBoardId: boardId,
                 title: task.title,

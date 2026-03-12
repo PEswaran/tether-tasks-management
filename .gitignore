@@ -28,6 +28,11 @@ dist-ssr
 amplify_outputs*
 amplifyconfiguration*
 
+# env
+.env
+.env.*
+!.env.example
+
 # Playwright
 /test-results/
 /playwright-report/

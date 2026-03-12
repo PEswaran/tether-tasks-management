@@ -34,6 +34,7 @@ export default function AuthRedirect() {
                 });
 
                 const memberships = res?.data || [];
+                const activeMemberships = memberships.filter((m: any) => m.status === "ACTIVE");
 
                 // helper: check for pending invitations
                 async function hasPendingInvitation(): Promise<boolean> {
@@ -47,7 +48,7 @@ export default function AuthRedirect() {
                     );
                 }
 
-                async function acceptTenantAdminInviteIfNeeded(tenantId: string, workspaceId: string) {
+                async function acceptTenantAdminInviteIfNeeded(tenantId: string, organizationId: string | undefined) {
                     const userEmail = payload.email as string;
                     if (!userEmail) return;
 
@@ -59,7 +60,7 @@ export default function AuthRedirect() {
                         (i: any) =>
                             i.status === "PENDING" &&
                             i.tenantId === tenantId &&
-                            i.workspaceId === workspaceId
+                            i.organizationId === organizationId
                     );
 
                     if (pending) {
@@ -71,7 +72,7 @@ export default function AuthRedirect() {
                 }
 
                 // no memberships at all — check for pending invitations first
-                if (!memberships.length) {
+                if (!activeMemberships.length) {
                     if (await hasPendingInvitation()) {
                         navigate("/accept-org-invitation");
                     } else {
@@ -81,21 +82,17 @@ export default function AuthRedirect() {
                 }
 
                 // prefer last-used workspace, fall back to first membership
-                let activeMem = memberships[0];
-                const stored = localStorage.getItem("activeWorkspace");
-                if (stored) {
-                    const found = memberships.find((m: any) => m.workspaceId === stored);
+                let activeMem = activeMemberships[0];
+                const storedOrg = localStorage.getItem("activeOrganization");
+                if (storedOrg) {
+                    const found = activeMemberships.find((m: any) => m.organizationId === storedOrg);
                     if (found) activeMem = found;
                 }
 
                 const role = activeMem.role;
 
-                // for OWNER/MEMBER users, check for pending invitations
-                // (e.g. member in ws A, pending owner invite for ws B)
-                if (role !== "TENANT_ADMIN" && await hasPendingInvitation()) {
-                    navigate("/accept-org-invitation");
-                    return;
-                }
+                // Do not force users with active memberships into invitation flows.
+                // Pending invites can be accepted from explicit invite links/pages.
 
                 // check if tenant is suspended
                 const tenantRes = await client.models.Tenant.get({ id: activeMem.tenantId });
@@ -104,14 +101,85 @@ export default function AuthRedirect() {
                     return;
                 }
 
-                if (role === "TENANT_ADMIN") {
-                    await acceptTenantAdminInviteIfNeeded(activeMem.tenantId, activeMem.workspaceId);
-                    navigate("/tenant");
+                const activeNonAdminMemberships = activeMemberships.filter(
+                    (m: any) => m.status === "ACTIVE" && m.role !== "TENANT_ADMIN"
+                );
+                const accessibleWorkspaceIds = new Set<string>();
+                const orgIdsToExpand = new Set<string>();
+                const tenantIdsToExpand = new Set<string>();
+
+                activeNonAdminMemberships.forEach((m: any) => {
+                    if (m.workspaceId) {
+                        accessibleWorkspaceIds.add(m.workspaceId);
+                        return;
+                    }
+                    if (m.organizationId) {
+                        orgIdsToExpand.add(m.organizationId);
+                        return;
+                    }
+                    if (m.tenantId) {
+                        tenantIdsToExpand.add(m.tenantId);
+                    }
+                });
+
+                const [orgWorkspaceResults, tenantWorkspaceResults] = await Promise.all([
+                    Promise.all(
+                        Array.from(orgIdsToExpand).map((orgId) =>
+                            client.models.Workspace.list({ filter: { organizationId: { eq: orgId } } })
+                        )
+                    ),
+                    Promise.all(
+                        Array.from(tenantIdsToExpand).map((tid) =>
+                            client.models.Workspace.list({ filter: { tenantId: { eq: tid } } })
+                        )
+                    ),
+                ]);
+
+                orgWorkspaceResults.forEach((res: any) => {
+                    (res.data || [])
+                        .filter((ws: any) => ws?.isActive !== false)
+                        .forEach((ws: any) => {
+                            if (ws?.id) accessibleWorkspaceIds.add(ws.id);
+                        });
+                });
+
+                tenantWorkspaceResults.forEach((res: any) => {
+                    (res.data || [])
+                        .filter((ws: any) => ws?.isActive !== false)
+                        .forEach((ws: any) => {
+                            if (ws?.id) accessibleWorkspaceIds.add(ws.id);
+                        });
+                });
+
+                const isMultiWorkspaceUser = role !== "TENANT_ADMIN" && accessibleWorkspaceIds.size > 1;
+
+                // Compute target path based on role
+                let targetPath: string;
+                if (isMultiWorkspaceUser) {
+                    targetPath = "/general";
+                } else if (role === "TENANT_ADMIN") {
+                    await acceptTenantAdminInviteIfNeeded(activeMem.tenantId, activeMem.organizationId);
+                    targetPath = "/tenant";
                 } else if (role === "OWNER") {
-                    navigate("/owner");
+                    targetPath = "/owner";
                 } else {
-                    navigate("/member");
+                    targetPath = "/member";
                 }
+
+                // Check if user profile has firstName set
+                const profileRes = await client.models.UserProfile.get({ userId: sub });
+                if (!profileRes.data?.firstName) {
+                    navigate(`/profile?redirect=${encodeURIComponent(targetPath)}`);
+                    return;
+                }
+
+                // Welcome page for first-time tenant admins
+                if (role === "TENANT_ADMIN" && (!profileRes.data?.hasSeenWelcome || !profileRes.data?.termsAcceptedAt)) {
+                    navigate(`/welcome?redirect=${encodeURIComponent(targetPath)}`);
+                    return;
+                }
+
+                navigate(targetPath);
 
             } catch (err: any) {
                 console.error("redirect error", err);

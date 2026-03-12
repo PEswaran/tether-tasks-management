@@ -8,16 +8,30 @@ function getPlanLabel(plan: string | null | undefined) {
     switch (plan) {
         case "PROFESSIONAL": return "Professional";
         case "ENTERPRISE": return "Enterprise";
+        case "TRIAL": return "Trial";
+        case "PILOT": return "Pilot";
         default: return "Starter";
     }
 }
 
 function getPlanColor(plan: string | null | undefined) {
     switch (plan) {
-        case "PROFESSIONAL": return { bg: "#eff6ff", color: "#3b82f6" };
-        case "ENTERPRISE": return { bg: "#f5f3ff", color: "#7c3aed" };
+        case "PROFESSIONAL": return { bg: "#e8f0fa", color: "#1e3a5f" };
+        case "ENTERPRISE": return { bg: "#e4f7fa", color: "#0ea5b8" };
+        case "TRIAL": return { bg: "#fffbeb", color: "#f59e0b" };
+        case "PILOT": return { bg: "#dbeafe", color: "#1d4ed8" };
         default: return { bg: "#f1f5f9", color: "#64748b" };
     }
+}
+
+function getTrialDaysLeft(trialEndDate: string | null | undefined): string | null {
+    if (!trialEndDate) return null;
+    const now = new Date();
+    const end = new Date(trialEndDate);
+    const diffMs = end.getTime() - now.getTime();
+    const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+    if (diffDays <= 0) return "Expired";
+    return `${diffDays} day${diffDays !== 1 ? "s" : ""} left`;
 }
 
 export default function TenantsPage() {
@@ -92,6 +106,16 @@ export default function TenantsPage() {
                                     }}>
                                         {getPlanLabel(t.plan)}
                                     </span>
+                                    {t.plan === "TRIAL" && (
+                                        <span style={{
+                                            fontSize: 11,
+                                            color: getTrialDaysLeft(t.trialEndDate) === "Expired" ? "#dc2626" : "#f59e0b",
+                                            marginLeft: 6,
+                                            fontWeight: 500,
+                                        }}>
+                                            ({getTrialDaysLeft(t.trialEndDate) || "No end date"})
+                                        </span>
+                                    )}
                                 </td>
                                 <td>
                                     <span style={{

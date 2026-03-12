@@ -1,25 +1,25 @@
 /* BUTTONS */
 .btn-primary {
-  background: linear-gradient(135deg, var(--primary), var(--accent));
+  background: linear-gradient(135deg, var(--primary-700), var(--primary), var(--brand-sky));
   border: none;
   color: white;
   padding: 10px 18px;
   border-radius: 10px;
   font-weight: 600;
   cursor: pointer;
-  box-shadow: 0 6px 20px rgba(79, 70, 229, 0.35);
+  box-shadow: 0 10px 24px rgba(20, 85, 165, 0.24);
   transition: all 0.2s;
 }
 
 .btn-primary:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 30px rgba(79, 70, 229, 0.4);
+  box-shadow: 0 14px 32px rgba(20, 85, 165, 0.28);
 }
 
 .btn-secondary {
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(255, 255, 255, 0.92);
   border: 1px solid var(--border);
-  color: #cbd5e1;
+  color: var(--primary-700);
   padding: 10px 16px;
   border-radius: 10px;
 }
@@ -42,15 +42,15 @@
 }
 
 .card:hover {
-  box-shadow: 0 8px 30px rgba(79, 70, 229, 0.08);
+  box-shadow: 0 14px 34px rgba(17, 66, 121, 0.10);
   border-color: var(--primary);
 }
 
 .metric-card {
-  background: linear-gradient(180deg, #0f172a, #020617);
+  background: linear-gradient(160deg, var(--brand-navy), var(--primary-700) 52%, var(--primary));
   border-radius: 18px;
   padding: 24px;
-  border: 1px solid var(--border);
+  border: 1px solid rgba(123, 197, 237, 0.24);
   position: relative;
   overflow: hidden;
 }
@@ -59,16 +59,14 @@
   content: "";
   position: absolute;
   inset: 0;
-  background: radial-gradient(
-    circle at top right,
-    rgba(79, 70, 229, 0.18),
-    transparent 40%
-  );
+  background:
+    radial-gradient(circle at top right, rgba(123, 197, 237, 0.24), transparent 42%),
+    linear-gradient(135deg, transparent 20%, rgba(245, 154, 28, 0.12) 100%);
 }
 
 .metric-title {
   font-size: 13px;
-  color: var(--muted);
+  color: rgba(255, 255, 255, 0.74);
 }
 
 .metric-value {
@@ -79,15 +77,15 @@
 
 .metric-sub {
   font-size: 12px;
-  color: #64748b;
+  color: rgba(255, 255, 255, 0.68);
   margin-top: 6px;
 }
 
 .workspace-select {
   padding: 10px 14px;
   border-radius: 10px;
-  border: 1px solid #e2e8f0;
-  background: white;
+  border: 1px solid var(--border);
+  background: linear-gradient(180deg, #ffffff, #f8fbff);
   font-size: 14px;
   margin-left: auto;
 }
@@ -146,7 +144,7 @@
 }
 
 .btn-table {
-  background: #f1f5f9;
+  background: linear-gradient(180deg, #f8fbff, #edf5fd);
   border: none;
   padding: 6px 12px;
   border-radius: 8px;
@@ -157,7 +155,7 @@
 }
 
 .btn-table:hover {
-  background: #e2e8f0;
+  background: #dfeefe;
 }
 
 .btn-table.danger {
@@ -180,15 +178,15 @@
   text-align: left;
   font-size: 12px;
   font-weight: 600;
-  color: #64748b;
+  color: var(--muted);
   text-transform: uppercase;
   letter-spacing: 0.4px;
   padding: 12px 16px;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid var(--border);
 }
 
 .tt-table tbody tr {
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid var(--border-soft);
   transition: background 0.15s;
 }
 
@@ -197,7 +195,7 @@
 }
 
 .tt-table tbody tr:hover {
-  background: #f8fafc;
+  background: #f7fbff;
 }
 
 .tt-table tbody td {
@@ -260,13 +258,13 @@
   width: 34px;
   height: 34px;
   border-radius: 8px;
-  background: #eef2ff;
+  background: #e8f0fa;
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 700;
-  color: #4338ca;
-  margin-right: 10px;
+  color: #152d4a;
+  flex-shrink: 0;
 }
 
 .avatar-sm.amber {
@@ -277,6 +275,7 @@
 .user-cell {
   display: flex;
   align-items: center;
+  gap: 10px;
 }
 
 .user-name {
@@ -305,8 +304,8 @@
   color: #8b7dff;
 }
 .role-blue {
-  background: #2563eb22;
-  color: #3b82f6;
+  background: #1e3a5f22;
+  color: #1e3a5f;
 }
 .role-gold {
   background: #d4a01722;
@@ -322,7 +321,7 @@
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #6366f1, #22c55e);
+  background: linear-gradient(135deg, #1e3a5f, #22c55e);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -349,7 +348,7 @@
   right: 0;
   top: 48px;
   width: 200px;
-  background: var(--card);
+  background: linear-gradient(135deg, #e8f0fa, #e9edff);
   border-radius: 12px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
   padding: 8px;
@@ -377,4 +376,61 @@
 .profile-item.danger:hover {
   background: rgba(239, 68, 68, 0.1);
   color: #ef4444;
+}
+
+.profile-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 4px 0;
+}
+
+.profile-item-icon {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* DEMO BANNER */
+.demo-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 8px 16px;
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: #1a1a2e;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.demo-banner-dismiss {
+  background: none;
+  border: none;
+  color: #1a1a2e;
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  opacity: 0.7;
+  transition: opacity 0.15s;
+}
+
+.demo-banner-dismiss:hover {
+  opacity: 1;
+}
+
+/* Offset app shell when demo banner is visible */
+.demo-banner + .app-shell {
+  margin-top: 36px;
+}
+
+.demo-banner ~ .app-shell {
+  margin-top: 36px;
 }

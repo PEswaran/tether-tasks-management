@@ -2,12 +2,14 @@ import { useEffect, useState } from "react";
 import { fetchAuthSession } from "aws-amplify/auth";
 import { dataClient } from "../../../libs/data-client";
 import { useNavigate } from "react-router-dom";
+import { useWorkspace } from "../../../shared-components/workspace-context";
 import { useConfirm } from "../../../shared-components/confirm-context";
 
 export default function AcceptInvitationPage() {
     const client = dataClient();
     const navigate = useNavigate();
     const { alert } = useConfirm();
+    const { switchTenant, setOrganizationId } = useWorkspace();
 
     const [loading, setLoading] = useState(false);
     const [invite, setInvite] = useState<any>(null);
@@ -60,7 +62,7 @@ export default function AcceptInvitationPage() {
             // 🔵 ensure membership exists
             const memCheck = await client.models.Membership.list({
                 filter: {
-                    workspaceId: { eq: invite.workspaceId },
+                    organizationId: { eq: invite.organizationId },
                     userSub: { eq: userSub }
                 }
             });
@@ -68,7 +70,7 @@ export default function AcceptInvitationPage() {
             if (!memCheck.data.length) {
                 await client.models.Membership.create({
                     tenantId: invite.tenantId,
-                    workspaceId: invite.workspaceId,
+                    organizationId: invite.organizationId,
                     userSub,
                     role: invite.role,
                     status: "ACTIVE",
@@ -76,8 +78,20 @@ export default function AcceptInvitationPage() {
                 });
             }
 
-            // 🚀 IMPORTANT: go to tenant dashboard
-            navigate("/tenant");
+            // 🚀 IMPORTANT: set tenant/org context, then go to role-specific dashboard
+            if (invite.tenantId) {
+                switchTenant(invite.tenantId);
+            }
+            if (invite.organizationId) {
+                setOrganizationId(invite.organizationId);
+            }
+
+            const rolePath = invite.role === "OWNER"
+                ? "/owner/boards"
+                : invite.role === "TENANT_ADMIN"
+                    ? "/tenant"
+                    : "/member";
+            navigate(rolePath);
 
         } catch (err) {
             console.error(err);
@@ -92,7 +106,7 @@ export default function AcceptInvitationPage() {
     return (
         <div style={{ padding: 40 }}>
             <h2>You're invited to join</h2>
-            <p>Workspace access has been granted.</p>
+            <p>Organization access has been granted.</p>
 
             <button
                 onClick={acceptInvite}

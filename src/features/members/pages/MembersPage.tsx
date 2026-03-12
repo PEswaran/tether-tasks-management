@@ -6,52 +6,45 @@ import { Search } from "lucide-react";
 import { useConfirm } from "../../../shared-components/confirm-context";
 import InviteMemberModal from "../../../components/shared/modals/invite-members-modal";
 import { isAuthed } from "../../../libs/isAuthed";
+import { logAudit } from "../../../libs/audit";
 
 export default function MembersPage() {
     const client = dataClient();
-    const { workspaceId: contextWorkspaceId, tenantId, tenantName, role } = useWorkspace();
+    const { organizationId: contextOrganizationId, tenantId, tenantName, role, organizations, setOrganizationId } = useWorkspace();
 
-    const [selectedWsId, setSelectedWsId] = useState<string | null>(null);
+    const [selectedOrgId, setSelectedOrgId] = useState<string | null>(null);
     const [members, setMembers] = useState<any[]>([]);
     const [invites, setInvites] = useState<any[]>([]);
     const [profiles, setProfiles] = useState<any[]>([]);
-    const [workspaces, setWorkspaces] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [showInvite, setShowInvite] = useState(false);
     const [search, setSearch] = useState("");
     const { confirm, alert } = useConfirm();
 
-    // The active workspace for this page — local state, not global context
-    const activeWsId = selectedWsId || contextWorkspaceId;
+    // The active organization for this page — local state, not global context
+    const activeOrgId = selectedOrgId || contextOrganizationId;
 
     // Sync from context on tenant switch
     useEffect(() => {
-        setSelectedWsId(null);
+        setSelectedOrgId(null);
     }, [tenantId]);
 
     useEffect(() => {
-        loadWorkspaces();
-    }, [tenantId]);
+        if (!contextOrganizationId && organizations.length > 0) {
+            setOrganizationId(organizations[0].id);
+        }
+    }, [contextOrganizationId, organizations, setOrganizationId]);
 
     useEffect(() => {
         loadMembers();
-    }, [activeWsId, tenantId]);
-
-    async function loadWorkspaces() {
-        if (tenantId) {
-            const wsRes = await client.models.Workspace.list({
-                filter: { tenantId: { eq: tenantId } }
-            });
-            setWorkspaces(wsRes.data);
-        }
-    }
+    }, [activeOrgId, tenantId]);
 
     async function loadMembers() {
 
         if (!(await isAuthed())) return;
         setLoading(true);
 
-        if (!activeWsId) {
+        if (!activeOrgId) {
             setMembers([]);
             setInvites([]);
             setLoading(false);
@@ -60,13 +53,13 @@ export default function MembersPage() {
 
         /* MEMBERS */
         const memRes = await client.models.Membership.list({
-            filter: { workspaceId: { eq: activeWsId } }
+            filter: { organizationId: { eq: activeOrgId } }
         });
         setMembers(memRes.data);
 
         /* INVITES */
         const invRes = await client.models.Invitation.list({
-            filter: { workspaceId: { eq: activeWsId } }
+            filter: { organizationId: { eq: activeOrgId } }
         });
         setInvites(invRes.data);
 
@@ -81,14 +74,29 @@ export default function MembersPage() {
         return profiles.find((p: any) => p.userId === userSub);
     }
 
+    function fullName(prof: any): string {
+        const first = prof?.firstName?.trim() || "";
+        const last = prof?.lastName?.trim() || "";
+        if (first || last) return `${first} ${last}`.trim();
+        return displayName(prof?.email);
+    }
+
+    function nameInitial(prof: any): string {
+        if (prof?.firstName) return prof.firstName[0].toUpperCase();
+        if (prof?.email) return prof.email[0].toUpperCase();
+        return "U";
+    }
+
     /* ============================= ACTIONS ============================= */
 
     async function removeMember(member: any) {
         console.log("CLICK REMOVE", member);
 
+        const prof = profileFor(member.userSub);
+        const memberName = fullName(prof);
         const ok = await confirm({
             title: "Remove Member",
-            message: `Remove ${member.userSub} from workspace?`,
+            message: `Remove ${memberName} from organization?`,
             confirmLabel: "Remove",
             variant: "danger"
         });
@@ -101,6 +109,15 @@ export default function MembersPage() {
             await client.models.Membership.update({
                 id: member.id,
                 status: "REMOVED"
+            });
+
+            logAudit({
+                tenantId,
+                organizationId: activeOrgId,
+                action: "REMOVE",
+                resourceType: "Membership",
+                resourceId: member.id,
+                metadata: { userSub: member.userSub },
             });
 
             await alert({
@@ -144,8 +161,8 @@ export default function MembersPage() {
                 await client.mutations.sendAssignmentEmail({
                     userSub,
                     type: "INVITE",
-                    itemName: "Workspace",
-                    workspaceId: inv.workspaceId,
+                        itemName: "Organization",
+                    workspaceId: inv.organizationId || inv.workspaceId,
                 });
             }
         } catch (emailErr) {
@@ -161,7 +178,7 @@ export default function MembersPage() {
                 (m: any) => m.id !== member.id && m.role === "OWNER" && m.status === "ACTIVE"
             );
             if (hasOwner) {
-                await alert({ title: "Owner Exists", message: "This workspace already has an owner. Remove the current owner first.", variant: "warning" });
+                await alert({ title: "Owner Exists", message: "This organization already has an owner. Remove the current owner first.", variant: "warning" });
                 return;
             }
         }
@@ -169,6 +186,15 @@ export default function MembersPage() {
         await client.models.Membership.update({
             id: member.id,
             role: newRole as any,
+        });
+
+        logAudit({
+            tenantId,
+            organizationId: activeOrgId,
+            action: "UPDATE",
+            resourceType: "Membership",
+            resourceId: member.id,
+            metadata: { userSub: member.userSub, newRole },
         });
 
         loadMembers();
@@ -190,7 +216,7 @@ export default function MembersPage() {
             if (!q) return true;
             const prof = profileFor(m.userSub);
             const email = (prof?.email || "").toLowerCase();
-            const name = displayName(prof?.email).toLowerCase();
+            const name = fullName(prof).toLowerCase();
             return email.includes(q) || name.includes(q);
         });
 
@@ -222,23 +248,29 @@ export default function MembersPage() {
             <div className="page-header">
                 <div>
                     <h1>Members</h1>
-                    <div className="page-sub">Workspace users & permissions</div>
+                    <div className="page-sub">Organization users & permissions</div>
                 </div>
 
                 {/* WORKSPACE SELECTOR */}
                 <select
+                    id="members-organization-select"
+                    name="members_organization_select"
                     className="workspace-select"
-                    value={activeWsId || ""}
-                    onChange={(e) => setSelectedWsId(e.target.value || null)}
+                    value={activeOrgId || ""}
+                    onChange={(e) => {
+                        const id = e.target.value || null;
+                        setSelectedOrgId(id);
+                        if (id) setOrganizationId(id);
+                    }}
                 >
-                    <option value="">Select workspace</option>
-                    {workspaces.map((w: any) => (
-                        <option key={w.id} value={w.id}>{w.name}</option>
+                    <option value="">Select organization</option>
+                    {organizations.map((o: any) => (
+                        <option key={o.id} value={o.id}>{o.name}</option>
                     ))}
                 </select>
 
                 {/* INVITE */}
-                {canManage && activeWsId && (
+                {canManage && activeOrgId && (
                     <button className="btn-primary" onClick={() => setShowInvite(true)}>
                         + Invite Member
                     </button>
@@ -246,10 +278,12 @@ export default function MembersPage() {
             </div>
 
             {/* SEARCH BAR */}
-            {activeWsId && (
+            {activeOrgId && (
                 <div style={{ position: "relative", marginBottom: 16, maxWidth: 320 }}>
                     <Search size={16} style={{ position: "absolute", left: 12, top: 10, color: "#94a3b8" }} />
                     <input
+                        id="members-search-input"
+                        name="members_search_input"
                         type="text"
                         placeholder="Search by name or email..."
                         value={search}
@@ -287,16 +321,18 @@ export default function MembersPage() {
 
                             return (
                                 <tr key={m.id}>
-                                    <td className="user-cell">
-                                        <div className="avatar-sm">
-                                            {displayName(prof?.email || "U")[0].toUpperCase()}
-                                        </div>
-                                        <div>
-                                            <div className="user-name">
-                                                {displayName(prof?.email || m.userSub)}
+                                    <td>
+                                        <div className="user-cell">
+                                            <div className="avatar-sm">
+                                                {nameInitial(prof)}
                                             </div>
-                                            <div className="user-sub">
-                                                <span className="badge green">Active</span>
+                                            <div>
+                                                <div className="user-name">
+                                                    {fullName(prof)}
+                                                </div>
+                                                <div className="user-sub">
+                                                    <span className="badge green">Active</span>
+                                                </div>
                                             </div>
                                         </div>
                                     </td>
@@ -308,6 +344,8 @@ export default function MembersPage() {
                                     <td>
                                         {canChangeRole ? (
                                             <select
+                                                id={`member-role-${m.id}`}
+                                                name={`member_role_${m.id}`}
                                                 value={m.role}
                                                 onChange={(e) => changeRole(m, e.target.value)}
                                                 style={{
@@ -426,12 +464,12 @@ export default function MembersPage() {
             )}
 
             {/* INVITE MODAL */}
-            {showInvite && canManage && activeWsId && tenantId && (
+            {showInvite && canManage && activeOrgId && tenantId && (
                 <InviteMemberModal
                     tenantId={tenantId}
                     tenantName={tenantName}
-                    currentWorkspaceId={activeWsId}
-                    workspaces={workspaces}
+                    currentOrganizationId={activeOrgId}
+                    organizations={organizations}
                     onClose={() => { setShowInvite(false); loadMembers(); }}
                     onInvited={() => { }}
                 />

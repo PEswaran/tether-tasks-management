@@ -1,13 +1,17 @@
 import { useEffect, useState } from "react";
 import { dataClient } from "../../libs/data-client";
 import { getCurrentUser } from "aws-amplify/auth";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { toast } from "sonner";
 import { useTaskModal } from "../../pages/shared/stores/taskModalStore";
+import { useWorkspace } from "../../shared-components/workspace-context";
+import { resolveDestination as resolveDest, getRolePrefix } from "../../libs/notificationHelpers";
 
 export default function NotificationBell() {
     const client = dataClient();
     const navigate = useNavigate();
+    const location = useLocation();
+    const { role } = useWorkspace();
 
     const [notifications, setNotifications] = useState<any[]>([]);
     const [open, setOpen] = useState(false);
@@ -53,12 +57,10 @@ export default function NotificationBell() {
 
                         toast.success(n.title || "New notification", {
                             description: n.message,
-                            action: n.link
-                                ? {
-                                    label: "Open",
-                                    onClick: () => navigate(n.link),
-                                }
-                                : undefined,
+                            action: {
+                                label: "Open",
+                                onClick: () => markRead(n),
+                            },
                         });
                     }
                 },
@@ -90,65 +92,73 @@ export default function NotificationBell() {
     }
 
     /* ===============================
+       RESOLVE DESTINATION FOR NOTIFICATION
+    =============================== */
+    function resolveDestination(n: any) {
+        return resolveDest(n, role, location.pathname);
+    }
+
+    /* ===============================
        MARK ONE READ
     =============================== */
-    async function markRead(n: any) {
-        try {
-            await client.models.Notification.update({
-                id: n.id,
-                isRead: true
-            });
+    function markRead(n: any) {
+        // Update local state immediately so the notification disappears
+        setNotifications(prev =>
+            prev.map(x =>
+                x.id === n.id ? { ...x, isRead: true } : x
+            )
+        );
 
-            if (n.link?.startsWith("/tasks/")) {
-                const id = n.link.split("/tasks/")[1];
-                openTask(id);
-            } else if (n.link) {
-                navigate(n.link);
+        // Close the panel
+        setOpen(false);
+
+        // Navigate based on notification type
+        const dest = resolveDestination(n);
+        if (dest) {
+            if (dest.type === "task") {
+                openTask(dest.id);
+            } else {
+                navigate(dest.path);
             }
-
-            setNotifications(prev =>
-                prev.map(x =>
-                    x.id === n.id ? { ...x, isRead: true } : x
-                )
-            );
-
-        } catch (err) {
-            console.error(err);
         }
+
+        // Persist to DB in the background
+        client.models.Notification.update({
+            id: n.id,
+            isRead: true
+        }).catch((err: any) => console.error("Failed to mark notification read:", err));
     }
 
 
     /* ===============================
        MARK ALL READ (Slack style)
     =============================== */
-    async function markAllRead() {
-        try {
-            const unread = notifications.filter(n => !n.isRead);
-            if (unread.length === 0) return;
+    function markAllRead() {
+        const unread = notifications.filter(n => !n.isRead);
+        if (unread.length === 0) return;
 
-            await Promise.all(
-                unread.map(n =>
-                    client.models.Notification.update({
-                        id: n.id,
-                        isRead: true
-                    })
-                )
-            );
+        // Update local state immediately
+        setNotifications(prev =>
+            prev.map(n => ({ ...n, isRead: true }))
+        );
 
-            setNotifications(prev =>
-                prev.map(n => ({ ...n, isRead: true }))
-            );
-        } catch (err) {
-            console.error(err);
-        }
+        // Persist to DB in the background
+        Promise.all(
+            unread.map(n =>
+                client.models.Notification.update({
+                    id: n.id,
+                    isRead: true
+                })
+            )
+        ).catch((err: any) => console.error("Failed to mark all notifications read:", err));
     }
 
     /* ===============================
        CLEAR BUTTON (same as mark all)
     =============================== */
-    async function clearAll(e?: any) {
+    function clearAll(e?: any) {
         e?.stopPropagation();
-        await markAllRead();
+        markAllRead();
         toast.success("All caught up 🎉");
     }
 
@@ -209,6 +219,31 @@ export default function NotificationBell() {
                             </div>
                         </div>
                     ))}
+
+                    {/* VIEW ALL LINK */}
+                    <div
+                        style={{
+                            padding: "10px 16px",
+                            textAlign: "center",
+                            borderTop: "1px solid #f1f5f9",
+                        }}
+                    >
+                        <span
+                            onClick={() => {
+                                setOpen(false);
+                                const prefix = getRolePrefix(role, location.pathname);
+                                navigate(`${prefix}/notifications`);
+                            }}
+                            style={{
+                                color: "#1e3a5f",
+                                fontSize: 13,
+                                fontWeight: 600,
+                                cursor: "pointer",
+                            }}
+                        >
+                            View all notifications
+                        </span>
+                    </div>
 
                 </div>
             )}

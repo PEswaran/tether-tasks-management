@@ -11,7 +11,7 @@ export async function isTenantAdmin(): Promise<boolean> {
         userSub: sub
     });
 
-    return res.data.some((m: any) => m.role === "TENANT_ADMIN");
+    return res.data.some((m: any) => m.role === "TENANT_ADMIN" && m.status !== "REMOVED");
 }
 
 export async function getTenantId(): Promise<string | null> {
@@ -24,7 +24,7 @@ export async function getTenantId(): Promise<string | null> {
         userSub: sub
     });
 
-    const membership = res.data.find((m: any) => m.role === "TENANT_ADMIN");
+    const membership = res.data.find((m: any) => m.role === "TENANT_ADMIN" && m.status !== "REMOVED");
     return membership?.tenantId ?? null;
 }
 
@@ -57,4 +57,3 @@ export async function getPendingInvitation() {
         return null;
     }
 }
-

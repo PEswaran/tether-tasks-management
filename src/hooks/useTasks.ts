@@ -3,10 +3,12 @@ import { dataClient } from "../libs/data-client";
 
 type UseTasksProps = {
     workspaceId?: string | null;
+    organizationId?: string | null;
     tenantId?: string | null;
+    scope?: "tenant" | "organization" | "workspace";
 };
 
-export function useTasks({ workspaceId, tenantId }: UseTasksProps) {
+export function useTasks({ workspaceId, organizationId, tenantId, scope = "workspace" }: UseTasksProps) {
     const client = useMemo(() => dataClient(), []);
 
     const [boards, setBoards] = useState<any[]>([]);
@@ -26,7 +28,9 @@ export function useTasks({ workspaceId, tenantId }: UseTasksProps) {
         setLoading(true);
 
         try {
-            const workspaceFilter = workspaceId
+            const useOrgFilter = scope === "organization" && !!organizationId;
+            const useWorkspaceFilter = scope === "workspace" && !!workspaceId;
+            const workspaceFilter = useWorkspaceFilter
                 ? { workspaceId: { eq: workspaceId } }
                 : undefined;
 
@@ -41,43 +45,52 @@ export function useTasks({ workspaceId, tenantId }: UseTasksProps) {
                 memRes,
             ] = await Promise.all([
                 client.models.Workspace.list({
-                    filter: { tenantId: { eq: tenantId } },
+                    filter: useOrgFilter
+                        ? { organizationId: { eq: organizationId } }
+                        : { tenantId: { eq: tenantId } },
                 }),
 
                 client.models.TaskBoard.list({
                     filter: workspaceFilter
                         ? { ...workspaceFilter }
-                        : { tenantId: { eq: tenantId } },
+                        : useOrgFilter
+                            ? { organizationId: { eq: organizationId } }
+                            : { tenantId: { eq: tenantId } },
                 }),
 
                 client.models.Task.list({
                     filter: workspaceFilter
                         ? { ...workspaceFilter }
-                        : { tenantId: { eq: tenantId } },
+                        : useOrgFilter
+                            ? { organizationId: { eq: organizationId } }
+                            : { tenantId: { eq: tenantId } },
                 }),
 
                 client.models.UserProfile.list({
                     filter: { tenantId: { eq: tenantId } },
                 }),
 
-                client.models.Membership.list({
-                    filter: workspaceId
-                        ? {
-                            workspaceId: { eq: workspaceId },
-                            status: { eq: "ACTIVE" },
-                        }
-                        : {
-                            tenantId: { eq: tenantId },
-                            status: { eq: "ACTIVE" },
-                        },
-                }),
+                useWorkspaceFilter
+                    ? client.models.Membership.listMembershipsByWorkspace({ workspaceId: workspaceId! })
+                    : useOrgFilter
+                        ? client.models.Membership.listMembershipsByOrganization({ organizationId: organizationId! })
+                        : client.models.Membership.listMembershipsByTenant({ tenantId }),
             ]);
 
             const orgs = orgRes.data || [];
             const boardsData = boardRes.data || [];
             const tasksData = taskRes.data || [];
             let profilesData = profRes.data || [];
-            const memberships = memRes.data || [];
+            let memberships = (memRes.data || []).filter((m: any) => m.status === "ACTIVE");
+            if (useWorkspaceFilter && organizationId) {
+                const orgMemRes = await client.models.Membership.listMembershipsByOrganization({ organizationId });
+                const orgActive = (orgMemRes.data || []).filter((m: any) => m.status === "ACTIVE");
+                const existingSubs = new Set(memberships.map((m: any) => m.userSub));
+                memberships = [
+                    ...memberships,
+                    ...orgActive.filter((m: any) => !existingSubs.has(m.userSub)),
+                ];
+            }
 
             setOrganizations(orgs);
             setBoards(boardsData);
@@ -102,21 +115,24 @@ export function useTasks({ workspaceId, tenantId }: UseTasksProps) {
             /* ===============================
                JOIN MEMBERSHIP + PROFILE
             =============================== */
-            const enrichedMembers = memberships.map((m: any) => {
-                const profile = profilesData.find(
-                    (p: any) => p.userId === m.userSub
-                );
+            const enrichedMembers = memberships
+                .filter((m: any) => m.role !== "TENANT_ADMIN")
+                .map((m: any) => {
+                    const profile = profilesData.find(
+                        (p: any) => p.userId === m.userSub
+                    );
 
-                return {
-                    userSub: m.userSub,
-                    workspaceId: m.workspaceId,
-                    tenantId: m.tenantId,
-                    role: m.role,
-                    email: profile?.email || m.userSub,
-                    firstName: profile?.firstName,
-                    lastName: profile?.lastName,
-                };
-            });
+                    return {
+                        userSub: m.userSub,
+                        workspaceId: m.workspaceId,
+                        organizationId: m.organizationId,
+                        tenantId: m.tenantId,
+                        role: m.role,
+                        email: profile?.email || m.userSub,
+                        firstName: profile?.firstName,
+                        lastName: profile?.lastName,
+                    };
+                });
 
             setMembers(enrichedMembers);
 
@@ -142,7 +158,7 @@ export function useTasks({ workspaceId, tenantId }: UseTasksProps) {
         } finally {
             setLoading(false);
         }
-    }, [tenantId, workspaceId, client]);
+    }, [tenantId, workspaceId, organizationId, scope, client]);
 
     /* =========================================================
        INITIAL LOAD
@@ -166,7 +182,8 @@ export function useTasks({ workspaceId, tenantId }: UseTasksProps) {
         try {
             subCreate = client.models.Task.onCreate().subscribe({
                 next: (task: any) => {
-                    if (workspaceId && task.workspaceId !== workspaceId) return;
+                    if (scope === "workspace" && workspaceId && task.workspaceId !== workspaceId) return;
+                    if (scope === "organization" && organizationId && task.organizationId !== organizationId) return;
                     setTasks(prev => [...prev, task]);
                 },
                 error: () => { },
@@ -174,7 +191,8 @@ export function useTasks({ workspaceId, tenantId }: UseTasksProps) {
 
             subUpdate = client.models.Task.onUpdate().subscribe({
                 next: (task: any) => {
-                    if (workspaceId && task.workspaceId !== workspaceId) return;
+                    if (scope === "workspace" && workspaceId && task.workspaceId !== workspaceId) return;
+                    if (scope === "organization" && organizationId && task.organizationId !== organizationId) return;
 
                     setTasks(prev =>
                         prev.map(t => (t.id === task.id ? task : t))
@@ -199,7 +217,7 @@ export function useTasks({ workspaceId, tenantId }: UseTasksProps) {
             subUpdate?.unsubscribe();
             subDelete?.unsubscribe();
         };
-    }, [tenantId, workspaceId]);
+    }, [tenantId, workspaceId, organizationId, scope]);
 
     /* =========================================================
        RETURN

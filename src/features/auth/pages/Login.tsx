@@ -1,7 +1,9 @@
-import { useState } from "react";
-import { signIn } from "aws-amplify/auth";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { confirmSignIn, signIn } from "aws-amplify/auth";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Eye, EyeOff } from "lucide-react";
+import { DEMO_EMAIL, DEMO_PASSWORD, setDemoFlag } from "../../../config/demo";
+import { logAudit } from "../../../libs/audit";
 
 type LoginProps = {
     onSignedIn?: () => void;
@@ -9,12 +11,33 @@ type LoginProps = {
 
 export default function Login({ onSignedIn }: LoginProps) {
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
+
+    const isDemo = searchParams.get("demo") === "true";
 
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
+    const [newPassword, setNewPassword] = useState("");
+    const [confirmPassword, setConfirmPassword] = useState("");
     const [showPassword, setShowPassword] = useState(false);
+    const [showNewPassword, setShowNewPassword] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
+    const [step, setStep] = useState<"signIn" | "newPassword">("signIn");
+
+    useEffect(() => {
+        if (isDemo) {
+            setEmail(DEMO_EMAIL);
+            setPassword(DEMO_PASSWORD);
+            setDemoFlag();
+        }
+    }, [isDemo]);
+
+    function clearPostLoginCache() {
+        // Clear stale tenant/workspace UI scope from previous sessions.
+        localStorage.removeItem("activeWorkspace");
+        localStorage.removeItem("activeOrganization");
+    }
 
     async function handleSignIn(e: any) {
         e.preventDefault();
@@ -22,72 +45,199 @@ export default function Login({ onSignedIn }: LoginProps) {
         setError("");
 
         try {
-            await signIn({
+            const res = await signIn({
                 username: email.toLowerCase(),
                 password,
             });
 
-            onSignedIn?.();
-            navigate("/auth-redirect");
+            if (res.isSignedIn) {
+                logAudit({
+                    action: "LOGIN",
+                    resourceType: "Session",
+                    resourceId: email.toLowerCase(),
+                    metadata: { email: email.toLowerCase() },
+                });
+                onSignedIn?.();
+                clearPostLoginCache();
+                window.location.replace("/auth-redirect");
+                return;
+            }
+
+            const signInStep = res.nextStep?.signInStep;
+            if (signInStep === "CONFIRM_SIGN_IN_WITH_NEW_PASSWORD_REQUIRED") {
+                setStep("newPassword");
+                return;
+            }
+
+            setError("Additional sign-in steps are required. Please contact support.");
 
         } catch (err: any) {
             setError(err.message || "Unable to sign in");
+        } finally {
+            setLoading(false);
+        }
+    }
+
+    async function handleConfirmNewPassword(e: any) {
+        e.preventDefault();
+        setError("");
+
+        if (newPassword.length < 8) {
+            setError("New password must be at least 8 characters.");
+            return;
+        }
+        if (newPassword !== confirmPassword) {
+            setError("New password and confirmation do not match.");
+            return;
         }
 
-        setLoading(false);
+        setLoading(true);
+        try {
+            const res = await confirmSignIn({ challengeResponse: newPassword });
+            if (res.isSignedIn) {
+                logAudit({
+                    action: "LOGIN",
+                    resourceType: "Session",
+                    resourceId: email.toLowerCase(),
+                    metadata: { email: email.toLowerCase(), newPasswordSet: true },
+                });
+                onSignedIn?.();
+                clearPostLoginCache();
+                window.location.replace("/auth-redirect");
+                return;
+            }
+
+            setError("Additional sign-in steps are required. Please contact support.");
+        } catch (err: any) {
+            setError(err.message || "Unable to set a new password");
+        } finally {
+            setLoading(false);
+        }
     }
 
     return (
         <div className="auth-page">
-            <div className="auth-card">
-                <div className="auth-logo-header">
-                    <div className="auth-logo-glow" />
-                    <button
-                        type="button"
-                        className="auth-logo-btn"
-                        onClick={() => navigate("/")}
-                        aria-label="Back to landing page"
-                    >
-                        <img src="/logo.png" alt="TetherTasks logo" className="auth-logo" />
-                    </button>
-                </div>
-                <h2>Welcome to TetherTasks</h2>
+            <div className="auth-stage">
+                <section className="auth-brand-panel">
+                    <div className="auth-brand-scrim" />
+                    <div className="auth-brand-copy">
+                        <span className="auth-brand-eyebrow">One company. Multiple orgs.</span>
+                        <h1>Stay connected. Get things done.</h1>
+                        <p>
+                            Run organizations, workspaces, task boards, and execution
+                            from one control layer without losing structure.
+                        </p>
+                    </div>
+                </section>
 
-                <form onSubmit={handleSignIn}>
-                    <input
-                        type="email"
-                        placeholder="Email"
-                        autoComplete="email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        required
-                    />
-
-                    <div className="auth-password-wrap">
-                        <input
-                            type={showPassword ? "text" : "password"}
-                            placeholder="Password"
-                            autoComplete="current-password"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            required
-                        />
+                <div className="auth-card">
+                    <div className="auth-logo-header">
+                        <div className="auth-logo-glow" />
                         <button
                             type="button"
-                            className="auth-password-toggle"
-                            onClick={() => setShowPassword((prev) => !prev)}
-                            aria-label={showPassword ? "Hide password" : "Show password"}
+                            className="auth-logo-btn"
+                            onClick={() => navigate("/")}
+                            aria-label="Back to landing page"
                         >
-                            {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                            <img src="https://tethertasks-assets.s3.us-east-1.amazonaws.com/tetherTasksv2.PNG" alt="TetherTasks logo" className="auth-logo" />
                         </button>
                     </div>
+                    <h2>Welcome to TetherTasks</h2>
 
-                    {error && <div className="auth-error">{error}</div>}
+                    {step === "signIn" && (
+                        <form onSubmit={handleSignIn}>
+                        <input
+                            id="login-email"
+                            name="email"
+                            type="email"
+                            placeholder="Email"
+                            autoComplete="email"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            required
+                            />
 
-                    <button className="auth-submit-btn" disabled={loading}>
-                        {loading ? "Signing in..." : "Sign in"}
-                    </button>
-                </form>
+                            <div className="auth-password-wrap">
+                            <input
+                                id="login-password"
+                                name="password"
+                                type={showPassword ? "text" : "password"}
+                                placeholder="Password"
+                                autoComplete="current-password"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                required
+                                />
+                                <button
+                                    type="button"
+                                    className="auth-password-toggle"
+                                    onClick={() => setShowPassword((prev) => !prev)}
+                                    aria-label={showPassword ? "Hide password" : "Show password"}
+                                >
+                                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                                </button>
+                            </div>
+
+                            {isDemo && !error && (
+                                <div className="auth-demo-hint">
+                                    Demo credentials loaded — click Sign In to explore
+                                </div>
+                            )}
+
+                            {error && <div className="auth-error">{error}</div>}
+
+                            <button className="auth-submit-btn" disabled={loading}>
+                                {loading ? "Signing in..." : "Sign in"}
+                            </button>
+                        </form>
+                    )}
+
+                    {step === "newPassword" && (
+                        <form onSubmit={handleConfirmNewPassword}>
+                            <p className="auth-hint">
+                                A temporary password was used. Please set a new password to continue.
+                            </p>
+
+                            <div className="auth-password-wrap">
+                                <input
+                                    id="login-new-password"
+                                    name="new_password"
+                                    type={showNewPassword ? "text" : "password"}
+                                    placeholder="New password"
+                                    autoComplete="new-password"
+                                    value={newPassword}
+                                    onChange={(e) => setNewPassword(e.target.value)}
+                                    required
+                                />
+                                <button
+                                    type="button"
+                                    className="auth-password-toggle"
+                                    onClick={() => setShowNewPassword((prev) => !prev)}
+                                    aria-label={showNewPassword ? "Hide password" : "Show password"}
+                                >
+                                    {showNewPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                                </button>
+                            </div>
+
+                            <input
+                                id="login-confirm-password"
+                                name="confirm_password"
+                                type={showNewPassword ? "text" : "password"}
+                                placeholder="Confirm new password"
+                                autoComplete="new-password"
+                                value={confirmPassword}
+                                onChange={(e) => setConfirmPassword(e.target.value)}
+                                required
+                            />
+
+                            {error && <div className="auth-error">{error}</div>}
+
+                            <button className="auth-submit-btn" disabled={loading}>
+                                {loading ? "Updating..." : "Update password"}
+                            </button>
+                        </form>
+                    )}
+                </div>
             </div>
         </div>
     );

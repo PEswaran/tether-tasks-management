@@ -3,30 +3,42 @@ import { useNavigate } from "react-router-dom";
 import { dataClient } from "../../../libs/data-client";
 import CountUp from "react-countup";
 import {
-    PieChart, Pie, Cell, Tooltip, ResponsiveContainer,
-    BarChart, Bar, XAxis, YAxis, CartesianGrid,
+    PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend,
 } from "recharts";
 import {
-    LayoutDashboard, Users, CheckCircle2, ListTodo,
-    Clock, TrendingUp, Kanban, ArrowUpRight, Building2,
+    LayoutDashboard, Users, ArrowUpRight, Building2, FlaskConical,
+    Briefcase, LayoutGrid, Kanban,
 } from "lucide-react";
 
 type Stats = {
     tenants: number;
+    activePilots: number;
     users: number;
-    todo: number;
-    inProgress: number;
-    done: number;
-    total: number;
+    organizations: number;
+    workspaces: number;
+    taskBoards: number;
+    planBreakdown: { name: string; value: number }[];
 };
+
+const PLAN_COLORS: Record<string, string> = {
+    STARTER: "#94a3b8",
+    PROFESSIONAL: "#1d4ed8",
+    ENTERPRISE: "#7c3aed",
+    PILOT: "#0ea5e9",
+    TRIAL: "#f59e0b",
+    OTHER: "#64748b",
+};
+
+const PLAN_ORDER = ["STARTER", "PROFESSIONAL", "ENTERPRISE", "PILOT", "TRIAL", "OTHER"];
 
 export default function Dashboard() {
     const client = dataClient();
     const navigate = useNavigate();
 
     const [stats, setStats] = useState<Stats>({
-        tenants: 0, users: 0, todo: 0,
-        inProgress: 0, done: 0, total: 0,
+        tenants: 0, activePilots: 0, users: 0,
+        organizations: 0, workspaces: 0, taskBoards: 0,
+        planBreakdown: [],
     });
     const [recentTenants, setRecentTenants] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
@@ -36,24 +48,42 @@ export default function Dashboard() {
     async function load() {
         setLoading(true);
         try {
-            const [tenantRes, memberRes, taskRes] = await Promise.all([
+            const [tenantRes, memberRes, orgRes, wsRes, boardRes] = await Promise.all([
                 client.models.Tenant.list(),
                 client.models.Membership.list(),
-                client.models.Task.list(),
+                client.models.Organization.list(),
+                client.models.Workspace.list(),
+                client.models.TaskBoard.list(),
             ]);
 
-            const tasks = taskRes.data;
+            const tenants = tenantRes.data;
+
+            const activePilots = tenants.filter(
+                (t: any) => t.plan === "PILOT" && t.pilotStatus === "ACTIVE"
+            ).length;
+
+            // Build plan breakdown
+            const planCounts: Record<string, number> = {};
+            for (const t of tenants) {
+                const plan = (t as any).plan || "OTHER";
+                const key = PLAN_ORDER.includes(plan) ? plan : "OTHER";
+                planCounts[key] = (planCounts[key] || 0) + 1;
+            }
+            const planBreakdown = PLAN_ORDER
+                .filter(p => planCounts[p])
+                .map(p => ({ name: p, value: planCounts[p] }));
 
             setStats({
-                tenants: tenantRes.data.length,
+                tenants: tenants.length,
+                activePilots,
                 users: memberRes.data.length,
-                todo: tasks.filter(t => t.status === "TODO").length,
-                inProgress: tasks.filter(t => t.status === "IN_PROGRESS").length,
-                done: tasks.filter(t => t.status === "DONE").length,
-                total: tasks.length,
+                organizations: orgRes.data.length,
+                workspaces: wsRes.data.length,
+                taskBoards: boardRes.data.length,
+                planBreakdown,
             });
 
-            const sorted = [...tenantRes.data].sort(
+            const sorted = [...tenants].sort(
                 (a, b) => new Date(b.createdAt!).getTime() - new Date(a.createdAt!).getTime()
             );
             setRecentTenants(sorted.slice(0, 5));
@@ -81,23 +111,6 @@ export default function Dashboard() {
             </div>
         );
     }
-
-    const completionRate = stats.total > 0
-        ? Math.round((stats.done / stats.total) * 100) : 0;
-
-    const barData = [
-        { name: "Todo", value: stats.todo, fill: "#94a3b8" },
-        { name: "In Progress", value: stats.inProgress, fill: "#3b82f6" },
-        { name: "Done", value: stats.done, fill: "#10b981" },
-    ];
-
-    const pieData = [
-        { name: "Todo", value: stats.todo },
-        { name: "In Progress", value: stats.inProgress },
-        { name: "Done", value: stats.done },
-    ].filter(d => d.value > 0);
-
-    const PIE_COLORS = ["#94a3b8", "#3b82f6", "#10b981"];
 
     return (
         <div className="dash">
@@ -131,6 +144,19 @@ export default function Dashboard() {
                     <ArrowUpRight size={16} className="kpi-arrow" />
                 </div>
 
+                <div className="kpi-card" onClick={() => navigate("/super/pilots")}>
+                    <div className="kpi-icon" style={{ background: "#dbeafe", color: "#1d4ed8" }}>
+                        <FlaskConical size={20} />
+                    </div>
+                    <div className="kpi-body">
+                        <span className="kpi-label">Active Pilots</span>
+                        <span className="kpi-value">
+                            <CountUp end={stats.activePilots} duration={0.8} />
+                        </span>
+                    </div>
+                    <ArrowUpRight size={16} className="kpi-arrow" />
+                </div>
+
                 <div className="kpi-card">
                     <div className="kpi-icon" style={{ background: "#ecfdf5", color: "#10b981" }}>
                         <Users size={20} />
@@ -144,148 +170,80 @@ export default function Dashboard() {
                 </div>
 
                 <div className="kpi-card">
-                    <div className="kpi-icon" style={{ background: "#eff6ff", color: "#3b82f6" }}>
-                        <ListTodo size={20} />
+                    <div className="kpi-icon" style={{ background: "#fef3c7", color: "#b45309" }}>
+                        <Briefcase size={20} />
                     </div>
                     <div className="kpi-body">
-                        <span className="kpi-label">Active Tasks</span>
+                        <span className="kpi-label">Organizations</span>
                         <span className="kpi-value">
-                            <CountUp end={stats.todo + stats.inProgress} duration={0.8} />
+                            <CountUp end={stats.organizations} duration={0.8} />
                         </span>
                     </div>
                 </div>
 
                 <div className="kpi-card">
-                    <div className="kpi-icon" style={{ background: "#eef2ff", color: "#4f46e5" }}>
-                        <Kanban size={20} />
+                    <div className="kpi-icon" style={{ background: "#e8f0fa", color: "#1e3a5f" }}>
+                        <LayoutGrid size={20} />
                     </div>
                     <div className="kpi-body">
-                        <span className="kpi-label">Total Tasks</span>
+                        <span className="kpi-label">Workspaces</span>
                         <span className="kpi-value">
-                            <CountUp end={stats.total} duration={0.8} />
+                            <CountUp end={stats.workspaces} duration={0.8} />
                         </span>
                     </div>
                 </div>
 
                 <div className="kpi-card">
                     <div className="kpi-icon" style={{ background: "#f0fdf4", color: "#16a34a" }}>
-                        <CheckCircle2 size={20} />
+                        <Kanban size={20} />
                     </div>
                     <div className="kpi-body">
-                        <span className="kpi-label">Completion</span>
+                        <span className="kpi-label">Task Boards</span>
                         <span className="kpi-value">
-                            <CountUp end={completionRate} duration={1} />%
+                            <CountUp end={stats.taskBoards} duration={0.8} />
                         </span>
                     </div>
                 </div>
 
             </div>
 
-            {/* PROGRESS BAR */}
-            <div className="progress-strip">
-                <div className="progress-row">
-                    <div className="progress-segment todo"
-                        style={{ width: `${stats.total ? (stats.todo / stats.total) * 100 : 0}%` }} />
-                    <div className="progress-segment active"
-                        style={{ width: `${stats.total ? (stats.inProgress / stats.total) * 100 : 0}%` }} />
-                    <div className="progress-segment done"
-                        style={{ width: `${stats.total ? (stats.done / stats.total) * 100 : 0}%` }} />
-                </div>
-                <div className="progress-legend">
-                    <span><span className="dot todo" /> Todo ({stats.todo})</span>
-                    <span><span className="dot active" /> In Progress ({stats.inProgress})</span>
-                    <span><span className="dot done" /> Done ({stats.done})</span>
-                </div>
-            </div>
-
             {/* CHARTS ROW */}
             <div className="chart-row">
 
-                {/* BAR CHART */}
+                {/* COMPANIES BY PLAN */}
                 <div className="dash-panel">
-                    <h3 className="panel-title">Task Breakdown</h3>
-                    {stats.total > 0 ? (
-                        <ResponsiveContainer width="100%" height={220}>
-                            <BarChart data={barData} barSize={36}>
-                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                                <XAxis dataKey="name" tick={{ fontSize: 12, fill: "#64748b" }} axisLine={false} tickLine={false} />
-                                <YAxis tick={{ fontSize: 12, fill: "#64748b" }} axisLine={false} tickLine={false} allowDecimals={false} />
-                                <Tooltip
-                                    contentStyle={{ borderRadius: 10, border: "1px solid #e5e7eb", fontSize: 13 }}
-                                />
-                                <Bar dataKey="value" radius={[6, 6, 0, 0]}>
-                                    {barData.map((d, i) => (
-                                        <Cell key={i} fill={d.fill} />
-                                    ))}
-                                </Bar>
-                            </BarChart>
-                        </ResponsiveContainer>
-                    ) : (
-                        <div className="empty-chart">No tasks yet</div>
-                    )}
-                </div>
-
-                {/* PIE CHART */}
-                <div className="dash-panel">
-                    <h3 className="panel-title">Distribution</h3>
-                    {pieData.length > 0 ? (
-                        <ResponsiveContainer width="100%" height={220}>
+                    <h3 className="panel-title">Companies by Plan</h3>
+                    {stats.planBreakdown.length > 0 ? (
+                        <ResponsiveContainer width="100%" height={260}>
                             <PieChart>
                                 <Pie
-                                    data={pieData}
+                                    data={stats.planBreakdown}
                                     dataKey="value"
                                     nameKey="name"
                                     cx="50%"
                                     cy="50%"
                                     innerRadius={50}
-                                    outerRadius={80}
+                                    outerRadius={85}
                                     paddingAngle={3}
+                                    label={({ name, value }) => `${name} (${value})`}
                                 >
-                                    {pieData.map((_, i) => (
-                                        <Cell key={i} fill={PIE_COLORS[i]} />
+                                    {stats.planBreakdown.map((d) => (
+                                        <Cell key={d.name} fill={PLAN_COLORS[d.name] || PLAN_COLORS.OTHER} />
                                     ))}
                                 </Pie>
                                 <Tooltip
                                     contentStyle={{ borderRadius: 10, border: "1px solid #e5e7eb", fontSize: 13 }}
                                 />
+                                <Legend
+                                    formatter={(value: string) => (
+                                        <span style={{ fontSize: 12, color: "#475569" }}>{value}</span>
+                                    )}
+                                />
                             </PieChart>
                         </ResponsiveContainer>
                     ) : (
-                        <div className="empty-chart">No tasks yet</div>
+                        <div className="empty-chart">No companies yet</div>
                     )}
-                </div>
-
-            </div>
-
-            {/* BOTTOM ROW */}
-            <div className="chart-row">
-
-                {/* STATUS BREAKDOWN */}
-                <div className="dash-panel">
-                    <h3 className="panel-title">Status Breakdown</h3>
-                    <div className="status-list">
-                        <div className="status-row">
-                            <div className="status-left">
-                                <Clock size={16} color="#94a3b8" />
-                                <span>Todo</span>
-                            </div>
-                            <span className="status-count">{stats.todo}</span>
-                        </div>
-                        <div className="status-row">
-                            <div className="status-left">
-                                <TrendingUp size={16} color="#3b82f6" />
-                                <span>In Progress</span>
-                            </div>
-                            <span className="status-count">{stats.inProgress}</span>
-                        </div>
-                        <div className="status-row">
-                            <div className="status-left">
-                                <CheckCircle2 size={16} color="#10b981" />
-                                <span>Done</span>
-                            </div>
-                            <span className="status-count">{stats.done}</span>
-                        </div>
-                    </div>
                 </div>
 
                 {/* RECENT COMPANIES */}
@@ -308,7 +266,7 @@ export default function Dashboard() {
                                     <div className="member-info">
                                         <span className="member-id">{t.companyName}</span>
                                         <span style={{ fontSize: 12, color: "#64748b" }}>
-                                            {new Date(t.createdAt).toLocaleDateString()}
+                                            {t.plan || "—"} &middot; {new Date(t.createdAt).toLocaleDateString()}
                                         </span>
                                     </div>
                                 </div>

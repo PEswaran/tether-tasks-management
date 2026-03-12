@@ -23,7 +23,7 @@ export default function WorkspaceTemplates() {
     <div style={{ padding: 28 }}>
       <h1 style={{ fontSize: 22, fontWeight: 700 }}>Template Manager</h1>
       <div style={{ color: "#64748b", marginTop: 6 }}>
-        Create and manage workspace templates for all tenants.
+        Create and manage organization templates for all tenants.
       </div>
 
       <div style={{ marginTop: 24 }}>
@@ -53,7 +53,7 @@ export default function WorkspaceTemplates() {
         ))}
         {showCreate && (
           <CreateTaskBoardModal
-            organizations={[]}
+            workspaces={[]}
             tenantId={'YOUR_TENANT_ID'}
             templateMode={true}
             forcedWorkspaceId={"TEMPLATES_WORKSPACE_ID"}

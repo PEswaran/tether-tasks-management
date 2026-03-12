@@ -34,11 +34,42 @@ export default function AuditLogsPage() {
         return profiles.find((p) => p.userId === userSub)?.email || userSub || "—";
     }
 
+    function downloadCsv() {
+        const header = ["Timestamp", "User", "Action", "Resource Type", "Resource ID", "Result"];
+        const rows = logs.map((log) => [
+            log.timestamp ? new Date(log.timestamp).toLocaleString() : "",
+            log.userId ? profileEmail(log.userId) : "",
+            log.action || "",
+            log.resourceType || "",
+            log.resourceId || "",
+            log.result || "",
+        ]);
+
+        const csvContent = [header, ...rows]
+            .map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(","))
+            .join("\n");
+
+        const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `audit-logs-${new Date().toISOString().slice(0, 10)}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+
     if (loading) return <div>Loading audit logs...</div>;
 
     return (
         <div>
-            <div className="page-title">Audit Logs</div>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <div className="page-title">Audit Logs</div>
+                {logs.length > 0 && (
+                    <button className="btn btn-secondary" onClick={downloadCsv}>
+                        Download CSV
+                    </button>
+                )}
+            </div>
 
             <table className="table">
                 <thead>

@@ -34,7 +34,8 @@ export async function getMemberOrgIds(): Promise<string[]> {
     const memberships = await getMyMemberships();
     return memberships
         .filter((m: any) => m.role === "MEMBER" && m.status !== "REMOVED")
-        .map((m: any) => m.workspaceId);
+        .map((m: any) => m.organizationId || m.workspaceId)
+        .filter(Boolean);
 }
 
 /**

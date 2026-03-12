@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { dataClient } from "../../../libs/data-client";
 import { displayName } from "../../../libs/displayName";
 import {
-    ArrowLeft, Building2, Users, Kanban, CreditCard, ListTodo,
+    ArrowLeft, Building2, Users, Kanban, CreditCard, ListTodo, Clock,
 } from "lucide-react";
 import CountUp from "react-countup";
 import { useConfirm } from "../../../shared-components/confirm-context";
@@ -26,6 +26,9 @@ export default function TenantDetail() {
     const [deleteError, setDeleteError] = useState("");
     const [deleteBlocked, setDeleteBlocked] = useState("");
 
+    const [showConvertModal, setShowConvertModal] = useState(false);
+    const [convertPlan, setConvertPlan] = useState("PROFESSIONAL");
+
     const [showReplaceModal, setShowReplaceModal] = useState(false);
     const [replaceTarget, setReplaceTarget] = useState<any>(null);
     const [newAdminEmail, setNewAdminEmail] = useState("");
@@ -42,7 +45,7 @@ export default function TenantDetail() {
             const [t, mem, ws, taskRes] = await Promise.all([
                 client.models.Tenant.get({ id: tenantId! }),
                 client.models.Membership.list({ filter: { tenantId: { eq: tenantId! } } }),
-                client.models.Workspace.list({ filter: { tenantId: { eq: tenantId! } } }),
+                client.models.Organization.list({ filter: { tenantId: { eq: tenantId! } } }),
                 client.models.Task.list({ filter: { tenantId: { eq: tenantId! } } }),
             ]);
 
@@ -178,16 +181,48 @@ export default function TenantDetail() {
         switch (plan) {
             case "PROFESSIONAL": return "Professional";
             case "ENTERPRISE": return "Enterprise";
+            case "TRIAL": return "Trial";
+            case "PILOT": return "Pilot";
             default: return "Starter";
         }
     }
 
     function getPlanColor(plan: string | null | undefined) {
         switch (plan) {
-            case "PROFESSIONAL": return { bg: "#eff6ff", color: "#3b82f6" };
-            case "ENTERPRISE": return { bg: "#f5f3ff", color: "#7c3aed" };
+            case "PROFESSIONAL": return { bg: "#e8f0fa", color: "#1e3a5f" };
+            case "ENTERPRISE": return { bg: "#e4f7fa", color: "#0ea5b8" };
+            case "TRIAL": return { bg: "#fffbeb", color: "#f59e0b" };
+            case "PILOT": return { bg: "#dbeafe", color: "#1d4ed8" };
             default: return { bg: "#f1f5f9", color: "#64748b" };
         }
+    }
+
+    function getTrialDaysLeft(): number | null {
+        if (!tenant?.trialEndDate) return null;
+        const diffMs = new Date(tenant.trialEndDate).getTime() - Date.now();
+        return Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+    }
+
+    async function extendTrial() {
+        if (!tenant?.trialEndDate) return;
+        const newEnd = new Date(tenant.trialEndDate);
+        newEnd.setDate(newEnd.getDate() + 7);
+        await client.models.Tenant.update({
+            id: tenantId!,
+            trialEndDate: newEnd.toISOString(),
+        });
+        load();
+    }
+
+    async function convertToPaid(newPlan: string) {
+        await client.models.Tenant.update({
+            id: tenantId!,
+            plan: newPlan,
+            subscriptionStatus: "ACTIVE",
+            trialStartDate: null as any,
+            trialEndDate: null as any,
+        });
+        load();
     }
 
     if (loading) {
@@ -337,11 +372,11 @@ export default function TenantDetail() {
 
                 {/* WORKSPACES */}
                 <div className="kpi-card" style={{ cursor: "default" }}>
-                    <div className="kpi-icon" style={{ background: "#eff6ff", color: "#3b82f6" }}>
+                    <div className="kpi-icon" style={{ background: "#e8f0fa", color: "#1e3a5f" }}>
                         <Kanban size={20} />
                     </div>
                     <div className="kpi-body">
-                        <span className="kpi-label">Workspaces</span>
+                        <span className="kpi-label">Organizations</span>
                         <span className="kpi-value">
                             <CountUp end={workspaces.length} duration={0.8} />
                         </span>
@@ -350,7 +385,7 @@ export default function TenantDetail() {
 
                 {/* TASKS */}
                 <div className="kpi-card" style={{ cursor: "default" }}>
-                    <div className="kpi-icon" style={{ background: "#eef2ff", color: "#4f46e5" }}>
+                    <div className="kpi-icon" style={{ background: "#e8f0fa", color: "#1e3a5f" }}>
                         <ListTodo size={20} />
                     </div>
                     <div className="kpi-body">
@@ -362,6 +397,57 @@ export default function TenantDetail() {
                 </div>
 
             </div>
+
+            {/* TRIAL INFO SECTION */}
+            {tenant.plan === "TRIAL" && (() => {
+                const daysLeft = getTrialDaysLeft();
+                const isExpired = daysLeft !== null && daysLeft <= 0;
+                return (
+                    <div style={{
+                        marginTop: 20,
+                        padding: "20px 24px",
+                        background: isExpired ? "#fef2f2" : "#fffbeb",
+                        border: `1px solid ${isExpired ? "#fecaca" : "#fde68a"}`,
+                        borderRadius: 10,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        gap: 16,
+                    }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                            <div style={{
+                                width: 40, height: 40, borderRadius: 10,
+                                background: isExpired ? "#fee2e2" : "#fef3c7",
+                                display: "flex", alignItems: "center", justifyContent: "center",
+                                color: isExpired ? "#dc2626" : "#d97706",
+                            }}>
+                                <Clock size={20} />
+                            </div>
+                            <div>
+                                <div style={{ fontWeight: 600, fontSize: 15, color: isExpired ? "#991b1b" : "#92400e" }}>
+                                    {isExpired ? "Trial Expired" : `Trial \u2014 ${daysLeft} day${daysLeft !== 1 ? "s" : ""} remaining`}
+                                </div>
+                                <div style={{ fontSize: 13, color: isExpired ? "#b91c1c" : "#a16207", marginTop: 2 }}>
+                                    {tenant.trialStartDate && (
+                                        <>Start: {new Date(tenant.trialStartDate).toLocaleDateString()}</>
+                                    )}
+                                    {tenant.trialEndDate && (
+                                        <> &middot; End: {new Date(tenant.trialEndDate).toLocaleDateString()}</>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                        <div style={{ display: "flex", gap: 8 }}>
+                            <button className="btn secondary" onClick={extendTrial} style={{ fontSize: 13 }}>
+                                Extend +7 days
+                            </button>
+                            <button className="btn" onClick={() => setShowConvertModal(true)} style={{ fontSize: 13 }}>
+                                Convert to Paid
+                            </button>
+                        </div>
+                    </div>
+                );
+            })()}
 
             {/* MEMBERS TABLE */}
             <h2 style={{ marginTop: 32, marginBottom: 16 }}>Members</h2>
@@ -396,8 +482,8 @@ export default function TenantDetail() {
                                     <span
                                         className="role-badge"
                                         style={{
-                                            background: m.role === "TENANT_ADMIN" ? "#fef3c7" : m.role === "OWNER" ? "#eff6ff" : "#f1f5f9",
-                                            color: m.role === "TENANT_ADMIN" ? "#d97706" : m.role === "OWNER" ? "#3b82f6" : "#64748b",
+                                            background: m.role === "TENANT_ADMIN" ? "#fef3c7" : m.role === "OWNER" ? "#e8f0fa" : "#f1f5f9",
+                                            color: m.role === "TENANT_ADMIN" ? "#d97706" : m.role === "OWNER" ? "#1e3a5f" : "#64748b",
                                         }}
                                     >
                                         {m.role}
@@ -441,7 +527,7 @@ export default function TenantDetail() {
             </table>
 
             {/* WORKSPACES TABLE */}
-            <h2 style={{ marginTop: 32, marginBottom: 16 }}>Workspaces</h2>
+            <h2 style={{ marginTop: 32, marginBottom: 16 }}>Organizations</h2>
             <table className="table">
                 <thead>
                     <tr>
@@ -452,7 +538,7 @@ export default function TenantDetail() {
                 <tbody>
                     {workspaces.map(ws => {
                         const wsMemberCount = members.filter(
-                            m => m.workspaceId === ws.id && m.status !== "REMOVED"
+                            m => m.organizationId === ws.id && m.status !== "REMOVED"
                         ).length;
                         return (
                             <tr key={ws.id}>
@@ -489,6 +575,8 @@ export default function TenantDetail() {
                             </p>
                             <label>New admin email:</label>
                             <input
+                                id="replace-admin-email"
+                                name="replace_admin_email"
                                 type="email"
                                 value={newAdminEmail}
                                 onChange={(e) => setNewAdminEmail(e.target.value)}
@@ -521,6 +609,71 @@ export default function TenantDetail() {
                 </div>
             )}
 
+            {/* CONVERT TO PAID MODAL */}
+            {showConvertModal && (
+                <div className="modal-backdrop" onClick={() => setShowConvertModal(false)}>
+                    <div className="modal" onClick={(e) => e.stopPropagation()}>
+
+                        <div className="modal-header">
+                            <h2>Convert to Paid Plan</h2>
+                            <div className="modal-sub">
+                                Choose a paid plan for {tenant.companyName}
+                            </div>
+                        </div>
+
+                        <div className="modal-form">
+                            <div style={{ display: "flex", gap: 12 }}>
+                                {[
+                                    { id: "STARTER", name: "Starter", price: "Free", color: "#64748b" },
+                                    { id: "PROFESSIONAL", name: "Professional", price: "$29/mo", color: "#1e3a5f" },
+                                    { id: "ENTERPRISE", name: "Enterprise", price: "$99/mo", color: "#0ea5b8" },
+                                ].map(p => {
+                                    const isActive = convertPlan === p.id;
+                                    return (
+                                        <div
+                                            key={p.id}
+                                            onClick={() => setConvertPlan(p.id)}
+                                            style={{
+                                                flex: 1,
+                                                padding: "16px 14px",
+                                                borderRadius: 10,
+                                                border: isActive ? `2px solid ${p.color}` : "2px solid #e5e7eb",
+                                                background: isActive ? `${p.color}08` : "#fff",
+                                                cursor: "pointer",
+                                                textAlign: "center",
+                                            }}
+                                        >
+                                            <div style={{ fontWeight: 600, fontSize: 14, color: isActive ? p.color : "#1e293b" }}>
+                                                {p.name}
+                                            </div>
+                                            <div style={{ fontSize: 18, fontWeight: 700, color: "#1e293b", marginTop: 4 }}>
+                                                {p.price}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                        <div className="modal-footer">
+                            <button className="btn secondary" onClick={() => setShowConvertModal(false)}>
+                                Cancel
+                            </button>
+                            <button
+                                className="btn"
+                                onClick={() => {
+                                    convertToPaid(convertPlan);
+                                    setShowConvertModal(false);
+                                }}
+                            >
+                                Convert Plan
+                            </button>
+                        </div>
+
+                    </div>
+                </div>
+            )}
+
             {/* DELETE CONFIRMATION MODAL */}
             {showDeleteConfirm && (
                 <div className="modal-backdrop" onClick={() => !deleting && setShowDeleteConfirm(false)}>
@@ -534,13 +687,15 @@ export default function TenantDetail() {
                         <div className="modal-form">
                             <p>
                                 This will permanently delete <strong>{tenant.companyName}</strong> and
-                                all associated data including members, tasks, workspaces, and the
+                                all associated data including members, tasks, organizations, and the
                                 tenant admin's Cognito account.
                             </p>
                             <label>
                                 Type <strong>{tenant.companyName}</strong> to confirm:
                             </label>
                             <input
+                                id="delete-company-confirm"
+                                name="delete_company_confirm"
                                 type="text"
                                 value={deleteInput}
                                 onChange={(e) => setDeleteInput(e.target.value)}

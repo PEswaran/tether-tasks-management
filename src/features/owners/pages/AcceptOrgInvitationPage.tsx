@@ -35,14 +35,14 @@ export default function AcceptOrgInvitationPage() {
                 (i: any) => i.status === "PENDING" && (i.role === "OWNER" || i.role === "MEMBER")
             );
 
-            if (!inv) { navigate("/"); return; }
+            if (!inv) { navigate("/auth-redirect"); return; }
 
             setInvitation(inv);
 
             // load tenant and org names
             const [tenantRes, orgRes] = await Promise.all([
                 inv.tenantId ? client.models.Tenant.get({ id: inv.tenantId }) : null,
-                inv.workspaceId ? client.models.Workspace.get({ id: inv.workspaceId }) : null,
+                inv.organizationId ? client.models.Organization.get({ id: inv.organizationId }) : null,
             ]);
 
             setTenantName(tenantRes?.data?.companyName || "");
@@ -81,21 +81,28 @@ export default function AcceptOrgInvitationPage() {
             });
 
             // Create membership if it doesn't already exist
-            const memCheck = await client.models.Membership.listMembershipsByWorkspace({
-                workspaceId: invitation.workspaceId,
+            const memCheck = await client.models.Membership.listMembershipsByOrganization({
+                organizationId: invitation.organizationId,
             });
-            const alreadyMember = memCheck.data.some(
+            const existingMembership = (memCheck.data || []).find(
                 (m: any) => m.userSub === userSub
             );
 
-            if (!alreadyMember) {
+            if (!existingMembership) {
                 await client.models.Membership.create({
                     tenantId: invitation.tenantId,
-                    workspaceId: invitation.workspaceId,
+                    organizationId: invitation.organizationId,
                     userSub,
                     role: invitation.role,
                     status: "ACTIVE",
                     joinedAt: new Date().toISOString(),
+                });
+            } else if (existingMembership.status !== "ACTIVE" || existingMembership.role !== invitation.role) {
+                await client.models.Membership.update({
+                    id: existingMembership.id,
+                    status: "ACTIVE",
+                    role: invitation.role,
+                    joinedAt: existingMembership.joinedAt || new Date().toISOString(),
                 });
             }
 
@@ -104,7 +111,7 @@ export default function AcceptOrgInvitationPage() {
             await refreshWorkspaces();
 
             // route to the correct shell
-            navigate("/");
+            navigate("/auth-redirect");
         } catch (err) {
             console.error(err);
             await alert({ title: "Error", message: "Error accepting invitation", variant: "danger" });

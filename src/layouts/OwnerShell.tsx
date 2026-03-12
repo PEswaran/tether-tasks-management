@@ -7,7 +7,7 @@ export default function OwnerShell() {
 
     return (
         <AppShell
-            companyName={tenantName || "Workspace"}
+            companyName={tenantName || "Organization"}
             navItems={ownerNav}
         />
     );

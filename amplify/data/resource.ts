@@ -6,6 +6,10 @@ import { sendAssignmentEmail } from '../functions/sendAssignmentEmail/resource';
 import { notifyTaskAssignment } from '../functions/notifyOnTaskAssignment/resource';
 import { replaceTenantAdminFn } from '../functions/replace-tenant-admin/resource';
 import { submitContactRequestFn } from '../functions/submit-contact-request/resource';
+import { deleteOrganizationFn } from '../functions/delete-organization/resource';
+import { getPlatformAnalyticsFn } from '../functions/get-platform-analytics/resource';
+import { createPilotFn } from '../functions/create-pilot/resource';
+import { sendDueDateRemindersFn } from '../functions/send-due-date-reminders/resource';
 
 const schema = a.schema({
 
@@ -20,7 +24,7 @@ const schema = a.schema({
     TaskPriority: a.enum(['LOW', 'MEDIUM', 'HIGH', 'URGENT']),
 
     NotificationType: a.enum([
-        'TASK_DELETE_REQUEST', 'TASK_ASSIGNED', 'TASK_UPDATED', 'TASK_COMPLETED', 'BOARD_ASSIGNED', 'INVITED_TO_WORKSPACE', 'CONTACT_REQUEST'
+        'TASK_DELETE_REQUEST', 'TASK_ASSIGNED', 'TASK_UPDATED', 'TASK_COMPLETED', 'BOARD_ASSIGNED', 'INVITED_TO_WORKSPACE', 'CONTACT_REQUEST', 'TASK_DUE_REMINDER', 'TASK_OVERDUE'
     ]),
 
     AuditAction: a.enum(['CREATE', 'UPDATE', 'DELETE', 'INVITE', 'REMOVE', 'LOGIN', 'LOGOUT', 'ASSIGN']),
@@ -41,6 +45,23 @@ const schema = a.schema({
         stripeCustomerId: a.string(),
         stripeSubscriptionId: a.string(),
 
+        trialStartDate: a.datetime(),
+        trialEndDate: a.datetime(),
+        agreementNotes: a.string(),
+        adminName: a.string(),
+
+        pilotStatus: a.string(),
+        pilotStartDate: a.datetime(),
+        pilotEndDate: a.datetime(),
+        pilotDurationDays: a.integer(),
+        pilotAgreementS3Key: a.string(),
+        pilotNotes: a.string(),
+        pilotContactName: a.string(),
+        pilotContactEmail: a.string(),
+        pilotConfirmationSentAt: a.datetime(),
+
+        agreementS3Key: a.string(),
+
         createdAt: a.datetime(),
         updatedAt: a.datetime(),
 
@@ -51,12 +72,44 @@ const schema = a.schema({
         ]),
 
     /* =========================================================
+     ORGANIZATION
+    ========================================================= */
+
+    Organization: a.model({
+        id: a.id().required(),
+        tenantId: a.id().required(),
+
+        name: a.string().required(),
+        description: a.string(),
+
+        createdBy: a.string(),
+        isActive: a.boolean(),
+
+        createdAt: a.datetime(),
+        updatedAt: a.datetime(),
+    })
+        .secondaryIndexes(index => [
+            index("tenantId")
+                .sortKeys(["createdAt"])
+                .queryField("listOrganizationsByTenant"),
+            index("tenantId")
+                .sortKeys(["name"])
+                .queryField("listOrganizationsByTenantAndName"),
+        ])
+        .authorization(allow => [
+            allow.group('PLATFORM_SUPER_ADMIN'),
+            allow.group('TENANT_ADMIN'),
+            allow.authenticated().to(['read'])
+        ]),
+
+    /* =========================================================
      WORKSPACE (ORG)
     ========================================================= */
 
     Workspace: a.model({
         id: a.id().required(),
         tenantId: a.id().required(),
+        organizationId: a.id(),
 
         name: a.string().required(),
         description: a.string(),
@@ -73,6 +126,7 @@ const schema = a.schema({
     })
         .secondaryIndexes(index => [
             index("tenantId").queryField("workspacesByTenant"), // rename safer
+            index("organizationId").queryField("workspacesByOrganization"),
             index("ownerUserSub").queryField("workspacesByOwner")
         ])
         .authorization(allow => [
@@ -89,7 +143,8 @@ const schema = a.schema({
         id: a.id().required(),
 
         tenantId: a.id().required(),
-        workspaceId: a.id().required(), // workspaceId
+        organizationId: a.id(),
+        workspaceId: a.id(), // legacy workspace scope
         userSub: a.string().required(),
 
         role: a.ref('MembershipRole').required(),
@@ -103,6 +158,10 @@ const schema = a.schema({
             index("userSub")
                 .sortKeys(["createdAt"])
                 .queryField("listMembershipsByUser"),
+
+            index("organizationId")
+                .sortKeys(["createdAt"])
+                .queryField("listMembershipsByOrganization"),
 
             index("workspaceId")
                 .sortKeys(["createdAt"])
@@ -127,6 +186,7 @@ const schema = a.schema({
     Invitation: a.model({
         id: a.id().required(),
         tenantId: a.id().required(),
+        organizationId: a.id(),
         workspaceId: a.id(),
 
         email: a.email().required(),
@@ -143,6 +203,10 @@ const schema = a.schema({
             index("email")
                 .sortKeys(["sentAt"])
                 .queryField("listInvitesByEmail"),
+
+            index("organizationId")
+                .sortKeys(["sentAt"])
+                .queryField("listInvitesByOrganization"),
 
             index("workspaceId")
                 .sortKeys(["sentAt"])
@@ -163,6 +227,7 @@ const schema = a.schema({
     TaskBoard: a.model({
         id: a.id().required(),
         tenantId: a.id().required(),
+        organizationId: a.id(),
         workspaceId: a.id().required(),
 
 
@@ -184,15 +249,20 @@ const schema = a.schema({
                 .sortKeys(["createdAt"])
                 .queryField("listWorkspacesByTenant"),
 
+            index("organizationId")
+                .sortKeys(["createdAt"])
+                .queryField("listTaskBoardsByOrganization"),
+
             index("ownerUserSub")
                 .sortKeys(["createdAt"])
                 .queryField("listWorkspacesByOwner")
         ])
 
         .authorization(allow => [
-            allow.group('PLATFORM_SUPER_ADMIN'),
-            allow.ownerDefinedIn('ownerUserSub'),
-            allow.authenticated().to(['read'])
+
+            allow.group('PLATFORM_SUPER_ADMIN'), allow.group('TENANT_ADMIN'),
+            allow.ownerDefinedIn('ownerUserSub').to(['read', 'create', 'update', 'delete']),
+            allow.authenticated().to(['read', 'update'])
 
         ]),
 
@@ -203,6 +273,7 @@ const schema = a.schema({
     Task: a.model({
         id: a.id().required(),
         tenantId: a.id().required(),
+        organizationId: a.id(),
         workspaceId: a.id().required(),
         taskBoardId: a.id().required(),
 
@@ -237,6 +308,10 @@ const schema = a.schema({
                 .sortKeys(["createdAt"])
                 .queryField("listTasksByBoard"),
 
+            index("organizationId")
+                .sortKeys(["createdAt"])
+                .queryField("listTasksByOrganization"),
+
             index("workspaceId")
                 .sortKeys(["createdAt"])
                 .queryField("listTasksByWorkspace")
@@ -255,6 +330,7 @@ const schema = a.schema({
     Notification: a.model({
         id: a.id().required(),
         tenantId: a.id().required(),
+        organizationId: a.id(),
         workspaceId: a.id(),
 
         recipientId: a.string().required(),
@@ -279,13 +355,18 @@ const schema = a.schema({
 
             index("tenantId")
                 .sortKeys(["createdAt"])
-                .queryField("listNotificationsByTenant")
+                .queryField("listNotificationsByTenant"),
+
+            index("organizationId")
+                .sortKeys(["createdAt"])
+                .queryField("listNotificationsByOrganization")
         ])
 
 
         .authorization(allow => [
             allow.group('PLATFORM_SUPER_ADMIN'),
-            allow.ownerDefinedIn('recipientId')
+            allow.ownerDefinedIn('recipientId').to(['read', 'update', 'delete']),
+            allow.authenticated().to(['create', 'read'])
         ]),
 
     /* =========================================================
@@ -295,6 +376,7 @@ const schema = a.schema({
     AuditLog: a.model({
         id: a.id().required(),
         tenantId: a.id(),
+        organizationId: a.id(),
         workspaceId: a.id(),
         userId: a.string(),
 
@@ -314,7 +396,11 @@ const schema = a.schema({
 
             index("userId")
                 .sortKeys(["timestamp"])
-                .queryField("listAuditByUser")
+                .queryField("listAuditByUser"),
+
+            index("organizationId")
+                .sortKeys(["timestamp"])
+                .queryField("listAuditByOrganization")
         ])
 
 
@@ -335,6 +421,9 @@ const schema = a.schema({
         firstName: a.string(),
         lastName: a.string(),
         role: a.string(),
+        hasSeenWelcome: a.boolean(),
+        termsAcceptedAt: a.datetime(),
+        signedAgreementS3Key: a.string(),
 
         createdAt: a.datetime(),
     })
@@ -344,8 +433,36 @@ const schema = a.schema({
         ])
         .authorization(allow => [
             allow.group('PLATFORM_SUPER_ADMIN'),
-            allow.authenticated().to(['read'])
+            allow.authenticated().to(['read']),
+            allow.ownerDefinedIn('userId').to(['create', 'update'])
         ]),
+
+    /* =========================================================
+     PILOT AGREEMENT
+    ========================================================= */
+
+    PilotAgreement: a.model({
+        tenantId: a.id().required(),
+        s3Key: a.string().required(),
+        fileName: a.string(),
+        generatedAt: a.datetime(),
+        generatedBy: a.string(),
+        version: a.integer(),
+        companyName: a.string(),
+        adminName: a.string(),
+        adminEmail: a.string(),
+        pilotDurationDays: a.integer(),
+        pilotStartDate: a.datetime(),
+        pilotEndDate: a.datetime(),
+        agreementNotes: a.string(),
+        createdAt: a.datetime(),
+    })
+        .secondaryIndexes(index => [
+            index("tenantId")
+                .sortKeys(["createdAt"])
+                .queryField("listAgreementsByTenant"),
+        ])
+        .authorization(allow => [allow.group('PLATFORM_SUPER_ADMIN')]),
 
     /* =========================================================
      MUTATIONS
@@ -355,6 +472,11 @@ const schema = a.schema({
         .arguments({
             companyName: a.string().required(),
             adminEmail: a.string().required(),
+            adminFirstName: a.string(),
+            adminLastName: a.string(),
+            plan: a.string(),
+            trialStartDate: a.string(),
+            agreementNotes: a.string(),
         })
         .returns(a.customType({
             success: a.boolean(),
@@ -368,7 +490,7 @@ const schema = a.schema({
     inviteMemberToOrg: a.mutation()
         .arguments({
             email: a.string().required(),
-            workspaceId: a.string().required(),
+            organizationId: a.string().required(),
             tenantId: a.string().required(),
             role: a.string().required(),
         })
@@ -404,6 +526,17 @@ const schema = a.schema({
         .authorization(allow => [allow.group("PLATFORM_SUPER_ADMIN")])
         .handler(a.handler.function(deleteTenantFn)),
 
+    removeOrganizationAndData: a.mutation()
+        .arguments({
+            organizationId: a.string().required(),
+        })
+        .returns(a.customType({
+            success: a.boolean(),
+            message: a.string(),
+        }))
+        .authorization(allow => [allow.group("TENANT_ADMIN"), allow.group("PLATFORM_SUPER_ADMIN")])
+        .handler(a.handler.function(deleteOrganizationFn)),
+
     sendAssignmentEmail: a.mutation()
         .arguments({
             userSub: a.string().required(),
@@ -435,6 +568,7 @@ const schema = a.schema({
             teamSize: a.string(),
             numberOfOrgs: a.string(),
             businessType: a.string(),
+            pilotInterest: a.string(),
             message: a.string().required(),
         })
         .returns(a.customType({
@@ -444,6 +578,38 @@ const schema = a.schema({
         .authorization(allow => [allow.publicApiKey()])
         .handler(a.handler.function(submitContactRequestFn)),
 
+    getPlatformAnalytics: a.mutation()
+        .arguments({
+            startDate: a.string(),
+            endDate: a.string(),
+        })
+        .returns(a.json())
+        .authorization(allow => [allow.group("PLATFORM_SUPER_ADMIN")])
+        .handler(a.handler.function(getPlatformAnalyticsFn)),
+
+    createPilot: a.mutation()
+        .arguments({
+            companyName: a.string().required(),
+            adminEmail: a.string().required(),
+            adminFirstName: a.string(),
+            adminLastName: a.string(),
+            pilotDurationDays: a.integer(),
+            pilotStartDate: a.string(),
+            pilotNotes: a.string(),
+            agreementNotes: a.string(),
+            orgName: a.string(),
+            workspaceName: a.string(),
+            boardName: a.string(),
+        })
+        .returns(a.customType({
+            success: a.boolean(),
+            message: a.string(),
+            tenantId: a.string(),
+            agreementS3Key: a.string(),
+        }))
+        .authorization(allow => [allow.group("PLATFORM_SUPER_ADMIN")])
+        .handler(a.handler.function(createPilotFn)),
+
 })
     .authorization(allow => [
         allow.resource(createTenantAdminFn),
@@ -452,7 +618,11 @@ const schema = a.schema({
         allow.resource(sendAssignmentEmail),
         allow.resource(notifyTaskAssignment),
         allow.resource(replaceTenantAdminFn),
-        allow.resource(submitContactRequestFn)
+        allow.resource(submitContactRequestFn),
+        allow.resource(deleteOrganizationFn),
+        allow.resource(getPlatformAnalyticsFn),
+        allow.resource(createPilotFn),
+        allow.resource(sendDueDateRemindersFn)
     ]);
 
 export type Schema = ClientSchema<typeof schema>;
